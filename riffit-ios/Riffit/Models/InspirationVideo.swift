@@ -16,7 +16,7 @@ struct InspirationVideo: Codable, Identifiable {
     let status: Status
     let savedAt: Date
 
-    enum Platform: String, Codable {
+    enum Platform: String, Codable, CaseIterable {
         case instagram
         case tiktok
         case youtube
