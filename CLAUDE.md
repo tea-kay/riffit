@@ -135,19 +135,39 @@ completed_at            timestamptz (nullable)
 created_at              timestamptz DEFAULT now()
 ```
 
-### StoryEntry
-The creator's personal narrative library. Powers the "in your voice" remixing.
+### Story
+The creative workspace. Each story organizes assets and references to inspiration videos.
 ```sql
 id                  uuid PRIMARY KEY
 creator_profile_id  uuid REFERENCES creator_profiles(id)
 title               text
-body_text           text
-voice_note_url      text (nullable)
-source              text CHECK (IN ('manual', 'voice', 'ai_interview', 'extracted'))
-category            text CHECK (IN ('career', 'win', 'failure', 'opinion', 'background', 'other'))
-tags                text[]
-embedding           vector(1536) (nullable)  -- pgvector, for semantic search
+status              text CHECK (IN ('draft', 'ready', 'archived')) DEFAULT 'draft'
 created_at          timestamptz DEFAULT now()
+updated_at          timestamptz DEFAULT now()
+```
+
+### StoryAsset
+Media and text attached to a Story (voice notes, video, images, text blocks).
+```sql
+id                  uuid PRIMARY KEY
+story_id            uuid REFERENCES stories(id)
+asset_type          text CHECK (IN ('voice_note', 'video', 'image', 'text'))
+content_text        text (nullable)          -- for text assets
+file_url            text (nullable)          -- for voice/video/image assets
+duration_seconds    int (nullable)           -- for voice/video assets
+display_order       int
+created_at          timestamptz DEFAULT now()
+```
+
+### StoryReference
+Links a Story to an InspirationVideo from the Library.
+```sql
+id                      uuid PRIMARY KEY
+story_id                uuid REFERENCES stories(id)
+inspiration_video_id    uuid REFERENCES inspiration_videos(id)
+reference_tag           text    -- Hook, Editing, B-Roll, Format, Topic, Inspiration
+ai_relevance_note       text (nullable)  -- AI-generated explanation of relevance
+created_at              timestamptz DEFAULT now()
 ```
 
 ### InspirationVideo
@@ -181,23 +201,6 @@ transition_notes      text (nullable)
 cut_count             int
 pacing                text CHECK (IN ('slow', 'medium', 'fast'))
 created_at            timestamptz DEFAULT now()
-```
-
-### ContentBrief
-The primary output. The thing the creator takes into filming.
-```sql
-id                    uuid PRIMARY KEY
-inspiration_video_id  uuid REFERENCES inspiration_videos(id)
-creator_profile_id    uuid REFERENCES creator_profiles(id)
-remixed_concept       text
-remixed_hook          text
-sections              jsonb[]   -- [{number, title, direction, story_ref_id, timing_guide}]
-shot_list             jsonb[]   -- [{shot_number, description, type, notes}]
-story_refs            uuid[]    -- references to StoryEntry ids used
-user_selections       jsonb     -- which parts user chose to keep/riff
-status                text CHECK (IN ('draft', 'active', 'done', 'archived')) DEFAULT 'draft'
-created_at            timestamptz DEFAULT now()
-updated_at            timestamptz DEFAULT now()
 ```
 
 ### SocialAccount
@@ -343,18 +346,12 @@ sheet:      20pt (top corners only for bottom sheets)
 - Footer: alignment badge + score
 - Badge colors: strong = primary tint/text, consider = surface/secondary, skip = danger tint/text
 
-**ContentBriefCard**
-- Surface background
-- "Creative brief" label (Label style, primary color)
-- Remixed concept title (Heading)
-- Section rows: number (primary color) + direction text + timing tag
-- Dividers between sections: 0.5pt, border subtle color
-
-**StoryEntryRow**
-- Surface background, 12pt radius
-- Teal icon container (28×28, 7pt radius, teal tint fill)
-- Title + preview text + category tag
-- Tag: teal tint background, teal text
+**StoryCard**
+- Surface background, card radius (20pt)
+- Story title (Heading weight)
+- Counts label: "3 assets · 2 references" (Caption, secondary)
+- Status badge: draft (surface/secondary) / ready (primary tint/primary) / archived (surface/tertiary)
+- Last updated relative timestamp (Caption, tertiary)
 
 **AlignmentBadge**
 - Capsule shape, 4pt vertical / 10pt horizontal padding
@@ -401,18 +398,17 @@ Build in this order. Do not skip ahead.
 14. Alignment scoring via Claude Edge Function
 15. InspirationCard display with verdict
 
-### Phase 4 — Deconstruction + Brief
-16. VideoDeconstruction generation
-17. Brief generation with storybank semantic search
-18. ContentBrief view with section picker
-19. Shot list view
+### Phase 4 — Storybank
+16. Story list view (StorybankView) with create/delete
+17. StoryDetailView with assets section + references section
+18. Add text assets
+19. Add voice note / video / image assets (media picker)
+20. Add references from Library (pick video + tag)
+21. AI relevance note generation via Edge Function
 
-### Phase 5 — Storybank
-20. StoryEntry list view
-21. Voice note recording + transcription
-22. Manual text entry
-23. AI interview for new story entries
-24. Tag management
+### Phase 5 — Deconstruction (v2)
+22. VideoDeconstruction generation
+23. Brief generation from Story + references (premium feature)
 
 ### Phase 6 — Monetization
 25. RevenueCat integration
@@ -439,14 +435,13 @@ Input: `{ inspiration_video_id: string, creator_profile_id: string }`
 4. Saves score, verdict, reasoning back to InspirationVideo
 Returns: `{ score: number, verdict: string, reasoning: string }`
 
-### `generate-brief`
-Input: `{ inspiration_video_id: string, creator_profile_id: string, user_selections: object }`
-1. Fetches VideoDeconstruction
-2. Fetches CreatorProfile
-3. Runs pgvector similarity search on StoryEntry embeddings to find relevant stories
-4. Calls Claude API to generate remixed concept, hook, and sections
-5. Saves ContentBrief record
-Returns: `{ content_brief_id: string }`
+### `generate-relevance-note`
+Input: `{ story_id: string, inspiration_video_id: string, reference_tag: string }`
+1. Fetches Story title and existing assets
+2. Fetches InspirationVideo transcript and user note
+3. Calls Claude API to generate a one-sentence relevance note
+4. Saves ai_relevance_note to StoryReference
+Returns: `{ ai_relevance_note: string }`
 
 ### `run-interview`
 Input: `{ session_id: string, user_message: string }`
@@ -472,7 +467,8 @@ Returns: `{ transcript: string, words: [{text, start, end}] }`
 Riffit/
 ├── App/
 │   ├── RiffitApp.swift          -- @main entry point
-│   └── AppState.swift           -- global app state (auth, onboarding)
+│   ├── AppState.swift           -- global app state (auth, onboarding)
+│   └── MainTabView.swift        -- 3-tab layout: Library / Storybank / Settings
 ├── Core/
 │   ├── Design/
 │   │   ├── RiffitColors.swift   -- color token environment object
@@ -486,10 +482,13 @@ Riffit/
 ├── Models/
 │   ├── User.swift
 │   ├── CreatorProfile.swift
-│   ├── StoryEntry.swift
+│   ├── IdeaComment.swift
+│   ├── IdeaFolder.swift
 │   ├── InspirationVideo.swift
-│   ├── VideoDeconstruction.swift
-│   └── ContentBrief.swift
+│   ├── Story.swift
+│   ├── StoryAsset.swift
+│   ├── StoryReference.swift
+│   └── VideoDeconstruction.swift
 ├── Features/
 │   ├── Auth/
 │   │   ├── AuthView.swift
@@ -503,21 +502,19 @@ Riffit/
 │   ├── Library/
 │   │   ├── LibraryView.swift
 │   │   ├── LibraryViewModel.swift
-│   │   └── InspirationCard.swift
-│   ├── Brief/
-│   │   ├── BriefView.swift
-│   │   ├── BriefViewModel.swift
-│   │   └── ShotListView.swift
+│   │   ├── AddInspirationView.swift
+│   │   ├── InspirationDetailView.swift
+│   │   └── FolderDetailView.swift
 │   ├── Storybank/
 │   │   ├── StorybankView.swift
 │   │   ├── StorybankViewModel.swift
-│   │   └── StoryEntryRow.swift
+│   │   ├── StoryDetailView.swift
+│   │   └── AddReferenceView.swift
 │   └── Settings/
 │       └── SettingsView.swift
 ├── Components/
 │   ├── InspirationCard.swift    -- reusable card component
 │   ├── AlignmentBadge.swift
-│   ├── StoryEntryRow.swift
 │   ├── RiffitButton.swift       -- primary/secondary/ghost/danger variants
 │   └── LoadingOverlay.swift
 └── ShareExtension/
@@ -528,11 +525,10 @@ Riffit/
 
 ## Navigation Structure
 
-Tab bar with 4 tabs:
+Tab bar with 3 tabs:
 1. **Library** (house icon) — Inspiration library, the main feed
-2. **Briefs** (document icon) — All generated creative briefs
-3. **Storybank** (bookmark icon) — Personal story library
-4. **Settings** (gear icon) — Profile, subscription, preferences
+2. **Storybank** (bookmark icon) — Creative workspace for organizing stories
+3. **Settings** (gear icon) — Profile, subscription, preferences
 
 No tab bar shown during onboarding. Onboarding is a full-screen modal flow dismissed permanently once complete.
 
@@ -641,8 +637,12 @@ Before writing any Swift code, complete:
 - [x] Data model designed
 - [x] Architecture decided
 - [x] Design system complete
+- [x] Xcode project created
+- [x] Library tab: ideas, folders, drag-and-drop, detail view with comments
+- [x] Storybank tab: story list, detail view with assets + references
 - [ ] Supabase project created
-- [ ] Xcode project created
-- [ ] Development started
+- [ ] Media asset recording/picking (voice, video, image)
+- [ ] AI relevance note generation
+- [ ] Persistence (Supabase integration)
 
-Next action: Create Supabase project → run schema → create Xcode project → implement design system tokens.
+Next action: Create Supabase project → run schema → connect iOS to Supabase.
