@@ -1,28 +1,36 @@
 import SwiftUI
 
 /// The main entry point for the Riffit app.
-/// Sets up the root view and injects environment objects
-/// (like RiffitColors) that the entire app relies on.
+/// Sets up the root view and injects the global AppState
+/// environment object that the entire app relies on.
 @main
 struct RiffitApp: App {
     @StateObject private var appState = AppState()
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
                 .environmentObject(appState)
         }
     }
 }
 
-/// Temporary root view — will be replaced with proper
-/// navigation (tab bar vs onboarding) once auth is built.
-struct ContentView: View {
+/// Root view that decides what to show based on app state:
+/// - Not authenticated → AuthView
+/// - Authenticated but not onboarded → OnboardingView (full-screen, no tab bar)
+/// - Authenticated and onboarded → MainTabView (the main app)
+struct RootView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        Text("Riffit")
-            .font(.largeTitle)
-            .fontWeight(.medium)
+        Group {
+            if !appState.isAuthenticated {
+                AuthView()
+            } else if !appState.isOnboardingComplete {
+                OnboardingView()
+            } else {
+                MainTabView()
+            }
+        }
     }
 }

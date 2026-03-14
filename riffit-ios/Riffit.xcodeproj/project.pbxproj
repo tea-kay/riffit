@@ -11,6 +11,7 @@
 		06D4086095FD0E74881DFD51 /* BriefViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7C4F21B6925981900F05F8B /* BriefViewModel.swift */; };
 		0C0C3D99022F0B87CD5FCF50 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8195FF2AC4D4715DE367914 /* SettingsView.swift */; };
 		10B990E25FD094CE69DCCF96 /* RiffitSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10BA7CDC3821AC5664F16466 /* RiffitSpacing.swift */; };
+		1457C7442AEBE91EBD705812 /* SocialConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4C85A1CB41022805ABBEF8 /* SocialConnectView.swift */; };
 		1D8795CEF94FF6F9816E2E99 /* RiffitApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E3E18E921EEEEA4A1811D08 /* RiffitApp.swift */; };
 		287C3C14CE2B464B9A70AE9F /* LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCFFDEC95DDE5AEC083E6F70 /* LibraryViewModel.swift */; };
 		29C9C1D91AB28A226E97D479 /* AlignmentBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E53779A8DB0EA398AA19B8 /* AlignmentBadge.swift */; };
@@ -32,6 +33,7 @@
 		ADEFD9559A7199A784AA3C3B /* VideoDeconstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA88E5355C855A2C69D50BD4 /* VideoDeconstruction.swift */; };
 		B0AE71E45D4098C325AC7EBA /* CreatorTypeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C629D838BA4CD611A819F8B7 /* CreatorTypeView.swift */; };
 		B7F985472D882D573AB1B248 /* RiffitFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3FD07C7FAC4D4F9790B251E /* RiffitFonts.swift */; };
+		C40DAFF1CE73611699B384F9 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AF98CEE92E42C689BCCC586 /* MainTabView.swift */; };
 		CB6A157565810D27B5A20B31 /* StoryEntryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6DDD15D9589DB940A00F3B8 /* StoryEntryRow.swift */; };
 		CDE2A83B109C665317A81E7D /* StorybankView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81284910A3F4946E96B3848F /* StorybankView.swift */; };
 		D3749D5D3757E22BA0FAD5D2 /* RiffitColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6DF108017C95F089FE41062 /* RiffitColors.swift */; };
@@ -51,6 +53,7 @@
 		10BA7CDC3821AC5664F16466 /* RiffitSpacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitSpacing.swift; sourceTree = "<group>"; };
 		1120BC2824BE7C4619C6A84D /* LoadingOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingOverlay.swift; sourceTree = "<group>"; };
 		155EA98817C649A20CD8E5F4 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
+		2AF98CEE92E42C689BCCC586 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		2B41C262581B8EBD33B6C7DA /* StorybankViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorybankViewModel.swift; sourceTree = "<group>"; };
 		4027999F98DCDFF7F026A771 /* Riffit.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Riffit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4FB41979B81A76CDE5AD2DE7 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -76,6 +79,7 @@
 		C6DF108017C95F089FE41062 /* RiffitColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitColors.swift; sourceTree = "<group>"; };
 		D4A7A5B5B7C509A2567B9D16 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		DCFFDEC95DDE5AEC083E6F70 /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryViewModel.swift; sourceTree = "<group>"; };
+		DD4C85A1CB41022805ABBEF8 /* SocialConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialConnectView.swift; sourceTree = "<group>"; };
 		E3FD07C7FAC4D4F9790B251E /* RiffitFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitFonts.swift; sourceTree = "<group>"; };
 		F6DDD15D9589DB940A00F3B8 /* StoryEntryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryEntryRow.swift; sourceTree = "<group>"; };
 		FDFBAC7B70511DF8DBA97F2D /* ShotListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotListView.swift; sourceTree = "<group>"; };
@@ -210,6 +214,7 @@
 			children = (
 				C629D838BA4CD611A819F8B7 /* CreatorTypeView.swift */,
 				0C8324F7E1E52BBC5D8F498B /* InterviewView.swift */,
+				DD4C85A1CB41022805ABBEF8 /* SocialConnectView.swift */,
 			);
 			path = Steps;
 			sourceTree = "<group>";
@@ -228,6 +233,7 @@
 			isa = PBXGroup;
 			children = (
 				08D17B3D22B4EF12F4E471B3 /* AppState.swift */,
+				2AF98CEE92E42C689BCCC586 /* MainTabView.swift */,
 				6E3E18E921EEEEA4A1811D08 /* RiffitApp.swift */,
 			);
 			path = App;
@@ -345,6 +351,7 @@
 				6C3D2A41DDA79F34C993841A /* LibraryView.swift in Sources */,
 				287C3C14CE2B464B9A70AE9F /* LibraryViewModel.swift in Sources */,
 				9C47B39C28A1DDB46B0AB535 /* LoadingOverlay.swift in Sources */,
+				C40DAFF1CE73611699B384F9 /* MainTabView.swift in Sources */,
 				D4091E523966B81A323E69E4 /* OnboardingView.swift in Sources */,
 				6CE9EEEBF6BE9C4ED91F26D5 /* OnboardingViewModel.swift in Sources */,
 				1D8795CEF94FF6F9816E2E99 /* RiffitApp.swift in Sources */,
@@ -354,6 +361,7 @@
 				10B990E25FD094CE69DCCF96 /* RiffitSpacing.swift in Sources */,
 				0C0C3D99022F0B87CD5FCF50 /* SettingsView.swift in Sources */,
 				A90ADEB36A71F79E764740DC /* ShotListView.swift in Sources */,
+				1457C7442AEBE91EBD705812 /* SocialConnectView.swift in Sources */,
 				FA8A8C67DABB1C448AD2D4A6 /* StoryEntry.swift in Sources */,
 				CB6A157565810D27B5A20B31 /* StoryEntryRow.swift in Sources */,
 				CDE2A83B109C665317A81E7D /* StorybankView.swift in Sources */,
