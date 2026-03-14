@@ -1,0 +1,349 @@
+{
+  "" : {
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/Riffit-primary.dia",
+    "emit-module-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/Riffit-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/Riffit-primary-emit-module.dia",
+    "pch" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/Riffit-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/Riffit-primary.swiftdeps"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/App/AppState.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AppState.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AppState.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AppState.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AppState.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AppState.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AppState.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AppState.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AppState~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/App/RiffitApp.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitApp.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitApp.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitApp.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitApp.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitApp.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitApp.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitApp.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitApp~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Components/AlignmentBadge.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AlignmentBadge.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AlignmentBadge.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AlignmentBadge.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AlignmentBadge.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AlignmentBadge.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AlignmentBadge.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AlignmentBadge.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AlignmentBadge~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Components/InspirationCard.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationCard.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationCard.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationCard.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationCard.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationCard.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationCard.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationCard.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationCard~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Components/LoadingOverlay.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LoadingOverlay.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LoadingOverlay.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LoadingOverlay.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LoadingOverlay.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LoadingOverlay.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LoadingOverlay.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LoadingOverlay.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LoadingOverlay~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Components/RiffitButton.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitButton.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitButton.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitButton.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitButton.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitButton.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitButton.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitButton.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitButton~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Components/StoryEntryRow.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntryRow.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntryRow.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntryRow.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntryRow.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntryRow.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntryRow.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntryRow.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntryRow~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Core/Design/RiffitColors.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitColors.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitColors.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitColors.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitColors.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitColors.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitColors.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitColors.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitColors~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Core/Design/RiffitFonts.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitFonts.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitFonts.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitFonts.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitFonts.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitFonts.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitFonts.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitFonts.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitFonts~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Core/Design/RiffitSpacing.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitSpacing.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitSpacing.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitSpacing.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitSpacing.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitSpacing.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitSpacing.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitSpacing.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/RiffitSpacing~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Core/Extensions/View+Riffit.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/View+Riffit.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/View+Riffit.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/View+Riffit.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/View+Riffit.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/View+Riffit.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/View+Riffit.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/View+Riffit.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/View+Riffit~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Core/Network/EdgeFunctions.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/EdgeFunctions.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/EdgeFunctions.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/EdgeFunctions.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/EdgeFunctions.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/EdgeFunctions.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/EdgeFunctions.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/EdgeFunctions.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/EdgeFunctions~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Core/Network/SupabaseClient.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SupabaseClient.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SupabaseClient.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SupabaseClient.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SupabaseClient.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SupabaseClient.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SupabaseClient.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SupabaseClient.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SupabaseClient~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Auth/AuthView.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthView.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthView.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthView.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthView.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthView.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthView.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthView.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthView~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Auth/AuthViewModel.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthViewModel.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthViewModel.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthViewModel.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthViewModel.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthViewModel.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthViewModel.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthViewModel.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/AuthViewModel~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Brief/BriefView.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefView.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefView.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefView.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefView.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefView.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefView.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefView.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefView~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Brief/BriefViewModel.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefViewModel.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefViewModel.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefViewModel.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefViewModel.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefViewModel.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefViewModel.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefViewModel.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/BriefViewModel~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Brief/ShotListView.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ShotListView.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ShotListView.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ShotListView.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ShotListView.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ShotListView.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ShotListView.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ShotListView.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ShotListView~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Library/LibraryView.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryView.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryView.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryView.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryView.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryView.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryView.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryView.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryView~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Library/LibraryViewModel.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryViewModel.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryViewModel.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryViewModel.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryViewModel.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryViewModel.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryViewModel.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryViewModel.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/LibraryViewModel~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Onboarding/OnboardingView.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingView.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingView.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingView.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingView.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingView.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingView.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingView.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingView~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Onboarding/OnboardingViewModel.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingViewModel.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingViewModel.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingViewModel.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingViewModel.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingViewModel.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingViewModel.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingViewModel.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/OnboardingViewModel~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Onboarding/Steps/CreatorTypeView.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorTypeView.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorTypeView.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorTypeView.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorTypeView.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorTypeView.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorTypeView.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorTypeView.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorTypeView~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Onboarding/Steps/InterviewView.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InterviewView.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InterviewView.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InterviewView.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InterviewView.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InterviewView.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InterviewView.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InterviewView.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InterviewView~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Settings/SettingsView.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SettingsView.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SettingsView.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SettingsView.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SettingsView.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SettingsView.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SettingsView.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/SettingsView~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Storybank/StorybankView.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankView.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankView.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankView.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankView.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankView.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankView.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankView.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankView~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Features/Storybank/StorybankViewModel.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankViewModel.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankViewModel.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankViewModel.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankViewModel.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankViewModel.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankViewModel.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankViewModel.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StorybankViewModel~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Models/ContentBrief.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ContentBrief.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ContentBrief.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ContentBrief.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ContentBrief.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ContentBrief.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ContentBrief.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ContentBrief.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/ContentBrief~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Models/CreatorProfile.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorProfile.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorProfile.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorProfile.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorProfile.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorProfile.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorProfile.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorProfile.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/CreatorProfile~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Models/InspirationVideo.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationVideo.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationVideo.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationVideo.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationVideo.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationVideo.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationVideo.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationVideo.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/InspirationVideo~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Models/StoryEntry.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntry.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntry.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntry.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntry.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntry.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntry.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntry.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/StoryEntry~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Models/User.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/User.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/User.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/User.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/User.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/User.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/User.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/User.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/User~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/Riffit/Models/VideoDeconstruction.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/VideoDeconstruction.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/VideoDeconstruction.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/VideoDeconstruction.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/VideoDeconstruction.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/VideoDeconstruction.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/VideoDeconstruction.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/VideoDeconstruction.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/VideoDeconstruction~partial.swiftmodule"
+  },
+  "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/tk/Documents/Projects/Riffit/riffit/riffit-ios/build/Riffit.build/Debug-iphoneos/Riffit.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}
