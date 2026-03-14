@@ -11,6 +11,9 @@ struct RiffitApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(appState)
+                // Apply the user's chosen appearance mode.
+                // nil means follow the system setting.
+                .preferredColorScheme(appState.appearanceMode.colorScheme)
         }
     }
 }
