@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// The main screen — where you submit IG links and see all your saved ideas.
-/// Tapping an idea opens the detail view.
+/// The main screen — folders at the top, unfiled ideas below.
+/// Drag an idea onto a folder to organize it.
 struct LibraryView: View {
     @StateObject private var viewModel = LibraryViewModel()
     @State private var showAddSheet: Bool = false
+    @State private var showNewFolderAlert: Bool = false
+    @State private var newFolderName: String = ""
 
     var body: some View {
         ZStack {
@@ -17,14 +19,25 @@ struct LibraryView: View {
             } else if viewModel.isEmpty {
                 emptyState
             } else {
-                postList
+                mainContent
             }
         }
         .navigationTitle("Ideas")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showAddSheet = true
+                Menu {
+                    Button {
+                        showAddSheet = true
+                    } label: {
+                        Label("New Idea", systemImage: "lightbulb")
+                    }
+
+                    Button {
+                        newFolderName = ""
+                        showNewFolderAlert = true
+                    } label: {
+                        Label("New Folder", systemImage: "folder.badge.plus")
+                    }
                 } label: {
                     Image(systemName: "plus")
                         .foregroundStyle(Color.riffitPrimary)
@@ -34,21 +47,45 @@ struct LibraryView: View {
         .sheet(isPresented: $showAddSheet) {
             AddInspirationView(viewModel: viewModel)
         }
+        .alert("New Folder", isPresented: $showNewFolderAlert) {
+            TextField("Folder name", text: $newFolderName)
+            Button("Cancel", role: .cancel) {}
+            Button("Create") {
+                let trimmed = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    viewModel.createFolder(name: trimmed)
+                }
+            }
+        }
         .task {
             await viewModel.fetchVideos()
         }
     }
 
-    // MARK: - Post List
+    // MARK: - Main Content
 
-    private var postList: some View {
+    private var mainContent: some View {
         ScrollView {
             LazyVStack(spacing: .smPlus) {
-                ForEach(viewModel.videos) { video in
-                    NavigationLink(value: video) {
-                        IdeaRow(video: video)
+                // Folders section
+                if !viewModel.folders.isEmpty {
+                    foldersSection
+                }
+
+                // Unfiled ideas
+                let unfiled = viewModel.unfiledVideos
+                if !unfiled.isEmpty {
+                    if !viewModel.folders.isEmpty {
+                        sectionHeader("Unfiled")
                     }
-                    .buttonStyle(.plain)
+
+                    ForEach(unfiled) { video in
+                        NavigationLink(value: video) {
+                            IdeaRow(video: video, tags: viewModel.tags(for: video.id))
+                        }
+                        .buttonStyle(.plain)
+                        .draggable(video.id.uuidString)
+                    }
                 }
             }
             .padding(.horizontal, .md)
@@ -58,8 +95,29 @@ struct LibraryView: View {
             await viewModel.refresh()
         }
         .navigationDestination(for: InspirationVideo.self) { video in
-            InspirationDetailView(video: video)
+            InspirationDetailView(video: video, viewModel: viewModel)
         }
+        .navigationDestination(for: IdeaFolder.self) { folder in
+            FolderDetailView(folder: folder, viewModel: viewModel)
+        }
+    }
+
+    // MARK: - Folders Section
+
+    private var foldersSection: some View {
+        ForEach(viewModel.folders) { folder in
+            FolderDropTarget(folder: folder, viewModel: viewModel)
+        }
+    }
+
+    // MARK: - Section Header
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .riffitLabel()
+            .foregroundStyle(Color.riffitTextTertiary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, .sm)
     }
 
     // MARK: - Empty State
@@ -88,31 +146,119 @@ struct LibraryView: View {
     }
 }
 
+// MARK: - Folder Row
+
+struct FolderRow: View {
+    let folder: IdeaFolder
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: .smPlus) {
+            Image(systemName: "folder.fill")
+                .font(.title3)
+                .foregroundStyle(Color.riffitPrimary)
+
+            Text(folder.name)
+                .riffitHeading()
+                .foregroundStyle(Color.riffitTextPrimary)
+
+            Spacer()
+
+            Text("\(count)")
+                .riffitCaption()
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(Color.riffitTextTertiary)
+        }
+        .padding(.md)
+        .background(Color.riffitSurface)
+        .cornerRadius(.cardRadius)
+        .overlay(
+            RoundedRectangle(cornerRadius: .cardRadius)
+                .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+        )
+    }
+}
+
+// MARK: - Folder Drop Target
+
+/// Wraps a FolderRow with drop-target behavior and a highlight when
+/// an idea is dragged over it. Folders themselves are never draggable.
+struct FolderDropTarget: View {
+    let folder: IdeaFolder
+    @ObservedObject var viewModel: LibraryViewModel
+    @State private var isTargeted: Bool = false
+
+    var body: some View {
+        NavigationLink(value: folder) {
+            FolderRow(
+                folder: folder,
+                count: viewModel.videos(in: folder).count
+            )
+            // Highlight border when a drag hovers over this folder
+            .overlay(
+                RoundedRectangle(cornerRadius: .cardRadius)
+                    .stroke(Color.riffitPrimary, lineWidth: isTargeted ? 2 : 0)
+            )
+            .scaleEffect(isTargeted ? 1.02 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: isTargeted)
+        }
+        .buttonStyle(.plain)
+        .dropDestination(for: String.self) { items, _ in
+            guard let idString = items.first,
+                  let videoId = UUID(uuidString: idString),
+                  // Only accept video IDs, not folder IDs
+                  viewModel.videos.contains(where: { $0.id == videoId })
+            else { return false }
+            viewModel.moveVideo(videoId, to: folder.id)
+            return true
+        } isTargeted: { targeted in
+            isTargeted = targeted
+        }
+    }
+}
+
 // MARK: - Idea Row
 
-/// A single row in the ideas list. The note is the headline —
-/// it tells you what the idea is about at a glance. URL and
-/// timestamp are secondary context.
+/// Note is the headline, tags show below it, URL is the footer.
 struct IdeaRow: View {
     let video: InspirationVideo
+    let tags: [String]
 
     var body: some View {
         VStack(alignment: .leading, spacing: .sm) {
-            // Note is the primary identifier — what the idea is about
+            // Note — the primary identifier
             if let note = video.userNote, !note.isEmpty {
                 Text(note)
                     .riffitHeading()
                     .foregroundStyle(Color.riffitTextPrimary)
                     .lineLimit(2)
             } else {
-                // Fallback if no note was provided
                 Text("No note")
                     .riffitHeading()
                     .foregroundStyle(Color.riffitTextTertiary)
                     .italic()
             }
 
-            // URL shortened to just the path identifier
+            // Tags row
+            if !tags.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(tags, id: \.self) { tag in
+                        Text(tag)
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundStyle(Color.riffitPrimary)
+                            .padding(.vertical, 3)
+                            .padding(.horizontal, 8)
+                            .background(Color.riffitPrimaryTint)
+                            .clipShape(Capsule())
+                    }
+                }
+            }
+
+            // IG link
             HStack(spacing: 6) {
                 Image(systemName: "camera")
                     .font(.caption2)
@@ -123,11 +269,6 @@ struct IdeaRow: View {
                     .foregroundStyle(Color.riffitTextTertiary)
                     .lineLimit(1)
             }
-
-            // Relative timestamp
-            Text(video.savedAt, style: .relative)
-                .riffitCaption()
-                .foregroundStyle(Color.riffitTextTertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.md)
@@ -139,13 +280,10 @@ struct IdeaRow: View {
         )
     }
 
-    /// Strips the URL down to just the meaningful part
-    /// e.g. "instagram.com/reel/ABC123" → "reel/ABC123"
     private var shortURL: String {
         guard let url = URL(string: video.url) else { return video.url }
         let path = url.path
         if path.count > 1 {
-            // Drop the leading slash
             return String(path.dropFirst())
         }
         return url.host ?? video.url

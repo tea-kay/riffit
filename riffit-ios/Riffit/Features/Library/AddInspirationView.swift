@@ -1,113 +1,169 @@
 import SwiftUI
 
-/// Sheet for submitting an Instagram link with a note about
-/// what caught your eye. IG-only for now — other platforms later.
+/// The core capture sheet — a bottom sheet for saving an IG link
+/// with an optional note and tags. Designed to be completable
+/// in under 10 seconds. Nothing is required except the URL.
 struct AddInspirationView: View {
     @ObservedObject var viewModel: LibraryViewModel
     @Environment(\.dismiss) private var dismiss
-    @FocusState private var focusedField: Field?
 
     @State private var urlText: String = ""
     @State private var userNote: String = ""
-    @State private var showError: Bool = false
-
-    enum Field {
-        case url
-        case note
-    }
+    @State private var selectedTags: Set<String> = []
+    @State private var showURLError: Bool = false
 
     var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: .lg) {
-                // URL input
-                VStack(alignment: .leading, spacing: .sm) {
-                    Text("Instagram Link")
-                        .riffitLabel()
-                        .foregroundStyle(Color.riffitTextTertiary)
+        VStack(spacing: .lg) {
+            // Drag handle
+            Capsule()
+                .fill(Color.riffitTextTertiary.opacity(0.5))
+                .frame(width: 36, height: 5)
+                .padding(.top, .smPlus)
 
-                    TextField("Paste an Instagram reel or post URL...", text: $urlText)
-                        .riffitBody()
+            // URL preview
+            urlPreview
+
+            // Note field
+            TextField("What caught your eye?", text: $userNote, axis: .vertical)
+                .lineLimit(2...4)
+                .riffitBody()
+                .foregroundStyle(Color.riffitTextPrimary)
+                .padding(.smPlus)
+                .background(Color.riffitSurface)
+                .cornerRadius(.inputRadius)
+                .overlay(
+                    RoundedRectangle(cornerRadius: .inputRadius)
+                        .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
+                )
+
+            // Tag selector
+            tagSelector
+
+            Spacer()
+
+            // Save button
+            RiffitButton(title: "Save", variant: .primary) {
+                save()
+            }
+        }
+        .padding(.horizontal, .md)
+        .padding(.bottom, .lg)
+        .background(Color.riffitBackground)
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.hidden) // We draw our own handle
+        .presentationCornerRadius(.sheetRadius)
+    }
+
+    // MARK: - URL Preview
+
+    private var urlPreview: some View {
+        VStack(spacing: .sm) {
+            HStack(spacing: .smPlus) {
+                // IG icon
+                Image(systemName: "camera")
+                    .font(.callout)
+                    .foregroundStyle(Color.riffitTeal400)
+                    .frame(width: 32, height: 32)
+                    .background(Color.riffitTealTint)
+                    .cornerRadius(.tagRadius)
+
+                if urlText.isEmpty {
+                    // Empty state — prompt to paste
+                    TextField("Paste an Instagram link...", text: $urlText)
+                        .riffitCallout()
                         .foregroundStyle(Color.riffitTextPrimary)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .keyboardType(.URL)
-                        .focused($focusedField, equals: .url)
-                        .padding(.smPlus)
-                        .background(Color.riffitSurface)
-                        .cornerRadius(.inputRadius)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: .inputRadius)
-                                .stroke(showError ? Color.riffitDanger : Color.riffitBorderDefault, lineWidth: 0.5)
-                        )
-                        .onChange(of: urlText) { showError = false }
+                } else {
+                    // Show the pasted URL, tappable to edit
+                    Text(displayURL)
+                        .riffitCallout()
+                        .foregroundStyle(Color.riffitTextPrimary)
+                        .lineLimit(1)
 
-                    if showError {
-                        Text("Paste a valid Instagram link (instagram.com or instagr.am).")
-                            .riffitCaption()
-                            .foregroundStyle(Color.riffitDanger)
+                    Spacer()
+
+                    // Clear button
+                    Button {
+                        urlText = ""
+                        showURLError = false
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.callout)
+                            .foregroundStyle(Color.riffitTextTertiary)
                     }
                 }
-
-                // Note input
-                VStack(alignment: .leading, spacing: .sm) {
-                    Text("What's the idea?")
-                        .riffitLabel()
-                        .foregroundStyle(Color.riffitTextTertiary)
-
-                    TextField("What caught your eye? What would you riff on?", text: $userNote, axis: .vertical)
-                        .lineLimit(3...6)
-                        .riffitBody()
-                        .foregroundStyle(Color.riffitTextPrimary)
-                        .focused($focusedField, equals: .note)
-                        .padding(.smPlus)
-                        .background(Color.riffitSurface)
-                        .cornerRadius(.inputRadius)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: .inputRadius)
-                                .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
-                        )
-                }
-
-                Spacer()
-
-                // Submit button
-                RiffitButton(title: "Save Idea", variant: .primary) {
-                    submit()
-                }
             }
-            .padding(.md)
-            .background(Color.riffitBackground)
-            .navigationTitle("New Idea")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(Color.riffitTextSecondary)
-                }
-            }
-            .onAppear {
-                focusedField = .url
+            .padding(.smPlus)
+            .background(Color.riffitSurface)
+            .cornerRadius(.inputRadius)
+            .overlay(
+                RoundedRectangle(cornerRadius: .inputRadius)
+                    .stroke(showURLError ? Color.riffitDanger : Color.riffitBorderDefault, lineWidth: 0.5)
+            )
+
+            if showURLError {
+                Text("Paste a valid Instagram link.")
+                    .riffitCaption()
+                    .foregroundStyle(Color.riffitDanger)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
-    // MARK: - Submit
+    // MARK: - Tag Selector
 
-    private func submit() {
+    private var tagSelector: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: .sm) {
+                ForEach(IdeaTag.defaults, id: \.self) { tag in
+                    TagPill(
+                        label: tag,
+                        isSelected: selectedTags.contains(tag)
+                    ) {
+                        if selectedTags.contains(tag) {
+                            selectedTags.remove(tag)
+                        } else {
+                            selectedTags.insert(tag)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Display URL
+
+    /// Shows a shortened version of the URL for the preview pill.
+    private var displayURL: String {
+        guard let url = URL(string: urlText) else { return urlText }
+        let path = url.path
+        if path.count > 1 {
+            return "instagram.com" + path
+        }
+        return url.host ?? urlText
+    }
+
+    // MARK: - Save
+
+    private func save() {
         let trimmedURL = urlText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard isInstagramURL(trimmedURL) else {
-            showError = true
+            showURLError = true
             return
         }
 
         let trimmedNote = userNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        let tags = Array(selectedTags)
 
         Task {
             await viewModel.addVideo(
                 url: trimmedURL,
                 platform: .instagram,
-                userNote: trimmedNote.isEmpty ? nil : trimmedNote
+                userNote: trimmedNote.isEmpty ? nil : trimmedNote,
+                tags: tags.isEmpty ? nil : tags
             )
         }
 
@@ -118,4 +174,44 @@ struct AddInspirationView: View {
         let lowered = urlString.lowercased()
         return lowered.contains("instagram.com") || lowered.contains("instagr.am")
     }
+}
+
+// MARK: - Tag Pill
+
+/// A selectable pill for tagging an idea.
+struct TagPill: View {
+    let label: String
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            Text(label)
+                .riffitCaption()
+                .fontWeight(.medium)
+                .foregroundStyle(isSelected ? Color(hex: 0x111111) : Color.riffitTextSecondary)
+                .padding(.vertical, 8)
+                .padding(.horizontal, .md)
+                .background(isSelected ? Color.riffitPrimary : Color.riffitSurface)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(isSelected ? Color.clear : Color.riffitBorderDefault, lineWidth: 0.5)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Default Tags
+
+enum IdeaTag {
+    static let defaults: [String] = [
+        "Hook",
+        "Editing",
+        "B-Roll",
+        "Format",
+        "Topic",
+        "Inspiration",
+    ]
 }

@@ -1,41 +1,65 @@
 import SwiftUI
 import WebKit
 
-/// Detail view shown when tapping an InspirationCard.
-/// Displays the video in an embedded webview, alignment score/verdict,
-/// full transcript, and deconstruction data when available.
+/// Detail view shown when tapping an idea row.
+/// Displays the video, tags, alignment data, transcript, and a
+/// chat-style comment thread with an input bar pinned at the bottom.
 struct InspirationDetailView: View {
     let video: InspirationVideo
+    @ObservedObject var viewModel: LibraryViewModel
 
     @State private var showFullTranscript: Bool = false
+    @State private var newCommentText: String = ""
+    @FocusState private var isCommentFieldFocused: Bool
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: .lg) {
-                // Embedded video webview
-                videoPlayer
+        VStack(spacing: 0) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: .lg) {
+                        // Embedded video webview
+                        videoPlayer
 
-                // Alignment section
-                if video.status == .analyzed {
-                    alignmentSection
+                        // Tags row
+                        let tags = viewModel.tags(for: video.id)
+                        if !tags.isEmpty {
+                            tagsRow(tags)
+                        }
+
+                        // Alignment section
+                        if video.status == .analyzed {
+                            alignmentSection
+                        }
+
+                        // Transcript section
+                        if let transcript = video.transcript, !transcript.isEmpty {
+                            transcriptSection(transcript)
+                        }
+
+                        // Status indicator for non-analyzed videos
+                        if video.status == .pending || video.status == .analyzing {
+                            statusSection
+                        }
+
+                        // Comments thread
+                        commentsSection
+
+                        // Invisible anchor to scroll to bottom
+                        Color.clear
+                            .frame(height: 1)
+                            .id("commentsBottom")
+                    }
+                    .padding(.md)
                 }
-
-                // Transcript section
-                if let transcript = video.transcript, !transcript.isEmpty {
-                    transcriptSection(transcript)
-                }
-
-                // User note
-                if let note = video.userNote, !note.isEmpty {
-                    noteSection(note)
-                }
-
-                // Status indicator for non-analyzed videos
-                if video.status == .pending || video.status == .analyzing {
-                    statusSection
+                .onChange(of: viewModel.comments(for: video.id).count) { _ in
+                    withAnimation {
+                        proxy.scrollTo("commentsBottom", anchor: .bottom)
+                    }
                 }
             }
-            .padding(.md)
+
+            // Comment input bar — pinned at bottom, outside ScrollView
+            commentInputBar
         }
         .background(Color.riffitBackground)
         .navigationTitle(video.platform.displayLabel)
@@ -52,6 +76,25 @@ struct InspirationDetailView: View {
                 RoundedRectangle(cornerRadius: .cardRadius)
                     .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
             )
+    }
+
+    // MARK: - Tags Row
+
+    private func tagsRow(_ tags: [String]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(tags, id: \.self) { tag in
+                    Text(tag)
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.riffitPrimary)
+                        .padding(.vertical, 3)
+                        .padding(.horizontal, 8)
+                        .background(Color.riffitPrimaryTint)
+                        .clipShape(Capsule())
+                }
+            }
+        }
     }
 
     // MARK: - Alignment Section
@@ -121,21 +164,6 @@ struct InspirationDetailView: View {
         }
     }
 
-    // MARK: - Note Section
-
-    private func noteSection(_ note: String) -> some View {
-        VStack(alignment: .leading, spacing: .smPlus) {
-            Text("Your Note")
-                .riffitLabel()
-                .foregroundStyle(Color.riffitTextTertiary)
-
-            Text(note)
-                .riffitBody()
-                .foregroundStyle(Color.riffitTextSecondary)
-                .riffitCard()
-        }
-    }
-
     // MARK: - Status Section
 
     private var statusSection: some View {
@@ -155,6 +183,148 @@ struct InspirationDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .riffitCard()
+    }
+
+    // MARK: - Comments Section
+
+    private var commentsSection: some View {
+        let comments = viewModel.comments(for: video.id)
+
+        return VStack(alignment: .leading, spacing: .smPlus) {
+            Text("Notes")
+                .riffitLabel()
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            if comments.isEmpty {
+                emptyCommentsState
+            } else {
+                ForEach(comments) { comment in
+                    CommentBubble(comment: comment)
+                }
+            }
+        }
+    }
+
+    private var emptyCommentsState: some View {
+        VStack(spacing: .sm) {
+            Text("No notes yet")
+                .riffitBody()
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            Text("Add your first thought below.")
+                .riffitCaption()
+                .foregroundStyle(Color.riffitTextTertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, .lg)
+    }
+
+    // MARK: - Comment Input Bar
+
+    private var commentInputBar: some View {
+        HStack(alignment: .bottom, spacing: .smPlus) {
+            TextField("Add a note...", text: $newCommentText, axis: .vertical)
+                .lineLimit(1...5)
+                .riffitBody()
+                .foregroundStyle(Color.riffitTextPrimary)
+                .focused($isCommentFieldFocused)
+
+            Button {
+                sendComment()
+            } label: {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 30))
+                    .foregroundStyle(
+                        canSend ? Color.riffitPrimary : Color.riffitTextTertiary
+                    )
+            }
+            .disabled(!canSend)
+        }
+        .padding(.horizontal, .md)
+        .padding(.vertical, .smPlus)
+        .background(Color.riffitSurface)
+        .overlay(
+            Rectangle()
+                .frame(height: 0.5)
+                .foregroundStyle(Color.riffitBorderSubtle),
+            alignment: .top
+        )
+    }
+
+    private var canSend: Bool {
+        !newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func sendComment() {
+        let trimmed = newCommentText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        viewModel.addComment(to: video.id, text: trimmed)
+        newCommentText = ""
+    }
+}
+
+// MARK: - Comment Bubble
+
+/// A single comment in the thread. Left-aligned card style (not a DM bubble).
+struct CommentBubble: View {
+    let comment: IdeaComment
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: .xs) {
+            // Author + timestamp
+            HStack {
+                Text(comment.authorName)
+                    .riffitCaption()
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.riffitTextPrimary)
+
+                Spacer()
+
+                Text(comment.createdAt.relativeTimestamp)
+                    .riffitCaption()
+                    .foregroundStyle(Color.riffitTextTertiary)
+            }
+
+            // Comment text
+            Text(comment.text)
+                .riffitBody()
+                .foregroundStyle(Color.riffitTextSecondary)
+        }
+        .padding(.smPlus)
+        .background(Color.riffitSurface)
+        .cornerRadius(.inputRadius)
+        .overlay(
+            RoundedRectangle(cornerRadius: .inputRadius)
+                .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+        )
+    }
+}
+
+// MARK: - Relative Timestamp
+
+extension Date {
+    /// Formats a date as a relative timestamp like "2m ago", "1h ago", "Yesterday".
+    var relativeTimestamp: String {
+        let now = Date()
+        let interval = now.timeIntervalSince(self)
+
+        if interval < 60 {
+            return "Just now"
+        } else if interval < 3600 {
+            let minutes = Int(interval / 60)
+            return "\(minutes)m ago"
+        } else if interval < 86400 {
+            let hours = Int(interval / 3600)
+            return "\(hours)h ago"
+        } else if interval < 172800 {
+            return "Yesterday"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .short
+            formatter.timeStyle = .none
+            return formatter.string(from: self)
+        }
     }
 }
 
