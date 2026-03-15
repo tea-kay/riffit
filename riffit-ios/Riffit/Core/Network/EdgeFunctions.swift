@@ -56,6 +56,16 @@ class EdgeFunctions {
         }
     }
 
+    struct FetchVideoMetadataResponse: Codable {
+        let title: String?
+        let thumbnailUrl: String?
+
+        enum CodingKeys: String, CodingKey {
+            case title
+            case thumbnailUrl = "thumbnail_url"
+        }
+    }
+
     // MARK: - Edge Function Calls
 
     /// Analyzes a video URL: transcribes it, scores alignment, and generates a deconstruction.
@@ -85,6 +95,13 @@ class EdgeFunctions {
     /// Transcribes an audio file stored in Supabase Storage.
     func transcribeAudio(audioUrl: String) async throws -> TranscribeAudioResponse {
         // TODO: Call supabase.functions.invoke("transcribe-audio", body: ...)
+        fatalError("Not implemented — requires Supabase SDK")
+    }
+
+    /// Fetches og:title, thumbnail, and stats for a video URL.
+    /// Best-effort — returns partial data if some fields are unavailable.
+    func fetchVideoMetadata(url: String) async throws -> FetchVideoMetadataResponse {
+        // TODO: Call supabase.functions.invoke("fetch-video-metadata", body: ...)
         fatalError("Not implemented — requires Supabase SDK")
     }
 }

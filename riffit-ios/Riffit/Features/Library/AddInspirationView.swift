@@ -9,16 +9,11 @@ struct AddInspirationView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var urlText: String = ""
+    @State private var titleText: String = ""
     @State private var userNote: String = ""
     @State private var selectedTags: Set<String> = []
     @State private var selectedFolderId: UUID?
     @State private var showURLError: Bool = false
-
-    // Stats fields (optional, expandable)
-    @State private var showStats: Bool = false
-    @State private var viewCountText: String = ""
-    @State private var likeCountText: String = ""
-    @State private var commentCountText: String = ""
 
     var body: some View {
         VStack(spacing: RS.lg) {
@@ -30,6 +25,14 @@ struct AddInspirationView: View {
 
             // URL preview
             urlPreview
+
+            // Title field — optional, manual entry
+            TextField("Add a title...", text: $titleText)
+                .font(RF.bodyMd)
+                .foregroundStyle(Color.riffitTextPrimary)
+                .padding(RS.smPlus)
+                .background(Color.riffitElevated)
+                .cornerRadius(RR.button)
 
             // Note field
             TextField("Your take", text: $userNote, axis: .vertical)
@@ -46,9 +49,6 @@ struct AddInspirationView: View {
 
             // Tag selector
             tagSelector
-
-            // Stats section (optional, expandable)
-            statsSection
 
             // Folder picker — only shown when folders exist
             if !viewModel.folders.isEmpty {
@@ -154,34 +154,6 @@ struct AddInspirationView: View {
         }
     }
 
-    // MARK: - Stats Section
-
-    @ViewBuilder
-    private var statsSection: some View {
-        if showStats {
-            HStack(spacing: RS.sm) {
-                StatField(emoji: "\u{1F441}", placeholder: "Views", text: $viewCountText)
-                StatField(emoji: "\u{2764}\u{FE0F}", placeholder: "Likes", text: $likeCountText)
-                StatField(emoji: "\u{1F4AC}", placeholder: "Comments", text: $commentCountText)
-            }
-        } else {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showStats = true
-                }
-            } label: {
-                HStack(spacing: RS.xs) {
-                    Image(systemName: "chart.bar")
-                        .font(.caption)
-                    Text("Add stats (optional)")
-                        .font(RF.caption)
-                }
-                .foregroundStyle(Color.riffitTextTertiary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
     // MARK: - Folder Picker
 
     private var folderPicker: some View {
@@ -260,24 +232,18 @@ struct AddInspirationView: View {
             return
         }
 
+        let trimmedTitle = titleText.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedNote = userNote.trimmingCharacters(in: .whitespacesAndNewlines)
         let tags = Array(selectedTags)
-
-        // Parse stat fields — only pass non-nil if the user entered a value
-        let views = Int(viewCountText)
-        let likes = Int(likeCountText)
-        let comments = Int(commentCountText)
 
         Task {
             await viewModel.addVideo(
                 url: trimmedURL,
                 platform: .instagram,
+                title: trimmedTitle.isEmpty ? nil : trimmedTitle,
                 userNote: trimmedNote.isEmpty ? nil : trimmedNote,
                 tags: tags.isEmpty ? nil : tags,
-                folderId: selectedFolderId,
-                viewCount: views,
-                likeCount: likes,
-                commentCount: comments
+                folderId: selectedFolderId
             )
         }
 
@@ -313,33 +279,6 @@ struct TagPill: View {
                 )
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Stat Field
-
-/// Small numeric input field for manually entering video stats.
-struct StatField: View {
-    let emoji: String
-    let placeholder: String
-    @Binding var text: String
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Text(emoji)
-                .font(RF.caption)
-            TextField(placeholder, text: $text)
-                .font(RF.caption)
-                .keyboardType(.numberPad)
-                .foregroundStyle(Color.riffitTextPrimary)
-        }
-        .padding(RS.sm)
-        .background(Color.riffitSurface)
-        .cornerRadius(RR.tag)
-        .overlay(
-            RoundedRectangle(cornerRadius: RR.tag)
-                .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
-        )
     }
 }
 

@@ -3,10 +3,9 @@ import SwiftUI
 /// Reusable card component for displaying an inspiration video.
 /// Layout (top to bottom):
 ///   1. Platform label with teal dot
-///   2. Auto-generated summary (heading, 2 lines) — shimmer while analyzing
+///   2. Title (from metadata, user note, or platform fallback)
 ///   3. Tag pills
 ///   4. "Your take:" + user note (1 line)
-///   5. Stats row + alignment score
 struct InspirationCard: View {
     let video: InspirationVideo
     var tags: [String] = []
@@ -16,8 +15,8 @@ struct InspirationCard: View {
             // Platform label
             platformLabel
 
-            // Auto-generated summary or shimmer placeholder
-            summarySection
+            // Title
+            titleSection
 
             // Tag pills
             if !tags.isEmpty {
@@ -38,8 +37,10 @@ struct InspirationCard: View {
                 }
             }
 
-            // Footer: stats + alignment
-            footerContent
+            // Archived tag if applicable
+            if video.status == .archived {
+                StatusTag(text: "Archived", color: Color.riffitTextTertiary)
+            }
         }
         .padding(RS.md)
         .background(Color.riffitSurface)
@@ -67,22 +68,37 @@ struct InspirationCard: View {
         }
     }
 
-    // MARK: - Summary
+    // MARK: - Title
 
-    @ViewBuilder
-    private var summarySection: some View {
-        if let summary = video.summary, !summary.isEmpty {
-            Text(summary)
-                .font(RF.heading)
-                .foregroundStyle(Color.riffitTextPrimary)
-                .lineLimit(2)
-                .truncationMode(.tail)
-        } else {
-            Text(displayTitle)
-                .font(RF.heading)
-                .foregroundStyle(Color.riffitTextPrimary)
-                .lineLimit(2)
+    private var titleSection: some View {
+        Text(cardTitle)
+            .font(RF.heading)
+            .foregroundStyle(Color.riffitTextPrimary)
+            .lineLimit(2)
+            .truncationMode(.tail)
+    }
+
+    /// Title hierarchy:
+    /// 1. video.title (from og:title or manual entry)
+    /// 2. First 8 words of video.userNote
+    /// 3. Platform name + "reel" as last resort
+    private var cardTitle: String {
+        // 1. Explicit title from metadata or manual entry
+        if let title = video.title, !title.isEmpty {
+            return title
         }
+
+        // 2. First 8 words of the user note
+        if let note = video.userNote, !note.isEmpty {
+            let words = note.split(separator: " ", omittingEmptySubsequences: true)
+            if words.count <= 8 {
+                return note
+            }
+            return words.prefix(8).joined(separator: " ") + "..."
+        }
+
+        // 3. Platform + "reel" fallback
+        return video.platform.displayLabel + " reel"
     }
 
     // MARK: - Tags
@@ -101,67 +117,11 @@ struct InspirationCard: View {
         }
     }
 
-    // MARK: - Footer
-
-    private var footerContent: some View {
-        HStack {
-            statsRow
-
-            Spacer()
-
-            if video.status == .archived {
-                StatusTag(text: "Archived", color: Color.riffitTextTertiary)
-            }
-        }
-    }
-
-    // MARK: - Stats Row
-
-    @ViewBuilder
-    private var statsRow: some View {
-        let hasStats = video.viewCount != nil || video.likeCount != nil || video.commentCount != nil
-
-        if hasStats {
-            HStack(spacing: RS.smPlus) {
-                if let views = video.viewCount {
-                    Text("\u{1F441} \(formatStat(views))")
-                        .font(RF.meta)
-                        .foregroundStyle(Color.riffitTextTertiary)
-                }
-                if let likes = video.likeCount {
-                    Text("\u{2764}\u{FE0F} \(formatStat(likes))")
-                        .font(RF.meta)
-                        .foregroundStyle(Color.riffitTextTertiary)
-                }
-                if let comments = video.commentCount {
-                    Text("\u{1F4AC} \(formatStat(comments))")
-                        .font(RF.meta)
-                        .foregroundStyle(Color.riffitTextTertiary)
-                }
-            }
-        }
-    }
-
-    // MARK: - Display Title (fallback)
-
-    private var displayTitle: String {
-        guard let url = URL(string: video.url),
-              let host = url.host else {
-            return video.url
-        }
-        let cleanHost = host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
-        let path = url.path
-        if path.isEmpty || path == "/" {
-            return cleanHost
-        }
-        let truncatedPath = path.count > 40 ? String(path.prefix(40)) + "..." : path
-        return cleanHost + truncatedPath
-    }
 }
 
 // MARK: - Status Tag
 
-/// Small tag for showing non-alignment status (pending, archived).
+/// Small tag for showing video status (archived).
 struct StatusTag: View {
     let text: String
     let color: Color
@@ -175,27 +135,6 @@ struct StatusTag: View {
             .background(color.opacity(0.1))
             .clipShape(Capsule())
     }
-}
-
-// MARK: - Stat Formatter
-
-/// Abbreviates large numbers for display: 2300000 → "2.3M", 48000 → "48K".
-func formatStat(_ n: Int) -> String {
-    if n >= 1_000_000 {
-        let m = Double(n) / 1_000_000.0
-        let formatted = String(format: "%.1f", m)
-        return formatted.hasSuffix(".0")
-            ? "\(n / 1_000_000)M"
-            : "\(formatted)M"
-    }
-    if n >= 1_000 {
-        let k = Double(n) / 1_000.0
-        let formatted = String(format: "%.1f", k)
-        return formatted.hasSuffix(".0")
-            ? "\(n / 1_000)K"
-            : "\(formatted)K"
-    }
-    return "\(n)"
 }
 
 // MARK: - Platform Display Label

@@ -7,18 +7,14 @@ struct InspirationVideo: Codable, Identifiable {
     let creatorProfileId: UUID
     let url: String
     let platform: Platform
+    var title: String?                // From og:title metadata or manual entry
     let userNote: String?
     let thumbnailUrl: String?
     let transcript: String?
-    var summary: String?              // AI-generated one-line summary of what the video is about
     let alignmentScore: Int?
     let alignmentVerdict: AlignmentVerdict?
     let alignmentReasoning: String?
     let status: Status
-    var viewCount: Int?               // Manually entered video view count
-    var likeCount: Int?               // Manually entered video like count
-    var commentCount: Int?            // Manually entered video comment count
-    let statSource: String?           // "manual" for MVP, "api" in v2 (Phyllo)
     let savedAt: Date
 
     enum Platform: String, Codable, CaseIterable {
@@ -36,9 +32,7 @@ struct InspirationVideo: Codable, Identifiable {
     }
 
     enum Status: String, Codable {
-        case pending
-        case analyzing
-        case analyzed
+        case saved
         case archived
     }
 
@@ -47,18 +41,14 @@ struct InspirationVideo: Codable, Identifiable {
         case creatorProfileId = "creator_profile_id"
         case url
         case platform
+        case title
         case userNote = "user_note"
         case thumbnailUrl = "thumbnail_url"
         case transcript
-        case summary
         case alignmentScore = "alignment_score"
         case alignmentVerdict = "alignment_verdict"
         case alignmentReasoning = "alignment_reasoning"
         case status
-        case viewCount = "view_count"
-        case likeCount = "like_count"
-        case commentCount = "comment_count"
-        case statSource = "stat_source"
         case savedAt = "saved_at"
     }
 }

@@ -3,7 +3,6 @@ import SwiftUI
 /// Modal for adding a reference from the Library to a Story.
 /// Step 1: Pick an idea from the user's saved InspirationVideos.
 /// Step 2: Pick which tag you're referencing it for.
-/// The AI relevance note will be generated asynchronously via an Edge Function.
 struct AddReferenceView: View {
     let story: Story
     @ObservedObject var viewModel: StorybankViewModel
@@ -32,12 +31,12 @@ struct AddReferenceView: View {
 
         let query = searchText.lowercased()
         return active.filter { video in
-            // Search by note text
-            if let note = video.userNote, note.lowercased().contains(query) {
+            // Search by title
+            if let title = video.title, title.lowercased().contains(query) {
                 return true
             }
-            // Search by summary
-            if let summary = video.summary, summary.lowercased().contains(query) {
+            // Search by note text
+            if let note = video.userNote, note.lowercased().contains(query) {
                 return true
             }
             // Search by tags
@@ -239,16 +238,16 @@ struct AddReferenceView: View {
 
 // MARK: - Picker Card
 
-/// Simplified card for the reference picker showing note, tags, URL, and alignment.
+/// Simplified card for the reference picker showing title, tags, and URL.
 struct PickerCard: View {
     let video: InspirationVideo
     let tags: [String]
 
     var body: some View {
         VStack(alignment: .leading, spacing: RS.sm) {
-            // Summary or note as headline
-            if let summary = video.summary, !summary.isEmpty {
-                Text(summary)
+            // Title or note as headline
+            if let title = video.title, !title.isEmpty {
+                Text(title)
                     .font(RF.label)
                     .foregroundStyle(Color.riffitTextPrimary)
                     .lineLimit(2)

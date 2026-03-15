@@ -64,36 +64,28 @@ class LibraryViewModel: ObservableObject {
     func addVideo(
         url: String,
         platform: InspirationVideo.Platform,
+        title: String?,
         userNote: String?,
         tags: [String]?,
-        folderId: UUID? = nil,
-        viewCount: Int? = nil,
-        likeCount: Int? = nil,
-        commentCount: Int? = nil
+        folderId: UUID? = nil
     ) async {
         isSubmitting = true
 
         // TODO: Save to Supabase
-
-        let hasStats = viewCount != nil || likeCount != nil || commentCount != nil
 
         let newVideo = InspirationVideo(
             id: UUID(),
             creatorProfileId: UUID(),
             url: url,
             platform: platform,
+            title: title,
             userNote: userNote,
             thumbnailUrl: nil,
             transcript: nil,
-            summary: nil,
             alignmentScore: nil,
             alignmentVerdict: nil,
             alignmentReasoning: nil,
-            status: .pending,
-            viewCount: viewCount,
-            likeCount: likeCount,
-            commentCount: commentCount,
-            statSource: hasStats ? "manual" : nil,
+            status: .saved,
             savedAt: Date()
         )
 
@@ -116,13 +108,27 @@ class LibraryViewModel: ObservableObject {
         isSubmitting = false
     }
 
-    // MARK: - Update Summary
+    // MARK: - Update Title
 
-    func updateSummary(for videoId: UUID, summary: String) {
+    func updateTitle(for videoId: UUID, title: String) {
         guard let index = videos.firstIndex(where: { $0.id == videoId }) else { return }
-        let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
-        videos[index].summary = trimmed.isEmpty ? nil : trimmed
-        // TODO: Update summary in Supabase inspiration_videos table
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        videos[index].title = trimmed.isEmpty ? nil : trimmed
+        // TODO: Update title in Supabase inspiration_videos table
+    }
+
+    // MARK: - Fetch Video Metadata
+
+    /// Calls fetch-video-metadata Edge Function in the background to get
+    /// title, thumbnail, and stats for a URL. Returns the metadata if
+    /// successful, nil if the fetch fails.
+    func fetchVideoMetadata(url: String) async -> EdgeFunctions.FetchVideoMetadataResponse? {
+        do {
+            return try await EdgeFunctions.shared.fetchVideoMetadata(url: url)
+        } catch {
+            // Metadata fetch is best-effort — if it fails, the user can enter manually
+            return nil
+        }
     }
 
     // MARK: - Folders

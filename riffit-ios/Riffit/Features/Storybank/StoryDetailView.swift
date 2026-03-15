@@ -458,10 +458,35 @@ struct EditTextAssetView: View {
 
 // MARK: - Reference Card
 
-/// Shows a reference to an inspiration video with tag and AI note.
+/// Shows a reference to an inspiration video with tag and title.
 struct ReferenceCard: View {
     let reference: StoryReference
     @ObservedObject var viewModel: StorybankViewModel
+    @EnvironmentObject var libraryViewModel: LibraryViewModel
+
+    /// Looks up the linked video to display its title.
+    private var linkedVideo: InspirationVideo? {
+        libraryViewModel.videos.first { $0.id == reference.inspirationVideoId }
+    }
+
+    /// Title hierarchy: video.title → first 8 words of userNote → platform + "reel"
+    private var referenceTitle: String {
+        guard let video = linkedVideo else { return "Linked inspiration" }
+
+        if let title = video.title, !title.isEmpty {
+            return title
+        }
+
+        if let note = video.userNote, !note.isEmpty {
+            let words = note.split(separator: " ", omittingEmptySubsequences: true)
+            if words.count <= 8 {
+                return note
+            }
+            return words.prefix(8).joined(separator: " ") + "..."
+        }
+
+        return video.platform.displayLabel + " reel"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: RS.sm) {
@@ -474,9 +499,8 @@ struct ReferenceCard: View {
                 .background(Color.riffitPrimaryTint)
                 .clipShape(Capsule())
 
-            // Original note from the library video (if available)
-            // Look up the video's userNote through the shared library
-            Text("Linked inspiration")
+            // Video title from the Library
+            Text(referenceTitle)
                 .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextPrimary)
                 .lineLimit(2)
