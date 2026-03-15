@@ -93,7 +93,7 @@ struct AddReferenceView: View {
                             .fontWeight(.medium)
                             .foregroundStyle(
                                 selectedTag == tag
-                                    ? Color(hex: 0x111111)
+                                    ? Color.riffitOnPrimary
                                     : Color.riffitTextPrimary
                             )
                             .frame(maxWidth: .infinity)

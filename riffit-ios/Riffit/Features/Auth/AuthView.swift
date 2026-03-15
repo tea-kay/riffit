@@ -40,14 +40,14 @@ struct AuthView: View {
     // MARK: - Brand Section
 
     private var brandSection: some View {
-        VStack(spacing: .smPlus) {
+        VStack(spacing: .md) {
             Text("Riffit")
-                .riffitDisplay()
+                .font(.custom("Georgia-BoldItalic", size: 56))
                 .foregroundStyle(Color.riffitPrimaryText)
 
-            Text("Your creative intelligence engine.")
-                .riffitBody()
-                .foregroundStyle(Color.riffitTextSecondary)
+            Text("scroll, riff, post")
+                .riffitTagline()
+                .foregroundStyle(Color.riffitTeal400)
         }
     }
 

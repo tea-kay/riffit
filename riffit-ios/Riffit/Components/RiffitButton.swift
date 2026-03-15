@@ -18,8 +18,7 @@ struct RiffitButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.callout)
-                .fontWeight(.medium)
+                .modifier(ButtonFontModifier(variant: variant))
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
                 .foregroundStyle(foregroundColor)
@@ -29,10 +28,22 @@ struct RiffitButton: View {
         }
     }
 
+    /// Primary buttons use Georgia Bold Italic; others use SF Pro callout.
+    private struct ButtonFontModifier: ViewModifier {
+        let variant: Variant
+        func body(content: Content) -> some View {
+            if variant == .primary {
+                content.riffitPrimaryButtonFont()
+            } else {
+                content.font(.callout).fontWeight(.medium)
+            }
+        }
+    }
+
     private var foregroundColor: Color {
         switch variant {
         case .primary:
-            return Color(hex: 0x111111)
+            return Color.riffitOnPrimary
         case .secondary:
             return Color.riffitPrimary
         case .ghost:

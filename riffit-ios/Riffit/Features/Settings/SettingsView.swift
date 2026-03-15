@@ -33,6 +33,14 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Settings")
+                    .riffitPageTitle()
+                    .foregroundStyle(Color.riffitTextPrimary)
+            }
+        }
     }
 
     // MARK: - Settings Row

@@ -11,7 +11,20 @@ class AppState: ObservableObject {
     @Published var creatorProfileId: UUID?
 
     /// User's chosen appearance mode, persisted across launches.
-    @AppStorage("appearanceMode") var appearanceMode: AppearanceMode = .system
+    /// Uses @Published + manual UserDefaults instead of @AppStorage
+    /// because @AppStorage inside ObservableObject doesn't fire
+    /// objectWillChange, which means .preferredColorScheme() at the
+    /// app root never re-evaluates.
+    @Published var appearanceMode: AppearanceMode {
+        didSet {
+            UserDefaults.standard.set(appearanceMode.rawValue, forKey: "appearanceMode")
+        }
+    }
+
+    init() {
+        let stored = UserDefaults.standard.string(forKey: "appearanceMode") ?? "system"
+        self.appearanceMode = AppearanceMode(rawValue: stored) ?? .system
+    }
 
     /// Called when onboarding finishes successfully.
     /// Updates state so the app transitions from the onboarding

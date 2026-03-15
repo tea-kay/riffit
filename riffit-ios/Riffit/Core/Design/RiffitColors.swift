@@ -79,6 +79,28 @@ extension Color {
 
     /// Danger tint — danger at ~12% dark / ~8% light
     static let riffitDangerTint = Color("RiffitDangerTint", bundle: nil)
+
+    // MARK: Grid Background (empty states)
+
+    /// Grid background — light: #F0EBD8 (warm beige), dark: #111111 (matches screen bg)
+    static let riffitGridBackground = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0x11/255.0, green: 0x11/255.0, blue: 0x11/255.0, alpha: 1)
+            : UIColor(red: 0xF0/255.0, green: 0xEB/255.0, blue: 0xD8/255.0, alpha: 1)
+    })
+
+    /// Grid line color — light: #D8D0BC, dark: white at 4% opacity
+    static let riffitGridLine = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(white: 1.0, alpha: 0.04)
+            : UIColor(red: 0xD8/255.0, green: 0xD0/255.0, blue: 0xBC/255.0, alpha: 1)
+    })
+
+    // MARK: On Primary
+
+    /// Text color on primary (gold) buttons — always #111111
+    /// Gold fill needs dark text in both light and dark mode.
+    static let riffitOnPrimary = Color(hex: 0x111111)
 }
 
 // MARK: - Hex Color Initializer

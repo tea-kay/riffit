@@ -23,7 +23,13 @@ struct LibraryView: View {
             }
         }
         .navigationTitle("Ideas")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Ideas")
+                    .riffitPageTitle()
+                    .foregroundStyle(Color.riffitTextPrimary)
+            }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Button {
@@ -123,26 +129,68 @@ struct LibraryView: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: .md) {
-            Image(systemName: "lightbulb")
-                .font(.system(size: 48))
-                .foregroundStyle(Color.riffitPrimary)
+        ZStack {
+            // Grid background — adaptive: beige in light, dark in dark
+            gridBackground
 
-            Text("No ideas yet")
-                .riffitTitle()
-                .foregroundStyle(Color.riffitTextPrimary)
+            VStack(spacing: .md) {
+                Spacer()
 
-            Text("Found an Instagram reel that sparks something?\nDrop the link here with a quick note.")
-                .riffitBody()
-                .foregroundStyle(Color.riffitTextSecondary)
-                .multilineTextAlignment(.center)
+                // Wave barrel illustration
+                WaveBarrelIllustration()
+                    .frame(width: 180, height: 180)
 
-            RiffitButton(title: "Add Your First Idea", variant: .primary) {
-                showAddSheet = true
+                Text("Nothing here yet")
+                    .font(.custom("Georgia-BoldItalic", size: 18))
+                    .foregroundStyle(Color.riffitTextPrimary)
+
+                Text("Catch a reel. Drop it here.")
+                    .font(.custom("Georgia-Italic", size: 12))
+                    .foregroundStyle(Color.riffitTextSecondary)
+
+                RiffitButton(title: "Drop your first reel", variant: .primary) {
+                    showAddSheet = true
+                }
+                .padding(.horizontal, .xl2)
+                .padding(.top, .sm)
+
+                Spacer()
             }
-            .padding(.top, .sm)
         }
-        .padding(.horizontal, .xl)
+    }
+
+    /// Beige grid background for empty states.
+    /// Does NOT ignore safe area — nav bar keeps its own background.
+    private var gridBackground: some View {
+        Canvas { context, size in
+            // Fill with grid background color
+            context.fill(
+                Path(CGRect(origin: .zero, size: size)),
+                with: .color(Color.riffitGridBackground)
+            )
+
+            // Vertical grid lines — 73pt spacing
+            let verticalSpacing: CGFloat = 73
+            var x: CGFloat = verticalSpacing
+            while x < size.width {
+                var path = Path()
+                path.move(to: CGPoint(x: x, y: 0))
+                path.addLine(to: CGPoint(x: x, y: size.height))
+                context.stroke(path, with: .color(Color.riffitGridLine), lineWidth: 0.4)
+                x += verticalSpacing
+            }
+
+            // Horizontal grid lines — 85pt spacing
+            let horizontalSpacing: CGFloat = 85
+            var y: CGFloat = horizontalSpacing
+            while y < size.height {
+                var path = Path()
+                path.move(to: CGPoint(x: 0, y: y))
+                path.addLine(to: CGPoint(x: size.width, y: y))
+                context.stroke(path, with: .color(Color.riffitGridLine), lineWidth: 0.4)
+                y += horizontalSpacing
+            }
+        }
     }
 }
 
@@ -287,6 +335,81 @@ struct IdeaRow: View {
             return String(path.dropFirst())
         }
         return url.host ?? video.url
+    }
+}
+
+// MARK: - Wave Barrel Illustration
+
+/// Concentric teal rings with a sunset core — the wave barrel.
+/// Ring order adapts to color scheme:
+///   Light: #1A8A96 → #0F6B75 → #0A4A52 → gold → amber → coral
+///   Dark:  #0A4A52 → #0F6B75 → #1A8A96 → gold → amber → coral
+struct WaveBarrelIllustration: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Canvas { context, size in
+            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+            let maxRadius = min(size.width, size.height) / 2
+
+            // Teal ring order flips between light and dark mode
+            let tealColors: [Color] = colorScheme == .dark
+                ? [.riffitTeal900, .riffitTeal600, .riffitTeal400]  // dark outer → light inner
+                : [.riffitTeal400, .riffitTeal600, .riffitTeal900]  // light outer → dark inner
+
+            let tealRadii: [CGFloat] = [1.0, 0.82, 0.64]
+
+            for (i, color) in tealColors.enumerated() {
+                let r = maxRadius * tealRadii[i]
+                let rect = CGRect(
+                    x: center.x - r, y: center.y - r,
+                    width: r * 2, height: r * 2
+                )
+                context.fill(Path(ellipseIn: rect), with: .color(color))
+            }
+
+            // Sunset core (same in both modes: gold → amber → coral)
+            let sunsetRings: [(color: Color, radiusFraction: CGFloat)] = [
+                (.riffitPrimary, 0.46),
+                (.riffitPrimaryPressed, 0.30),
+                (Color.riffitDanger, 0.16),
+            ]
+
+            for ring in sunsetRings {
+                let r = maxRadius * ring.radiusFraction
+                let rect = CGRect(
+                    x: center.x - r, y: center.y - r,
+                    width: r * 2, height: r * 2
+                )
+                context.fill(Path(ellipseIn: rect), with: .color(ring.color))
+            }
+
+            // White foam arc at the top of the barrel
+            let foamRadius = maxRadius * 0.95
+            var foamPath = Path()
+            foamPath.addArc(
+                center: center,
+                radius: foamRadius,
+                startAngle: .degrees(-160),
+                endAngle: .degrees(-20),
+                clockwise: false
+            )
+            context.stroke(foamPath, with: .color(.white.opacity(0.7)), lineWidth: 2.5)
+
+            // Two water lines below the barrel
+            let lineY1 = center.y + maxRadius + 12
+            let lineY2 = center.y + maxRadius + 22
+
+            for lineY in [lineY1, lineY2] {
+                var linePath = Path()
+                linePath.move(to: CGPoint(x: center.x - 30, y: lineY))
+                linePath.addQuadCurve(
+                    to: CGPoint(x: center.x + 30, y: lineY),
+                    control: CGPoint(x: center.x, y: lineY - 5)
+                )
+                context.stroke(linePath, with: .color(Color.riffitTeal600.opacity(0.5)), lineWidth: 1.5)
+            }
+        }
     }
 }
 

@@ -189,7 +189,7 @@ struct TagPill: View {
             Text(label)
                 .riffitCaption()
                 .fontWeight(.medium)
-                .foregroundStyle(isSelected ? Color(hex: 0x111111) : Color.riffitTextSecondary)
+                .foregroundStyle(isSelected ? Color.riffitOnPrimary : Color.riffitTextSecondary)
                 .padding(.vertical, 8)
                 .padding(.horizontal, .md)
                 .background(isSelected ? Color.riffitPrimary : Color.riffitSurface)
