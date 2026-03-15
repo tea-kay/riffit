@@ -77,16 +77,7 @@ struct InspirationCard: View {
                 .foregroundStyle(Color.riffitTextPrimary)
                 .lineLimit(2)
                 .truncationMode(.tail)
-        } else if video.status == .pending || video.status == .analyzing {
-            // Shimmer placeholder while summary is being generated
-            VStack(alignment: .leading, spacing: 6) {
-                ShimmerBlock()
-                    .frame(height: 18)
-                ShimmerBlock()
-                    .frame(width: 180, height: 18)
-            }
         } else {
-            // Analyzed but no summary — show URL as fallback title
             Text(displayTitle)
                 .font(RF.heading)
                 .foregroundStyle(Color.riffitTextPrimary)
@@ -112,51 +103,13 @@ struct InspirationCard: View {
 
     // MARK: - Footer
 
-    @ViewBuilder
     private var footerContent: some View {
-        switch video.status {
-        case .pending:
-            HStack {
-                statsRow
-                Spacer()
-                StatusTag(text: "Waiting to analyze", color: Color.riffitTextTertiary)
-            }
+        HStack {
+            statsRow
 
-        case .analyzing:
-            HStack {
-                statsRow
-                Spacer()
-                HStack(spacing: RS.sm) {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(Color.riffitPrimary)
-                    Text("Analyzing...")
-                        .font(RF.caption)
-                        .foregroundStyle(Color.riffitTextSecondary)
-                }
-            }
+            Spacer()
 
-        case .analyzed:
-            HStack {
-                statsRow
-
-                Spacer()
-
-                if let verdict = video.alignmentVerdict {
-                    AlignmentBadge(verdict: verdict)
-                }
-
-                if let score = video.alignmentScore {
-                    Text("\(score)/100")
-                        .font(RF.label)
-                        .foregroundStyle(Color.riffitPrimary)
-                }
-            }
-
-        case .archived:
-            HStack {
-                statsRow
-                Spacer()
+            if video.status == .archived {
                 StatusTag(text: "Archived", color: Color.riffitTextTertiary)
             }
         }
@@ -203,23 +156,6 @@ struct InspirationCard: View {
         }
         let truncatedPath = path.count > 40 ? String(path.prefix(40)) + "..." : path
         return cleanHost + truncatedPath
-    }
-}
-
-// MARK: - Shimmer Block
-
-/// Pulsing placeholder for content that's still loading.
-struct ShimmerBlock: View {
-    @State private var opacity: Double = 0.12
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: 4)
-            .fill(Color.riffitTextTertiary.opacity(opacity))
-            .onAppear {
-                withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
-                    opacity = 0.25
-                }
-            }
     }
 }
 

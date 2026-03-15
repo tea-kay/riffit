@@ -73,7 +73,7 @@ class LibraryViewModel: ObservableObject {
     ) async {
         isSubmitting = true
 
-        // TODO: Save to Supabase + call analyze-video edge function
+        // TODO: Save to Supabase
 
         let hasStats = viewCount != nil || likeCount != nil || commentCount != nil
 

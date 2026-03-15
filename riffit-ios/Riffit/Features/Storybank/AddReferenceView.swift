@@ -86,6 +86,9 @@ struct AddReferenceView: View {
         }
         .presentationDetents([.large])
         .presentationCornerRadius(RR.modal)
+        .task {
+            await libraryViewModel.fetchVideos()
+        }
     }
 
     // MARK: - Step 1: Pick Video
@@ -287,11 +290,6 @@ struct PickerCard: View {
                     .lineLimit(1)
 
                 Spacer()
-
-                // Alignment badge if available
-                if let verdict = video.alignmentVerdict {
-                    AlignmentBadge(verdict: verdict)
-                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

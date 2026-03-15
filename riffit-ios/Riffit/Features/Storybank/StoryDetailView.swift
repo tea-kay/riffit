@@ -481,16 +481,11 @@ struct ReferenceCard: View {
                 .foregroundStyle(Color.riffitTextPrimary)
                 .lineLimit(2)
 
-            // AI relevance note
+            // AI relevance note (generated when AI features are enabled)
             if let note = reference.aiRelevanceNote {
                 Text(note)
                     .font(RF.caption)
                     .foregroundStyle(Color.riffitTextSecondary)
-                    .italic()
-            } else {
-                Text("AI relevance note pending...")
-                    .font(RF.caption)
-                    .foregroundStyle(Color.riffitTextTertiary)
                     .italic()
             }
         }

@@ -26,19 +26,9 @@ struct InspirationDetailView: View {
                             tagsRow(tags)
                         }
 
-                        // Alignment section
-                        if video.status == .analyzed {
-                            alignmentSection
-                        }
-
                         // Transcript section
                         if let transcript = video.transcript, !transcript.isEmpty {
                             transcriptSection(transcript)
-                        }
-
-                        // Status indicator for non-analyzed videos
-                        if video.status == .pending || video.status == .analyzing {
-                            statusSection
                         }
 
                         // Comments thread
@@ -96,47 +86,6 @@ struct InspirationDetailView: View {
         }
     }
 
-    // MARK: - Alignment Section
-
-    private var alignmentSection: some View {
-        VStack(alignment: .leading, spacing: RS.smPlus) {
-            Text("Alignment")
-                .font(RF.label)
-                .textCase(.uppercase)
-                .tracking(0.08 * 13)
-                .foregroundStyle(Color.riffitTextTertiary)
-
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: RS.sm) {
-                    if let verdict = video.alignmentVerdict {
-                        AlignmentBadge(verdict: verdict)
-                    }
-
-                    if let reasoning = video.alignmentReasoning {
-                        Text(reasoning)
-                            .font(RF.bodyMd)
-                            .foregroundStyle(Color.riffitTextSecondary)
-                    }
-                }
-
-                Spacer()
-
-                if let score = video.alignmentScore {
-                    VStack(spacing: 2) {
-                        Text("\(score)")
-                            .font(RF.display(36))
-                            .foregroundStyle(Color.riffitPrimary)
-
-                        Text("/ 100")
-                            .font(RF.caption)
-                            .foregroundStyle(Color.riffitTextTertiary)
-                    }
-                }
-            }
-            .riffitCard()
-        }
-    }
-
     // MARK: - Transcript Section
 
     private func transcriptSection(_ transcript: String) -> some View {
@@ -165,27 +114,6 @@ struct InspirationDetailView: View {
             }
             .riffitCard()
         }
-    }
-
-    // MARK: - Status Section
-
-    private var statusSection: some View {
-        HStack(spacing: RS.smPlus) {
-            if video.status == .analyzing {
-                ProgressView()
-                    .controlSize(.small)
-                    .tint(Color.riffitPrimary)
-            } else {
-                Image(systemName: "clock")
-                    .foregroundStyle(Color.riffitTextTertiary)
-            }
-
-            Text(video.status == .analyzing ? "Analysis in progress..." : "Waiting to analyze")
-                .font(RF.bodyMd)
-                .foregroundStyle(Color.riffitTextSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .riffitCard()
     }
 
     // MARK: - Comments Section
