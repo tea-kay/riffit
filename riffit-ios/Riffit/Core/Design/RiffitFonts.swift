@@ -1,89 +1,129 @@
 import SwiftUI
 
-// MARK: - Typography Helpers
+// MARK: - Font Statics
 
-/// Typography modifiers matching the Riffit design system.
-/// Brand text (display, page titles, tagline, primary buttons) uses Georgia italic.
-/// UI text (headings, body, captions, labels) uses SF Pro.
-///
-/// Usage: Text("Hello").riffitDisplay()
-/// These modifiers set font, weight, and any extra tracking.
+/// Riffit design system fonts.
+/// Abril Fatface — all headings, titles, buttons, labels, tags.
+/// DM Sans — body text, metadata, timestamps, URLs, captions.
+/// Georgia Bold Italic is used ONLY in RiffitWordmark (the splash logo).
+
+extension Font {
+
+    // MARK: Abril Fatface (Headings)
+
+    /// Abril Fatface at a custom size — for any heading that doesn't
+    /// fit the preset tokens (e.g. alignment scores).
+    static func riffitDisplay(_ size: CGFloat) -> Font {
+        .custom("AbrilFatface-Regular", size: size)
+    }
+
+    /// 32pt — hero text, display headings
+    static var riffitLargeTitle: Font { .riffitDisplay(32) }
+
+    /// 24pt — page titles (Ideas, Storybank, Settings)
+    static var riffitTitle: Font { .riffitDisplay(24) }
+
+    /// 20pt — card titles, section headings, empty state headlines
+    static var riffitHeading: Font { .riffitDisplay(20) }
+
+    /// 16pt — button text (all variants)
+    static var riffitButton: Font { .riffitDisplay(16) }
+
+    /// 13pt — section labels (NOTES, MY ASSETS, etc.)
+    static var riffitLabel: Font { .riffitDisplay(13) }
+
+    /// 11pt — tag/badge text, status pills
+    static var riffitTag: Font { .riffitDisplay(11) }
+
+    // MARK: DM Sans (Body / Metadata)
+
+    /// DM Sans at a custom size and weight.
+    static func riffitSans(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        switch weight {
+        case .medium: return .custom("DMSans-Medium", size: size)
+        case .light:  return .custom("DMSans-Light", size: size)
+        default:      return .custom("DMSans-Regular", size: size)
+        }
+    }
+
+    /// 16pt DM Sans Regular — body descriptions, form inputs, chat text
+    static var riffitBody: Font { .riffitSans(16) }
+
+    /// 12pt DM Sans Regular — captions, secondary info, subtext
+    static var riffitCaption: Font { .riffitSans(12) }
+
+    /// 11pt DM Sans Regular — timestamps, metadata counts
+    static var riffitMeta: Font { .riffitSans(11) }
+
+    /// 12pt DM Sans Light — URL text, links
+    static var riffitURL: Font { .riffitSans(12, weight: .light) }
+}
+
+// MARK: - View Modifier Helpers
+
+/// Convenience modifiers that apply the font tokens.
+/// These keep existing call sites like `.riffitBody()` working
+/// while routing to the new Abril Fatface / DM Sans fonts.
 
 extension View {
-    /// Display/hero text — Georgia Bold Italic, 32pt
-    /// Used for the app wordmark and splash headlines.
+
+    /// Display/hero text — Abril Fatface 32pt
     func riffitDisplay() -> some View {
-        self
-            .font(.custom("Georgia-BoldItalic", size: 32))
+        self.font(.riffitLargeTitle)
     }
 
-    /// Page title — Georgia Bold Italic, 26pt
-    /// Used for top-level screen titles: Ideas, Storybank, Settings.
+    /// Page title — Abril Fatface 24pt
     func riffitPageTitle() -> some View {
-        self
-            .font(.custom("Georgia-BoldItalic", size: 26))
+        self.font(.riffitTitle)
     }
 
-    /// Title style — 22pt, medium weight (maps to .title)
+    /// Title — Abril Fatface 24pt
     func riffitTitle() -> some View {
-        self
-            .font(.title)
-            .fontWeight(.medium)
+        self.font(.riffitTitle)
     }
 
-    /// Tagline — Georgia Italic, 13pt, with 1pt letter spacing
-    /// Used for "scroll, riff, post" and similar brand taglines.
-    func riffitTagline() -> some View {
-        self
-            .font(.custom("Georgia-Italic", size: 13))
-            .kerning(1.0)
-    }
-
-    /// Primary button text — Georgia Bold Italic, 15pt
-    /// Used on primary (gold) buttons.
-    func riffitPrimaryButtonFont() -> some View {
-        self
-            .font(.custom("Georgia-BoldItalic", size: 15))
-    }
-
-    /// Heading style — 17pt, medium weight (maps to .headline)
+    /// Heading — Abril Fatface 20pt
     func riffitHeading() -> some View {
-        self
-            .font(.headline)
-            .fontWeight(.medium)
+        self.font(.riffitHeading)
     }
 
-    /// Body style — 17pt, regular weight (maps to .body)
+    /// Body text — DM Sans 16pt
     func riffitBody() -> some View {
-        self
-            .font(.body)
+        self.font(.riffitBody)
     }
 
-    /// Callout style — 16pt, regular weight (maps to .callout)
+    /// Callout — maps to DM Sans 16pt (same as body)
     func riffitCallout() -> some View {
-        self
-            .font(.callout)
+        self.font(.riffitBody)
     }
 
-    /// Subhead style — 15pt, regular weight (maps to .subheadline)
+    /// Subhead — maps to DM Sans 16pt
     func riffitSubhead() -> some View {
-        self
-            .font(.subheadline)
+        self.font(.riffitBody)
     }
 
-    /// Caption style — 12pt, regular weight (maps to .caption)
+    /// Caption — DM Sans 12pt
     func riffitCaption() -> some View {
-        self
-            .font(.caption)
+        self.font(.riffitCaption)
     }
 
-    /// Label style — 11pt, medium weight, uppercase, tracked (maps to .caption2)
-    /// Used for small labels like platform tags, status indicators, etc.
+    /// Label — Abril Fatface 13pt, uppercase, letter-spaced 0.08em
     func riffitLabel() -> some View {
         self
-            .font(.caption2)
-            .fontWeight(.medium)
+            .font(.riffitLabel)
             .textCase(.uppercase)
-            .tracking(0.06 * 11)  // 0.06em at 11pt
+            .tracking(0.08 * 13)
+    }
+
+    /// Primary button font — Abril Fatface 16pt
+    func riffitPrimaryButtonFont() -> some View {
+        self.font(.riffitButton)
+    }
+
+    /// Brand tagline — DM Sans Light 13pt, letter-spaced
+    func riffitTagline() -> some View {
+        self
+            .font(.riffitSans(13, weight: .light))
+            .kerning(1.0)
     }
 }

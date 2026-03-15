@@ -105,13 +105,13 @@ struct StorybankView: View {
                 Text(colorScheme == .dark
                      ? "Every story needs a spark"
                      : "Your story starts here")
-                    .font(.custom("Georgia-BoldItalic", size: 18))
+                    .font(.riffitHeading)
                     .foregroundStyle(Color.riffitTextPrimary)
 
                 Text(colorScheme == .dark
                      ? "Start building your first story."
                      : "Build your first story.")
-                    .font(.custom("Georgia-Italic", size: 12))
+                    .font(.riffitCaption)
                     .foregroundStyle(colorScheme == .dark
                         ? Color(hex: 0x555555)
                         : Color.riffitTextSecondary)
@@ -560,8 +560,7 @@ struct StoryStatusBadge: View {
 
     var body: some View {
         Text(status.label)
-            .font(.caption2)
-            .fontWeight(.medium)
+            .font(.riffitTag)
             .foregroundStyle(foregroundColor)
             .padding(.vertical, 3)
             .padding(.horizontal, 8)

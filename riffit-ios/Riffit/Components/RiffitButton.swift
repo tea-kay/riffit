@@ -28,15 +28,11 @@ struct RiffitButton: View {
         }
     }
 
-    /// Primary buttons use Georgia Bold Italic; others use SF Pro callout.
+    /// All button variants use Abril Fatface 16pt.
     private struct ButtonFontModifier: ViewModifier {
         let variant: Variant
         func body(content: Content) -> some View {
-            if variant == .primary {
-                content.riffitPrimaryButtonFont()
-            } else {
-                content.font(.callout).fontWeight(.medium)
-            }
+            content.font(.riffitButton)
         }
     }
 

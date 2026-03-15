@@ -15,7 +15,7 @@ struct LoadingOverlay: View {
                     .tint(Color.riffitPrimary)
 
                 Text(message)
-                    .font(.callout)
+                    .font(.riffitBody)
                     .foregroundStyle(Color.riffitTextPrimary)
             }
             .padding(.xl)

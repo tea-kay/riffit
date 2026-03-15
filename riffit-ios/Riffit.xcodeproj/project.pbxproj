@@ -50,6 +50,10 @@
 		FAFA3855208C106A4A4E2E5A /* InspirationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B51C570A8060A401A8F4AE96 /* InspirationCard.swift */; };
 		D5E6F7A8B9C0D1E2F3A4B5C6 /* RiffitWordmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6F7A8B9C0D1E2F3A4B5C6D7 /* RiffitWordmark.swift */; };
 		F7A8B9C0D1E2F3A4B5C6D7E8 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A8B9C0D1E2F3A4B5C6D7E8F9 /* LaunchScreen.storyboard */; };
+		AA11BB22CC33DD44EE55FF01 /* AbrilFatface-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF11 /* AbrilFatface-Regular.ttf */; };
+		AA11BB22CC33DD44EE55FF02 /* DMSans-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF12 /* DMSans-Light.ttf */; };
+		AA11BB22CC33DD44EE55FF03 /* DMSans-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF13 /* DMSans-Regular.ttf */; };
+		AA11BB22CC33DD44EE55FF04 /* DMSans-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF14 /* DMSans-Medium.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -108,6 +112,11 @@
 		FB7AE2E5C30E70F6F15FA681 /* AddInspirationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddInspirationView.swift; sourceTree = "<group>"; };
 		E6F7A8B9C0D1E2F3A4B5C6D7 /* RiffitWordmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitWordmark.swift; sourceTree = "<group>"; };
 		A8B9C0D1E2F3A4B5C6D7E8F9 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF11 /* AbrilFatface-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "AbrilFatface-Regular.ttf"; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF12 /* DMSans-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-Light.ttf"; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF13 /* DMSans-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-Regular.ttf"; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF14 /* DMSans-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-Medium.ttf"; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF15 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -115,12 +124,14 @@
 			isa = PBXGroup;
 			children = (
 				602FE9C75CD489434CB43DCB /* Assets.xcassets */,
+				AA11BB22CC33DD44EE55FF15 /* Info.plist */,
 				A8B9C0D1E2F3A4B5C6D7E8F9 /* LaunchScreen.storyboard */,
 				B09163DD5F36C00D42047FB2 /* App */,
 				3DB2DD298956B95ABE7957D3 /* Components */,
 				065217055233F261CCA7764B /* Core */,
 				11EAE2C8C8D11ED372751EA2 /* Features */,
 				92875288934CF73A7B4F5B8C /* Models */,
+				AA11BB22CC33DD44EE55FF20 /* Resources */,
 			);
 			path = Riffit;
 			sourceTree = "<group>";
@@ -291,6 +302,25 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		AA11BB22CC33DD44EE55FF20 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				AA11BB22CC33DD44EE55FF21 /* Fonts */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		AA11BB22CC33DD44EE55FF21 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				AA11BB22CC33DD44EE55FF11 /* AbrilFatface-Regular.ttf */,
+				AA11BB22CC33DD44EE55FF12 /* DMSans-Light.ttf */,
+				AA11BB22CC33DD44EE55FF14 /* DMSans-Medium.ttf */,
+				AA11BB22CC33DD44EE55FF13 /* DMSans-Regular.ttf */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
 		EB92633DF792B92AC17D8E26 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
@@ -380,7 +410,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA11BB22CC33DD44EE55FF01 /* AbrilFatface-Regular.ttf in Resources */,
 				EC3E4AA1FEA733730E864EC8 /* Assets.xcassets in Resources */,
+				AA11BB22CC33DD44EE55FF02 /* DMSans-Light.ttf in Resources */,
+				AA11BB22CC33DD44EE55FF04 /* DMSans-Medium.ttf in Resources */,
+				AA11BB22CC33DD44EE55FF03 /* DMSans-Regular.ttf in Resources */,
 				F7A8B9C0D1E2F3A4B5C6D7E8 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -480,6 +514,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = RiffitPrimary;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Riffit/Info.plist;
 				INFOPLIST_GENERATION_MODE = GeneratedFile;
 				INFOPLIST_KEY_CFBundleDisplayName = Riffit;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -561,6 +596,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = RiffitPrimary;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Riffit/Info.plist;
 				INFOPLIST_GENERATION_MODE = GeneratedFile;
 				INFOPLIST_KEY_CFBundleDisplayName = Riffit;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -8,10 +8,9 @@ struct AlignmentBadge: View {
 
     var body: some View {
         Text(verdict.label)
-            .font(.caption2)
-            .fontWeight(.medium)
+            .font(.riffitTag)
             .textCase(.uppercase)
-            .tracking(0.06 * 11)  // 0.06em at 11pt (caption2 size)
+            .tracking(0.06 * 11)
             .padding(.vertical, .xs)
             .padding(.horizontal, 10)
             .background(backgroundColor)

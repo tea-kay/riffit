@@ -11,43 +11,41 @@ struct AuthView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        ZStack {
-            Color.riffitBackground
-                .ignoresSafeArea()
+        GeometryReader { geo in
+            let wordmarkFontSize = max(72, geo.size.width * 0.18)
 
-            VStack(spacing: 0) {
-                Spacer()
+            ZStack {
+                Color.riffitBackground
+                    .ignoresSafeArea()
 
-                // Wordmark + tagline in the upper half
-                brandSection
+                VStack(spacing: 0) {
+                    // Wordmark + tagline centered in upper 60%
+                    VStack(spacing: .xl) {
+                        RiffitWordmark(fontSize: wordmarkFontSize)
+                            .frame(
+                                width: geo.size.width - 80,
+                                height: wordmarkFontSize * 1.4
+                            )
 
-                Spacer()
-                Spacer()
+                        Text("scroll, riff, post")
+                            .font(.riffitSans(13, weight: .light))
+                            .tracking(4)
+                            .foregroundStyle(Color.riffitTeal400)
+                    }
+                    .frame(height: geo.size.height * 0.6)
 
-                // Sign in button + legal text at the bottom
-                bottomSection
+                    Spacer()
+
+                    // Sign in button + legal text pinned to bottom
+                    bottomSection
+                }
+                .padding(.bottom, 48)
+
+                // Error overlay
+                if let error = viewModel.error {
+                    errorBanner(error)
+                }
             }
-            .padding(.horizontal, .lg)
-            .padding(.bottom, .xl)
-
-            // Error overlay
-            if let error = viewModel.error {
-                errorBanner(error)
-            }
-        }
-    }
-
-    // MARK: - Brand Section
-
-    private var brandSection: some View {
-        VStack(spacing: .md) {
-            RiffitWordmark(fontSize: 56)
-                .frame(height: 80)
-
-            Text("scroll, riff, post")
-                .font(.custom("Georgia-Italic", size: 16))
-                .tracking(4)
-                .foregroundStyle(Color.riffitTeal400)
         }
     }
 
@@ -91,6 +89,7 @@ struct AuthView: View {
                 .multilineTextAlignment(.center)
                 .tint(Color.riffitTextTertiary)
         }
+        .padding(.horizontal, .lg)
     }
 
     // MARK: - Error Banner

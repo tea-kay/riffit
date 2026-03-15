@@ -141,11 +141,11 @@ struct LibraryView: View {
                     .frame(width: 180, height: 180)
 
                 Text("Nothing here yet")
-                    .font(.custom("Georgia-BoldItalic", size: 18))
+                    .font(.riffitHeading)
                     .foregroundStyle(Color.riffitTextPrimary)
 
                 Text("Catch a reel. Drop it here.")
-                    .font(.custom("Georgia-Italic", size: 12))
+                    .font(.riffitCaption)
                     .foregroundStyle(Color.riffitTextSecondary)
 
                 RiffitButton(title: "Drop your first reel", variant: .primary) {
@@ -295,8 +295,7 @@ struct IdeaRow: View {
                 HStack(spacing: 6) {
                     ForEach(tags, id: \.self) { tag in
                         Text(tag)
-                            .font(.caption2)
-                            .fontWeight(.medium)
+                            .font(.riffitTag)
                             .foregroundStyle(Color.riffitPrimary)
                             .padding(.vertical, 3)
                             .padding(.horizontal, 8)

@@ -310,8 +310,7 @@ struct ReferenceCard: View {
         VStack(alignment: .leading, spacing: .sm) {
             // Tag pill
             Text(reference.referenceTag)
-                .font(.caption2)
-                .fontWeight(.medium)
+                .font(.riffitTag)
                 .foregroundStyle(Color.riffitPrimary)
                 .padding(.vertical, 3)
                 .padding(.horizontal, 8)

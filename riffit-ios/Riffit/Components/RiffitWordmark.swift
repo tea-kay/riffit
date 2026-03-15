@@ -41,20 +41,32 @@ class RiffitWordmarkUIView: UIView {
             ?? UIFont.boldSystemFont(ofSize: fontSize)
     }
 
+    /// Base attributes shared by sizing and drawing — disables ligatures
+    /// and applies tight kerning to prevent "ff" ligature artifacts.
+    private var baseAttributes: [NSAttributedString.Key: Any] {
+        [
+            .font: wordmarkFont,
+            .ligature: 0,     // Disable ligatures (prevents "ff" joining)
+            .kern: -2.0       // Tighten letter spacing
+        ]
+    }
+
+    /// The wordmark string with a zero-width non-joiner between the f's
+    /// as a belt-and-suspenders ligature break.
+    private let wordmarkText = "Ri\u{200C}ffit"
+
     override var intrinsicContentSize: CGSize {
-        let attrs: [NSAttributedString.Key: Any] = [.font: wordmarkFont]
-        let textSize = ("Riffit" as NSString).size(withAttributes: attrs)
+        let textSize = (wordmarkText as NSString).size(withAttributes: baseAttributes)
         // Extra space for shadows (+4,+4) and thick stroke (8pt each side)
         return CGSize(width: textSize.width + 20, height: textSize.height + 16)
     }
 
     override func draw(_ rect: CGRect) {
         let font = wordmarkFont
-        let text = "Riffit"
+        let text = wordmarkText
 
         // Calculate text size and center it in the view
-        let baseAttrs: [NSAttributedString.Key: Any] = [.font: font]
-        let textSize = (text as NSString).size(withAttributes: baseAttrs)
+        let textSize = (text as NSString).size(withAttributes: baseAttributes)
         let x = (rect.width - textSize.width) / 2
         let y = (rect.height - textSize.height) / 2
         let origin = CGPoint(x: x, y: y)
@@ -97,7 +109,11 @@ class RiffitWordmarkUIView: UIView {
     private func drawLayer(_ text: String, at point: CGPoint, font: UIFont,
                            fill: UIColor? = nil, stroke: UIColor? = nil,
                            strokeWidth: CGFloat = 0) {
-        var attrs: [NSAttributedString.Key: Any] = [.font: font]
+        var attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .ligature: 0,     // Disable ligatures on every layer
+            .kern: -2.0       // Match kerning on every layer
+        ]
 
         if let stroke {
             attrs[.strokeColor] = stroke

@@ -85,8 +85,7 @@ struct InspirationDetailView: View {
             HStack(spacing: 6) {
                 ForEach(tags, id: \.self) { tag in
                     Text(tag)
-                        .font(.caption2)
-                        .fontWeight(.medium)
+                        .font(.riffitTag)
                         .foregroundStyle(Color.riffitPrimary)
                         .padding(.vertical, 3)
                         .padding(.horizontal, 8)
@@ -123,7 +122,7 @@ struct InspirationDetailView: View {
                 if let score = video.alignmentScore {
                     VStack(spacing: 2) {
                         Text("\(score)")
-                            .font(.system(size: 36, weight: .medium))
+                            .font(.riffitDisplay(36))
                             .foregroundStyle(Color.riffitPrimary)
 
                         Text("/ 100")
