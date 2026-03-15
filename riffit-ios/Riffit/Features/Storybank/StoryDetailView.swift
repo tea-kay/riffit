@@ -10,10 +10,14 @@ struct StoryDetailView: View {
 
     @State private var showAddTextSheet: Bool = false
     @State private var showAddReferenceSheet: Bool = false
+    @State private var showAddSectionModal: Bool = false
+    @State private var newSectionName: String = ""
     @State private var editingAsset: StoryAsset?
     @State private var selectedVideo: InspirationVideo?
     @State private var showRenameModal: Bool = false
     @State private var renameText: String = ""
+    @State private var renamingSection: AssetSection?
+    @State private var renameSectionText: String = ""
     @EnvironmentObject var libraryViewModel: LibraryViewModel
 
     /// Looks up the latest version of this story from the viewModel
@@ -24,39 +28,64 @@ struct StoryDetailView: View {
 
     var body: some View {
         List {
-            // MARK: Assets Section
+            // MARK: Assets Section — flat list with interleaved section headers
             Section {
-                if viewModel.assets(for: story.id).isEmpty {
+                let rows = viewModel.flatRows(for: story.id)
+                if rows.isEmpty {
                     emptyAssetsState
                         .listRowBackground(Color.riffitBackground)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: 0, leading: RS.md, bottom: 0, trailing: RS.md))
                 } else {
-                    ForEach(viewModel.assets(for: story.id)) { asset in
-                        AssetRow(asset: asset)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                if asset.assetType == .text {
-                                    editingAsset = asset
+                    ForEach(rows) { row in
+                        switch row {
+                        case .sectionHeader(let section):
+                            SectionHeaderRow(
+                                section: section,
+                                onRename: {
+                                    renameSectionText = section.name
+                                    renamingSection = section
+                                },
+                                onDelete: {
+                                    viewModel.deleteSection(section)
                                 }
-                            }
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    viewModel.deleteAsset(asset)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
+                            )
                             .listRowBackground(Color.riffitBackground)
                             .listRowSeparator(.hidden)
                             .listRowInsets(EdgeInsets(
-                                top: RS.xs, leading: RS.md,
+                                top: RS.sm, leading: RS.md,
                                 bottom: RS.xs, trailing: RS.md
                             ))
+
+                        case .asset(let asset):
+                            AssetRow(asset: asset)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    if asset.assetType == .text {
+                                        editingAsset = asset
+                                    }
+                                }
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        viewModel.deleteAsset(asset)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
+                                .listRowBackground(Color.riffitBackground)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(
+                                    top: RS.xs, leading: RS.md,
+                                    bottom: RS.xs, trailing: RS.md
+                                ))
+                        }
                     }
                     .onMove { from, to in
-                        viewModel.moveAsset(in: story.id, from: from, to: to)
-                        Task { await viewModel.saveAssetOrder(for: story.id) }
+                        // Reorder the flat array, then reassign sectionIDs
+                        // based on which section header each asset falls under
+                        var reordered = viewModel.flatRows(for: story.id)
+                        reordered.move(fromOffsets: from, toOffset: to)
+                        viewModel.applyFlatRowOrder(for: story.id, reordered: reordered)
                     }
                     .deleteDisabled(true)
                 }
@@ -176,6 +205,41 @@ struct StoryDetailView: View {
                 }
             )
         }
+        .riffitModal(isPresented: $showAddSectionModal) {
+            RiffitInputModal(
+                title: "New Section",
+                placeholder: "Section name",
+                actionLabel: "Create",
+                text: $newSectionName,
+                onCancel: {
+                    showAddSectionModal = false
+                },
+                onAction: { name in
+                    viewModel.addSection(to: story.id, name: name)
+                    showAddSectionModal = false
+                }
+            )
+        }
+        .riffitModal(isPresented: Binding(
+            get: { renamingSection != nil },
+            set: { if !$0 { renamingSection = nil } }
+        )) {
+            RiffitInputModal(
+                title: "Rename Section",
+                placeholder: "Section name",
+                actionLabel: "Save",
+                text: $renameSectionText,
+                onCancel: {
+                    renamingSection = nil
+                },
+                onAction: { name in
+                    if let section = renamingSection {
+                        viewModel.renameSection(section, to: name)
+                    }
+                    renamingSection = nil
+                }
+            )
+        }
     }
 
     // MARK: - Section Headers
@@ -190,6 +254,17 @@ struct StoryDetailView: View {
 
             Spacer()
 
+            // Add section button
+            Button {
+                newSectionName = ""
+                showAddSectionModal = true
+            } label: {
+                Image(systemName: "folder.badge.plus")
+                    .font(.body)
+                    .foregroundStyle(Color.riffitTeal400)
+            }
+
+            // Add asset button
             Menu {
                 Button {
                     // TODO: Voice recording flow
@@ -382,6 +457,55 @@ struct AssetRow: View {
         let minutes = seconds / 60
         let secs = seconds % 60
         return String(format: "%d:%02d", minutes, secs)
+    }
+}
+
+// MARK: - Section Header Row
+
+/// A fixed row representing a named asset section.
+/// Has a teal left accent bar, section name, and action buttons.
+/// .moveDisabled(true) keeps it pinned while assets drag past.
+struct SectionHeaderRow: View {
+    let section: AssetSection
+    let onRename: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack(spacing: RS.sm) {
+            // 3pt teal left accent bar
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(Color.riffitTeal400)
+                .frame(width: 3, height: 24)
+
+            // Section name — .textCase(nil) prevents SwiftUI auto-uppercasing
+            Text(section.name)
+                .font(RF.label)
+                .foregroundStyle(Color.riffitTeal400)
+                .textCase(nil)
+
+            Spacer()
+
+            // Rename
+            Button {
+                onRename()
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.caption)
+                    .foregroundStyle(Color.riffitTextTertiary)
+            }
+            .buttonStyle(.plain)
+
+            // Delete section (assets fall back to unsectioned)
+            Button {
+                onDelete()
+            } label: {
+                Image(systemName: "trash")
+                    .font(.caption)
+                    .foregroundStyle(Color.riffitTextTertiary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, RS.xs)
     }
 }
 

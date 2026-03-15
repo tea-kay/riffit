@@ -36,6 +36,7 @@
 		BD30DA85B13097342CF6A12B /* FolderDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698DD03AD3E62BF69020BE35 /* FolderDetailView.swift */; };
 		C40DAFF1CE73611699B384F9 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AF98CEE92E42C689BCCC586 /* MainTabView.swift */; };
 		C1A2B3C4D5E6F7081920A1B2 /* Story.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3A4B5C6D7E8F9001122 /* Story.swift */; };
+		C6D7E8F9A0B1C2D3E4F5A6B7 /* AssetSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B6C7D8E9F0A1B2C3D4E5F6 /* AssetSection.swift */; };
 		C2B3C4D5E6F7A8B9C0D1E2F3 /* StoryAsset.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F3A4B5C6D7E8F9A0B1C2D3 /* StoryAsset.swift */; };
 		C3D4E5F6A7B8C9D0E1F2A3B4 /* StoryReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3A4B5C6D7E8F9A0B1C2D3E4 /* StoryReference.swift */; };
 		C4E5F6A7B8C9D0E1F2A3B4C5 /* StoryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B5C6D7E8F9A0B1C2D3E4F5 /* StoryDetailView.swift */; };
@@ -70,6 +71,7 @@
 
 /* Begin PBXFileReference section */
 		00798CA0356C2C648DDE4C3E /* RiffitButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitButton.swift; sourceTree = "<group>"; };
+		A5B6C7D8E9F0A1B2C3D4E5F6 /* AssetSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetSection.swift; sourceTree = "<group>"; };
 		069D025481ECE0A021008223 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		08D17B3D22B4EF12F4E471B3 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		0C8324F7E1E52BBC5D8F498B /* InterviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewView.swift; sourceTree = "<group>"; };
@@ -246,6 +248,7 @@
 		92875288934CF73A7B4F5B8C /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				A5B6C7D8E9F0A1B2C3D4E5F6 /* AssetSection.swift */,
 				8EC6D4A31D986A071BB299DA /* CreatorProfile.swift */,
 				F1E2D3C4B5A6978869504132 /* IdeaComment.swift */,
 				87FFBFAE84C6515F34CC9962 /* IdeaFolder.swift */,
@@ -437,6 +440,7 @@
 			files = (
 				966ADE41C3669EC80245EF74 /* AddInspirationView.swift in Sources */,
 				29C9C1D91AB28A226E97D479 /* AlignmentBadge.swift in Sources */,
+				C6D7E8F9A0B1C2D3E4F5A6B7 /* AssetSection.swift in Sources */,
 				87B9263868DA552843455709 /* AppState.swift in Sources */,
 				982C803AC22F1CE18BFBDABC /* AuthView.swift in Sources */,
 				50A859AC41E5825A09C91848 /* AuthViewModel.swift in Sources */,

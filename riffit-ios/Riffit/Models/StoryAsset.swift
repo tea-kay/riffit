@@ -9,6 +9,7 @@ struct StoryAsset: Codable, Identifiable, Hashable {
     let storyId: UUID
     let assetType: AssetType
     var name: String?              // User-defined name (Hook, Script, etc.)
+    var sectionId: UUID?           // Which AssetSection this belongs to (nil = unsectioned)
     var contentText: String?       // For text assets
     var fileUrl: String?           // For voice/video/image assets
     var durationSeconds: Int?      // For voice/video assets
@@ -27,6 +28,7 @@ struct StoryAsset: Codable, Identifiable, Hashable {
         case storyId = "story_id"
         case assetType = "asset_type"
         case name
+        case sectionId = "section_id"
         case contentText = "content_text"
         case fileUrl = "file_url"
         case durationSeconds = "duration_seconds"
@@ -39,6 +41,7 @@ struct StoryAsset: Codable, Identifiable, Hashable {
         storyId: UUID,
         assetType: AssetType,
         name: String? = nil,
+        sectionId: UUID? = nil,
         contentText: String? = nil,
         fileUrl: String? = nil,
         durationSeconds: Int? = nil,
@@ -49,6 +52,7 @@ struct StoryAsset: Codable, Identifiable, Hashable {
         self.storyId = storyId
         self.assetType = assetType
         self.name = name
+        self.sectionId = sectionId
         self.contentText = contentText
         self.fileUrl = fileUrl
         self.durationSeconds = durationSeconds
