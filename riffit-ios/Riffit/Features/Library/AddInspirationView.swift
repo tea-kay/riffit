@@ -5,6 +5,7 @@ import SwiftUI
 /// in under 10 seconds. Nothing is required except the URL.
 struct AddInspirationView: View {
     @ObservedObject var viewModel: LibraryViewModel
+    var preselectedFolderId: UUID? = nil
     @Environment(\.dismiss) private var dismiss
 
     @State private var urlText: String = ""
@@ -67,6 +68,11 @@ struct AddInspirationView: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(RR.modal)
+        .onAppear {
+            if selectedFolderId == nil, let folderId = preselectedFolderId {
+                selectedFolderId = folderId
+            }
+        }
     }
 
     // MARK: - URL Preview

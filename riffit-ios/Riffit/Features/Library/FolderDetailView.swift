@@ -6,6 +6,7 @@ struct FolderDetailView: View {
     let folder: IdeaFolder
     @ObservedObject var viewModel: LibraryViewModel
 
+    @State private var showAddSheet: Bool = false
     @State private var showRenameAlert: Bool = false
     @State private var renameText: String = ""
     @State private var showDeleteConfirm: Bool = false
@@ -51,6 +52,12 @@ struct FolderDetailView: View {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Button {
+                        showAddSheet = true
+                    } label: {
+                        Label("New Idea", systemImage: "plus.circle.fill")
+                    }
+
+                    Button {
                         renameText = folder.name
                         showRenameAlert = true
                     } label: {
@@ -67,6 +74,9 @@ struct FolderDetailView: View {
                         .foregroundStyle(Color.riffitPrimary)
                 }
             }
+        }
+        .sheet(isPresented: $showAddSheet) {
+            AddInspirationView(viewModel: viewModel, preselectedFolderId: folder.id)
         }
         .riffitModal(isPresented: $showRenameAlert) {
             RiffitInputModal(
