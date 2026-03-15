@@ -3,8 +3,13 @@ import SwiftUI
 /// The main tab bar with 3 tabs shown after onboarding is complete.
 /// No tab bar is shown during onboarding — this view only appears
 /// once AppState.isOnboardingComplete is true.
+///
+/// LibraryViewModel is created here and injected as an EnvironmentObject
+/// so that both the Library tab and the Storybank's reference picker
+/// can share the same video data.
 struct MainTabView: View {
     @State private var selectedTab: Tab = .library
+    @StateObject private var libraryViewModel = LibraryViewModel()
 
     enum Tab: String {
         case library
@@ -39,5 +44,6 @@ struct MainTabView: View {
             .tag(Tab.settings)
         }
         .tint(Color.riffitPrimary)
+        .environmentObject(libraryViewModel)
     }
 }

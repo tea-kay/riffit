@@ -110,6 +110,16 @@ class StorybankViewModel: ObservableObject {
         touchStory(storyId)
     }
 
+    func updateAsset(_ asset: StoryAsset, name: String?, text: String) {
+        guard let assets = storyAssetsMap[asset.storyId],
+              let index = assets.firstIndex(where: { $0.id == asset.id })
+        else { return }
+        storyAssetsMap[asset.storyId]?[index].name = name
+        storyAssetsMap[asset.storyId]?[index].contentText = text
+        touchStory(asset.storyId)
+        // TODO: Update name + content_text in Supabase story_assets table
+    }
+
     func deleteAsset(_ asset: StoryAsset) {
         storyAssetsMap[asset.storyId]?.removeAll { $0.id == asset.id }
         // Reindex display orders
@@ -131,6 +141,17 @@ class StorybankViewModel: ObservableObject {
         }
         storyAssetsMap[storyId] = assets
         touchStory(storyId)
+    }
+
+    /// Persists the current display_order for all assets in a story
+    /// to Supabase in a single batch update.
+    func saveAssetOrder(for storyId: UUID) async {
+        let ordered = assets(for: storyId)
+        // TODO: Batch update display_order on story_assets in Supabase
+        // for asset in ordered {
+        //     update story_assets set display_order = asset.displayOrder where id = asset.id
+        // }
+        _ = ordered
     }
 
     // MARK: - References

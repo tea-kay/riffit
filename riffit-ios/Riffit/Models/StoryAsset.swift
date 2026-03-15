@@ -8,6 +8,7 @@ struct StoryAsset: Codable, Identifiable, Hashable {
     let id: UUID
     let storyId: UUID
     let assetType: AssetType
+    var name: String?              // User-defined name (Hook, Script, etc.)
     var contentText: String?       // For text assets
     var fileUrl: String?           // For voice/video/image assets
     var durationSeconds: Int?      // For voice/video assets
@@ -25,6 +26,7 @@ struct StoryAsset: Codable, Identifiable, Hashable {
         case id
         case storyId = "story_id"
         case assetType = "asset_type"
+        case name
         case contentText = "content_text"
         case fileUrl = "file_url"
         case durationSeconds = "duration_seconds"
@@ -36,6 +38,7 @@ struct StoryAsset: Codable, Identifiable, Hashable {
         id: UUID = UUID(),
         storyId: UUID,
         assetType: AssetType,
+        name: String? = nil,
         contentText: String? = nil,
         fileUrl: String? = nil,
         durationSeconds: Int? = nil,
@@ -45,6 +48,7 @@ struct StoryAsset: Codable, Identifiable, Hashable {
         self.id = id
         self.storyId = storyId
         self.assetType = assetType
+        self.name = name
         self.contentText = contentText
         self.fileUrl = fileUrl
         self.durationSeconds = durationSeconds

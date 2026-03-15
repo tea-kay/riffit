@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The core capture sheet — a bottom sheet for saving an IG link
-/// with an optional note and tags. Designed to be completable
+/// with an optional note, tags, and stats. Designed to be completable
 /// in under 10 seconds. Nothing is required except the URL.
 struct AddInspirationView: View {
     @ObservedObject var viewModel: LibraryViewModel
@@ -12,6 +12,12 @@ struct AddInspirationView: View {
     @State private var selectedTags: Set<String> = []
     @State private var selectedFolderId: UUID?
     @State private var showURLError: Bool = false
+
+    // Stats fields (optional, expandable)
+    @State private var showStats: Bool = false
+    @State private var viewCountText: String = ""
+    @State private var likeCountText: String = ""
+    @State private var commentCountText: String = ""
 
     var body: some View {
         VStack(spacing: RS.lg) {
@@ -25,7 +31,7 @@ struct AddInspirationView: View {
             urlPreview
 
             // Note field
-            TextField("What caught your eye?", text: $userNote, axis: .vertical)
+            TextField("Your take", text: $userNote, axis: .vertical)
                 .lineLimit(2...4)
                 .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextPrimary)
@@ -39,6 +45,9 @@ struct AddInspirationView: View {
 
             // Tag selector
             tagSelector
+
+            // Stats section (optional, expandable)
+            statsSection
 
             // Folder picker — only shown when folders exist
             if !viewModel.folders.isEmpty {
@@ -55,8 +64,8 @@ struct AddInspirationView: View {
         .padding(.horizontal, RS.md)
         .padding(.bottom, RS.lg)
         .background(Color.riffitBackground)
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.hidden) // We draw our own handle
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
         .presentationCornerRadius(RR.modal)
     }
 
@@ -136,6 +145,34 @@ struct AddInspirationView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Stats Section
+
+    @ViewBuilder
+    private var statsSection: some View {
+        if showStats {
+            HStack(spacing: RS.sm) {
+                StatField(emoji: "\u{1F441}", placeholder: "Views", text: $viewCountText)
+                StatField(emoji: "\u{2764}\u{FE0F}", placeholder: "Likes", text: $likeCountText)
+                StatField(emoji: "\u{1F4AC}", placeholder: "Comments", text: $commentCountText)
+            }
+        } else {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showStats = true
+                }
+            } label: {
+                HStack(spacing: RS.xs) {
+                    Image(systemName: "chart.bar")
+                        .font(.caption)
+                    Text("Add stats (optional)")
+                        .font(RF.caption)
+                }
+                .foregroundStyle(Color.riffitTextTertiary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -220,13 +257,21 @@ struct AddInspirationView: View {
         let trimmedNote = userNote.trimmingCharacters(in: .whitespacesAndNewlines)
         let tags = Array(selectedTags)
 
+        // Parse stat fields — only pass non-nil if the user entered a value
+        let views = Int(viewCountText)
+        let likes = Int(likeCountText)
+        let comments = Int(commentCountText)
+
         Task {
             await viewModel.addVideo(
                 url: trimmedURL,
                 platform: .instagram,
                 userNote: trimmedNote.isEmpty ? nil : trimmedNote,
                 tags: tags.isEmpty ? nil : tags,
-                folderId: selectedFolderId
+                folderId: selectedFolderId,
+                viewCount: views,
+                likeCount: likes,
+                commentCount: comments
             )
         }
 
@@ -262,6 +307,33 @@ struct TagPill: View {
                 )
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Stat Field
+
+/// Small numeric input field for manually entering video stats.
+struct StatField: View {
+    let emoji: String
+    let placeholder: String
+    @Binding var text: String
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(emoji)
+                .font(RF.caption)
+            TextField(placeholder, text: $text)
+                .font(RF.caption)
+                .keyboardType(.numberPad)
+                .foregroundStyle(Color.riffitTextPrimary)
+        }
+        .padding(RS.sm)
+        .background(Color.riffitSurface)
+        .cornerRadius(RR.tag)
+        .overlay(
+            RoundedRectangle(cornerRadius: RR.tag)
+                .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
+        )
     }
 }
 

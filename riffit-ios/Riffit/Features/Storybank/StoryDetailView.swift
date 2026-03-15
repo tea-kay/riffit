@@ -1,52 +1,130 @@
 import SwiftUI
 
 /// Detail view for a single Story. Two sections:
-/// 1. My Assets — voice notes, video, images, text (reorderable)
+/// 1. My Assets — voice notes, video, images, text (reorderable via drag handles)
 /// 2. References — links to inspiration videos from the Library
 struct StoryDetailView: View {
     let story: Story
     @ObservedObject var viewModel: StorybankViewModel
+    @Environment(\.dismiss) private var dismiss
 
-    @State private var showAddAssetMenu: Bool = false
     @State private var showAddTextSheet: Bool = false
     @State private var showAddReferenceSheet: Bool = false
-    @State private var showStatusPicker: Bool = false
+    @State private var editingAsset: StoryAsset?
+    @State private var showRenameModal: Bool = false
+    @State private var renameText: String = ""
+
+    /// Looks up the latest version of this story from the viewModel
+    /// so the nav title reflects renames without re-entering the view.
+    private var currentStory: Story {
+        viewModel.stories.first(where: { $0.id == story.id }) ?? story
+    }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: RS.xl) {
-                assetsSection
-                referencesSection
+        List {
+            // MARK: Assets Section
+            Section {
+                if viewModel.assets(for: story.id).isEmpty {
+                    emptyAssetsState
+                        .listRowBackground(Color.riffitBackground)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 0, leading: RS.md, bottom: 0, trailing: RS.md))
+                } else {
+                    ForEach(viewModel.assets(for: story.id)) { asset in
+                        AssetRow(asset: asset)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if asset.assetType == .text {
+                                    editingAsset = asset
+                                }
+                            }
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    viewModel.deleteAsset(asset)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                            .listRowBackground(Color.riffitBackground)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(
+                                top: RS.xs, leading: RS.md,
+                                bottom: RS.xs, trailing: RS.md
+                            ))
+                    }
+                    .onMove { from, to in
+                        viewModel.moveAsset(in: story.id, from: from, to: to)
+                        Task { await viewModel.saveAssetOrder(for: story.id) }
+                    }
+                    .deleteDisabled(true)
+                }
+            } header: {
+                assetsHeader
             }
-            .padding(RS.md)
+
+            // MARK: References Section
+            Section {
+                if viewModel.references(for: story.id).isEmpty {
+                    emptyReferencesState
+                        .listRowBackground(Color.riffitBackground)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 0, leading: RS.md, bottom: 0, trailing: RS.md))
+                } else {
+                    ForEach(viewModel.references(for: story.id)) { reference in
+                        ReferenceCard(reference: reference, viewModel: viewModel)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    viewModel.deleteReference(reference)
+                                } label: {
+                                    Label("Remove", systemImage: "trash")
+                                }
+                            }
+                            .listRowBackground(Color.riffitBackground)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(
+                                top: RS.xs, leading: RS.md,
+                                bottom: RS.xs, trailing: RS.md
+                            ))
+                    }
+                }
+            } header: {
+                referencesHeader
+            }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .background(Color.riffitBackground)
-        .navigationTitle(story.title)
+        .environment(\.editMode, .constant(.active))
+        .navigationTitle(currentStory.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    // Status picker
-                    Menu {
-                        ForEach(Story.Status.allCases, id: \.self) { status in
-                            Button {
-                                viewModel.updateStoryStatus(story, to: status)
-                            } label: {
-                                if story.status == status {
-                                    Label(status.label, systemImage: "checkmark")
-                                } else {
-                                    Text(status.label)
-                                }
-                            }
-                        }
+                    Button {
+                        renameText = currentStory.title
+                        showRenameModal = true
                     } label: {
-                        Label("Status", systemImage: "circle.dashed")
+                        Label("Rename", systemImage: "pencil")
+                    }
+
+                    Button {
+                        viewModel.updateStoryStatus(story, to: .archived)
+                        dismiss()
+                    } label: {
+                        Label("Archive", systemImage: "archivebox")
+                    }
+
+                    Button {
+                        // TODO: Share flow
+                    } label: {
+                        Label("Share", systemImage: "square.and.arrow.up")
                     }
 
                     Divider()
 
                     Button(role: .destructive) {
                         viewModel.deleteStory(story)
+                        dismiss()
                     } label: {
                         Label("Delete Story", systemImage: "trash")
                     }
@@ -62,70 +140,98 @@ struct StoryDetailView: View {
         .sheet(isPresented: $showAddReferenceSheet) {
             AddReferenceView(story: story, viewModel: viewModel)
         }
-    }
-
-    // MARK: - Assets Section
-
-    private var assetsSection: some View {
-        VStack(alignment: .leading, spacing: RS.smPlus) {
-            HStack {
-                Text("My Assets")
-                    .font(RF.label)
-                    .textCase(.uppercase)
-                    .tracking(0.08 * 13)
-                    .foregroundStyle(Color.riffitTextTertiary)
-
-                Spacer()
-
-                Menu {
-                    Button {
-                        // TODO: Voice recording flow
-                    } label: {
-                        Label("Voice Note", systemImage: "waveform")
-                    }
-
-                    Button {
-                        // TODO: Video picker flow
-                    } label: {
-                        Label("Video", systemImage: "video")
-                    }
-
-                    Button {
-                        // TODO: Image picker flow
-                    } label: {
-                        Label("Image", systemImage: "photo")
-                    }
-
-                    Button {
-                        showAddTextSheet = true
-                    } label: {
-                        Label("Text", systemImage: "text.alignleft")
-                    }
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(Color.riffitPrimary)
+        .fullScreenCover(item: $editingAsset) { asset in
+            EditTextAssetView(asset: asset, viewModel: viewModel)
+        }
+        .riffitModal(isPresented: $showRenameModal) {
+            RiffitInputModal(
+                title: "Rename Story",
+                placeholder: "Story name",
+                actionLabel: "Save",
+                text: $renameText,
+                onCancel: {
+                    showRenameModal = false
+                },
+                onAction: { name in
+                    viewModel.updateStoryTitle(story, to: name)
+                    showRenameModal = false
                 }
-            }
-
-            let assets = viewModel.assets(for: story.id)
-
-            if assets.isEmpty {
-                emptyAssetsState
-            } else {
-                ForEach(assets) { asset in
-                    AssetRow(asset: asset)
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                viewModel.deleteAsset(asset)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                }
-            }
+            )
         }
     }
+
+    // MARK: - Section Headers
+
+    private var assetsHeader: some View {
+        HStack {
+            Text("My Assets")
+                .font(RF.tag)
+                .textCase(.uppercase)
+                .tracking(0.08 * 12)
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            Spacer()
+
+            Menu {
+                Button {
+                    // TODO: Voice recording flow
+                } label: {
+                    Label("Voice Note", systemImage: "waveform")
+                }
+
+                Button {
+                    // TODO: Video picker flow
+                } label: {
+                    Label("Video", systemImage: "video")
+                }
+
+                Button {
+                    // TODO: Image picker flow
+                } label: {
+                    Label("Image", systemImage: "photo")
+                }
+
+                Button {
+                    showAddTextSheet = true
+                } label: {
+                    Label("Text", systemImage: "text.alignleft")
+                }
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(Color.riffitPrimary)
+            }
+        }
+        .padding(.bottom, RS.xs)
+    }
+
+    private var referencesHeader: some View {
+        HStack {
+            Text("References")
+                .font(RF.tag)
+                .textCase(.uppercase)
+                .tracking(0.08 * 12)
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            Spacer()
+
+            Button {
+                showAddReferenceSheet = true
+            } label: {
+                HStack(spacing: RS.xs) {
+                    Image(systemName: "plus.circle.fill")
+                    Text("Add from Library")
+                        .font(RF.caption)
+                        .fontWeight(.medium)
+                }
+                .foregroundStyle(Color.riffitPrimary)
+            }
+        }
+        .padding(.top, RS.md)
+        .padding(.bottom, RS.xs)
+    }
+
+    // MARK: - Empty States
 
     private var emptyAssetsState: some View {
         VStack(spacing: RS.sm) {
@@ -139,51 +245,6 @@ struct StoryDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, RS.lg)
-    }
-
-    // MARK: - References Section
-
-    private var referencesSection: some View {
-        VStack(alignment: .leading, spacing: RS.smPlus) {
-            HStack {
-                Text("References")
-                    .font(RF.label)
-                    .textCase(.uppercase)
-                    .tracking(0.08 * 13)
-                    .foregroundStyle(Color.riffitTextTertiary)
-
-                Spacer()
-
-                Button {
-                    showAddReferenceSheet = true
-                } label: {
-                    HStack(spacing: RS.xs) {
-                        Image(systemName: "plus.circle.fill")
-                        Text("Add from Library")
-                            .font(RF.caption)
-                            .fontWeight(.medium)
-                    }
-                    .foregroundStyle(Color.riffitPrimary)
-                }
-            }
-
-            let references = viewModel.references(for: story.id)
-
-            if references.isEmpty {
-                emptyReferencesState
-            } else {
-                ForEach(references) { reference in
-                    ReferenceCard(reference: reference, viewModel: viewModel)
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                viewModel.deleteReference(reference)
-                            } label: {
-                                Label("Remove", systemImage: "trash")
-                            }
-                        }
-                }
-            }
-        }
     }
 
     private var emptyReferencesState: some View {
@@ -203,32 +264,30 @@ struct StoryDetailView: View {
 
 // MARK: - Asset Row
 
-/// Renders an asset with a type-specific icon and preview.
+/// Renders an asset with a type-specific filled icon and a smart title.
+/// The system drag handle is provided by the List in edit mode —
+/// no custom handle needed.
 struct AssetRow: View {
     let asset: StoryAsset
 
     var body: some View {
         HStack(spacing: RS.smPlus) {
-            // Drag handle
-            Image(systemName: "line.3.horizontal")
+            // Type-specific filled icon
+            Image(systemName: assetIconName)
                 .font(.caption)
-                .foregroundStyle(Color.riffitTextTertiary)
-
-            // Type-specific icon
-            assetIcon
+                .foregroundStyle(Color.riffitTeal600)
                 .frame(width: 32, height: 32)
                 .background(Color.riffitTealTint)
                 .cornerRadius(RR.tag)
 
             // Content preview
             VStack(alignment: .leading, spacing: 2) {
-                Text(assetTypeLabel)
-                    .font(RF.caption)
-                    .fontWeight(.medium)
+                Text(assetTitle)
+                    .font(RF.label)
                     .foregroundStyle(Color.riffitTextPrimary)
 
                 Text(previewText)
-                    .font(RF.caption)
+                    .font(RF.meta)
                     .foregroundStyle(Color.riffitTextSecondary)
                     .lineLimit(1)
             }
@@ -251,35 +310,40 @@ struct AssetRow: View {
         )
     }
 
-    private var assetIcon: some View {
-        Group {
-            switch asset.assetType {
-            case .voiceNote:
-                Image(systemName: "waveform")
-                    .font(.caption)
-                    .foregroundStyle(Color.riffitTeal400)
-            case .video:
-                Image(systemName: "video")
-                    .font(.caption)
-                    .foregroundStyle(Color.riffitTeal400)
-            case .image:
-                Image(systemName: "photo")
-                    .font(.caption)
-                    .foregroundStyle(Color.riffitTeal400)
-            case .text:
-                Image(systemName: "text.alignleft")
-                    .font(.caption)
-                    .foregroundStyle(Color.riffitTeal400)
-            }
+    /// Filled SF Symbol name for each asset type.
+    private var assetIconName: String {
+        switch asset.assetType {
+        case .voiceNote: return "waveform"
+        case .video:     return "video.fill"
+        case .image:     return "photo.fill"
+        case .text:      return "doc.text.fill"
         }
     }
 
-    private var assetTypeLabel: String {
+    /// Smart title: prefers asset.name if set, then detects
+    /// "Hook:" / "Script:" prefixes, then first 3 words.
+    private var assetTitle: String {
+        // User-defined name takes priority for any asset type
+        if let name = asset.name, !name.isEmpty {
+            return name
+        }
+
         switch asset.assetType {
         case .voiceNote: return "Voice Note"
-        case .video: return "Video"
-        case .image: return "Image"
-        case .text: return "Text"
+        case .video:     return "Video"
+        case .image:     return "Image"
+        case .text:
+            guard let text = asset.contentText,
+                  !text.isEmpty
+            else { return "Text" }
+
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("Hook:") { return "Hook" }
+            if trimmed.hasPrefix("Script:") { return "Script" }
+
+            // First 3 words as a summary title
+            let words = trimmed.split(separator: " ", omittingEmptySubsequences: true)
+            return words.prefix(3).joined(separator: " ")
         }
     }
 
@@ -300,6 +364,95 @@ struct AssetRow: View {
         let minutes = seconds / 60
         let secs = seconds % 60
         return String(format: "%d:%02d", minutes, secs)
+    }
+}
+
+// MARK: - Edit Text Asset View
+
+/// Full-screen editor for text assets. Opens when tapping a text asset row.
+/// Name field at top, text editor below, auto-focuses keyboard.
+struct EditTextAssetView: View {
+    let asset: StoryAsset
+    @ObservedObject var viewModel: StorybankViewModel
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: Field?
+
+    @State private var assetName: String = ""
+    @State private var text: String = ""
+
+    private enum Field { case name, editor }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Name field
+                TextField("Name (optional)", text: $assetName)
+                    .font(RF.label)
+                    .foregroundStyle(Color.riffitTextPrimary)
+                    .padding(RS.smPlus)
+                    .background(Color.riffitElevated)
+                    .cornerRadius(RR.button)
+                    .padding(.horizontal, RS.md)
+                    .padding(.top, RS.sm)
+                    .focused($focusedField, equals: .name)
+
+                Divider()
+                    .padding(.horizontal, RS.md)
+                    .padding(.vertical, RS.sm)
+
+                // Text editor with character count
+                ZStack(alignment: .bottomTrailing) {
+                    TextEditor(text: $text)
+                        .font(RF.bodyMd)
+                        .foregroundStyle(Color.riffitTextPrimary)
+                        .scrollContentBackground(.hidden)
+                        .padding(.horizontal, RS.md)
+                        .padding(.bottom, RS.xl2)
+                        .focused($focusedField, equals: .editor)
+
+                    // Character count
+                    Text("\(text.count)")
+                        .font(RF.meta)
+                        .foregroundStyle(Color.riffitTextTertiary)
+                        .padding(.trailing, RS.md)
+                        .padding(.bottom, RS.smPlus)
+                }
+            }
+            .background(Color.riffitBackground)
+            .navigationTitle("Edit note")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        let trimmedName = assetName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                        viewModel.updateAsset(
+                            asset,
+                            name: trimmedName.isEmpty ? nil : trimmedName,
+                            text: trimmedText
+                        )
+                        dismiss()
+                    }
+                    .font(RF.button)
+                    .foregroundStyle(Color.riffitPrimary)
+                }
+
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundStyle(Color.riffitTextSecondary)
+                }
+            }
+        }
+        .onAppear {
+            assetName = asset.name ?? ""
+            text = asset.contentText ?? ""
+            // Small delay so the view is fully laid out before focusing
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                focusedField = .editor
+            }
+        }
     }
 }
 

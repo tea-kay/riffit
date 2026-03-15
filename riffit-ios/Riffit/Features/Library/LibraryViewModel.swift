@@ -24,6 +24,11 @@ class LibraryViewModel: ObservableObject {
         videos.filter { videoFolderMap[$0.id] == nil }
     }
 
+    /// Returns non-archived videos for use in pickers.
+    var activeVideos: [InspirationVideo] {
+        videos.filter { $0.status != .archived }
+    }
+
     func videos(in folder: IdeaFolder) -> [InspirationVideo] {
         videos.filter { videoFolderMap[$0.id] == folder.id }
     }
@@ -56,10 +61,21 @@ class LibraryViewModel: ObservableObject {
 
     // MARK: - Add Video
 
-    func addVideo(url: String, platform: InspirationVideo.Platform, userNote: String?, tags: [String]?, folderId: UUID? = nil) async {
+    func addVideo(
+        url: String,
+        platform: InspirationVideo.Platform,
+        userNote: String?,
+        tags: [String]?,
+        folderId: UUID? = nil,
+        viewCount: Int? = nil,
+        likeCount: Int? = nil,
+        commentCount: Int? = nil
+    ) async {
         isSubmitting = true
 
         // TODO: Save to Supabase + call analyze-video edge function
+
+        let hasStats = viewCount != nil || likeCount != nil || commentCount != nil
 
         let newVideo = InspirationVideo(
             id: UUID(),
@@ -69,10 +85,15 @@ class LibraryViewModel: ObservableObject {
             userNote: userNote,
             thumbnailUrl: nil,
             transcript: nil,
+            summary: nil,
             alignmentScore: nil,
             alignmentVerdict: nil,
             alignmentReasoning: nil,
             status: .pending,
+            viewCount: viewCount,
+            likeCount: likeCount,
+            commentCount: commentCount,
+            statSource: hasStats ? "manual" : nil,
             savedAt: Date()
         )
 
@@ -93,6 +114,15 @@ class LibraryViewModel: ObservableObject {
 
         videos.insert(newVideo, at: 0)
         isSubmitting = false
+    }
+
+    // MARK: - Update Summary
+
+    func updateSummary(for videoId: UUID, summary: String) {
+        guard let index = videos.firstIndex(where: { $0.id == videoId }) else { return }
+        let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        videos[index].summary = trimmed.isEmpty ? nil : trimmed
+        // TODO: Update summary in Supabase inspiration_videos table
     }
 
     // MARK: - Folders

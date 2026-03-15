@@ -3,7 +3,7 @@ import SwiftUI
 /// The main screen — folders at the top, unfiled ideas below.
 /// Drag an idea onto a folder to organize it.
 struct LibraryView: View {
-    @StateObject private var viewModel = LibraryViewModel()
+    @EnvironmentObject var viewModel: LibraryViewModel
     @State private var showAddSheet: Bool = false
     @State private var showNewFolderAlert: Bool = false
     @State private var showActionSheet: Bool = false
@@ -131,9 +131,9 @@ struct LibraryView: View {
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
-            .font(RF.label)
+            .font(RF.tag)
             .textCase(.uppercase)
-            .tracking(0.08 * 13)
+            .tracking(0.08 * 12)
             .foregroundStyle(Color.riffitTextTertiary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, RS.sm)
@@ -283,70 +283,13 @@ struct FolderDropTarget: View {
 
 // MARK: - Idea Row
 
-/// Note is the headline, tags show below it, URL is the footer.
+/// Delegates to InspirationCard for consistent card layout across the app.
 struct IdeaRow: View {
     let video: InspirationVideo
     let tags: [String]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: RS.sm) {
-            // Note — the primary identifier
-            if let note = video.userNote, !note.isEmpty {
-                Text(note)
-                    .font(RF.heading)
-                    .foregroundStyle(Color.riffitTextPrimary)
-                    .lineLimit(2)
-            } else {
-                Text("No note")
-                    .font(RF.heading)
-                    .foregroundStyle(Color.riffitTextTertiary)
-                    .italic()
-            }
-
-            // Tags row
-            if !tags.isEmpty {
-                HStack(spacing: 6) {
-                    ForEach(tags, id: \.self) { tag in
-                        Text(tag)
-                            .font(RF.tag)
-                            .foregroundStyle(Color.riffitPrimary)
-                            .padding(.vertical, 3)
-                            .padding(.horizontal, 8)
-                            .background(Color.riffitPrimaryTint)
-                            .clipShape(Capsule())
-                    }
-                }
-            }
-
-            // IG link
-            HStack(spacing: 6) {
-                Image(systemName: "camera")
-                    .font(.caption2)
-                    .foregroundStyle(Color.riffitTeal400)
-
-                Text(shortURL)
-                    .font(RF.caption)
-                    .foregroundStyle(Color.riffitTextTertiary)
-                    .lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(RS.md)
-        .background(Color.riffitSurface)
-        .cornerRadius(RR.card)
-        .overlay(
-            RoundedRectangle(cornerRadius: RR.card)
-                .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
-        )
-    }
-
-    private var shortURL: String {
-        guard let url = URL(string: video.url) else { return video.url }
-        let path = url.path
-        if path.count > 1 {
-            return String(path.dropFirst())
-        }
-        return url.host ?? video.url
+        InspirationCard(video: video, tags: tags)
     }
 }
 
@@ -354,8 +297,8 @@ struct IdeaRow: View {
 
 /// Concentric teal rings with a sunset core — the wave barrel.
 /// Ring order adapts to color scheme:
-///   Light: #1A8A96 → #0F6B75 → #0A4A52 → gold → amber → coral
-///   Dark:  #0A4A52 → #0F6B75 → #1A8A96 → gold → amber → coral
+///   Light: #1A8A96 -> #0F6B75 -> #0A4A52 -> gold -> amber -> coral
+///   Dark:  #0A4A52 -> #0F6B75 -> #1A8A96 -> gold -> amber -> coral
 struct WaveBarrelIllustration: View {
     @Environment(\.colorScheme) private var colorScheme
 
@@ -366,8 +309,8 @@ struct WaveBarrelIllustration: View {
 
             // Teal ring order flips between light and dark mode
             let tealColors: [Color] = colorScheme == .dark
-                ? [.riffitTeal900, .riffitTeal600, .riffitTeal400]  // dark outer → light inner
-                : [.riffitTeal400, .riffitTeal600, .riffitTeal900]  // light outer → dark inner
+                ? [.riffitTeal900, .riffitTeal600, .riffitTeal400]  // dark outer -> light inner
+                : [.riffitTeal400, .riffitTeal600, .riffitTeal900]  // light outer -> dark inner
 
             let tealRadii: [CGFloat] = [1.0, 0.82, 0.64]
 
@@ -380,7 +323,7 @@ struct WaveBarrelIllustration: View {
                 context.fill(Path(ellipseIn: rect), with: .color(color))
             }
 
-            // Sunset core (same in both modes: gold → amber → coral)
+            // Sunset core (same in both modes: gold -> amber -> coral)
             let sunsetRings: [(color: Color, radiusFraction: CGFloat)] = [
                 (.riffitPrimary, 0.46),
                 (.riffitPrimaryPressed, 0.30),
