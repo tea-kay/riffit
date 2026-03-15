@@ -15,6 +15,13 @@ class LibraryViewModel: ObservableObject {
     /// Maps video ID → tags. Tracked here until we add a tags column to Supabase.
     @Published var videoTagsMap: [UUID: [String]] = [:]
 
+    /// The full list of available tags. Starts with defaults, but the user
+    /// can add new ones or remove any (including defaults).
+    @Published var availableTags: [String] = IdeaTag.defaults
+
+    /// Alias so existing code referencing allTags still works.
+    var allTags: [String] { availableTags }
+
     /// Maps video ID → comments. Each video has a thread of comments.
     @Published var videoCommentsMap: [UUID: [IdeaComment]] = [:]
 
@@ -35,6 +42,44 @@ class LibraryViewModel: ObservableObject {
 
     func tags(for videoId: UUID) -> [String] {
         videoTagsMap[videoId] ?? []
+    }
+
+    /// Replaces all tags for a video. Pass an empty array to clear.
+    func setTags(for videoId: UUID, tags: [String]) {
+        if tags.isEmpty {
+            videoTagsMap.removeValue(forKey: videoId)
+        } else {
+            videoTagsMap[videoId] = tags
+        }
+        // TODO: Update tags in Supabase
+    }
+
+    /// Toggles a tag on/off for a video.
+    func toggleTag(for videoId: UUID, tag: String) {
+        var current = videoTagsMap[videoId] ?? []
+        if current.contains(tag) {
+            current.removeAll { $0 == tag }
+        } else {
+            current.append(tag)
+        }
+        videoTagsMap[videoId] = current.isEmpty ? nil : current
+    }
+
+    /// Adds a new tag to the available tags list.
+    func addCustomTag(_ tag: String) {
+        let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !availableTags.contains(trimmed) else { return }
+        availableTags.append(trimmed)
+    }
+
+    /// Removes a tag from the available list and from all videos that have it.
+    func removeAvailableTag(_ tag: String) {
+        availableTags.removeAll { $0 == tag }
+        // Remove this tag from any videos that had it
+        for (videoId, tags) in videoTagsMap {
+            let filtered = tags.filter { $0 != tag }
+            videoTagsMap[videoId] = filtered.isEmpty ? nil : filtered
+        }
     }
 
     /// Returns comments for a video, sorted oldest first (chat order).

@@ -4,8 +4,12 @@ import SwiftUI
 @MainActor
 class StorybankViewModel: ObservableObject {
     @Published var stories: [Story] = []
+    @Published var folders: [StoryFolder] = []
     @Published var isLoading: Bool = false
     @Published var error: Error?
+
+    /// Maps story ID → folder ID. Stories not in this dictionary are unfiled.
+    @Published var storyFolderMap: [UUID: UUID] = [:]
 
     /// Maps story ID → assets, ordered by displayOrder.
     @Published var storyAssetsMap: [UUID: [StoryAsset]] = [:]
@@ -16,7 +20,15 @@ class StorybankViewModel: ObservableObject {
     /// Maps story ID → asset sections.
     @Published var storySectionsMap: [UUID: [AssetSection]] = [:]
 
-    var isEmpty: Bool { stories.isEmpty }
+    var isEmpty: Bool { stories.isEmpty && folders.isEmpty }
+
+    var unfiledStories: [Story] {
+        stories.filter { storyFolderMap[$0.id] == nil }
+    }
+
+    func stories(in folder: StoryFolder) -> [Story] {
+        stories.filter { storyFolderMap[$0.id] == folder.id }
+    }
 
     // MARK: - Flat Rows
 
@@ -323,6 +335,34 @@ class StorybankViewModel: ObservableObject {
         }
 
         touchStory(section.storyId)
+    }
+
+    // MARK: - Story Folders
+
+    func createFolder(name: String) {
+        let folder = StoryFolder(name: name)
+        folders.append(folder)
+    }
+
+    func renameFolder(_ folder: StoryFolder, to name: String) {
+        guard let index = folders.firstIndex(where: { $0.id == folder.id }) else { return }
+        folders[index].name = name
+    }
+
+    func deleteFolder(_ folder: StoryFolder) {
+        // Unfile all stories in this folder — don't delete them
+        for (storyId, folderId) in storyFolderMap where folderId == folder.id {
+            storyFolderMap.removeValue(forKey: storyId)
+        }
+        folders.removeAll { $0.id == folder.id }
+    }
+
+    func moveStory(_ storyId: UUID, to folderId: UUID?) {
+        if let folderId {
+            storyFolderMap[storyId] = folderId
+        } else {
+            storyFolderMap.removeValue(forKey: storyId)
+        }
     }
 
     // MARK: - Helpers

@@ -10,6 +10,9 @@ struct InspirationDetailView: View {
 
     @State private var showFullTranscript: Bool = false
     @State private var newCommentText: String = ""
+    @State private var showNewTagField: Bool = false
+    @State private var newTagText: String = ""
+    @State private var titleText: String = ""
     @FocusState private var isCommentFieldFocused: Bool
 
     var body: some View {
@@ -17,14 +20,19 @@ struct InspirationDetailView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: RS.lg) {
+                        // Editable title
+                        TextField("Add a title...", text: $titleText)
+                            .font(RF.heading)
+                            .foregroundStyle(Color.riffitTextPrimary)
+                            .onChange(of: titleText) { newValue in
+                                viewModel.updateTitle(for: video.id, title: newValue)
+                            }
+
                         // Embedded video webview
                         videoPlayer
 
-                        // Tags row
-                        let tags = viewModel.tags(for: video.id)
-                        if !tags.isEmpty {
-                            tagsRow(tags)
-                        }
+                        // Tags — tap to toggle, + to create custom
+                        tagsSection
 
                         // Transcript section
                         if let transcript = video.transcript, !transcript.isEmpty {
@@ -54,6 +62,9 @@ struct InspirationDetailView: View {
         .background(Color.riffitBackground)
         .navigationTitle(video.platform.displayLabel)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            titleText = video.title ?? ""
+        }
     }
 
     // MARK: - Video Player
@@ -68,22 +79,98 @@ struct InspirationDetailView: View {
             )
     }
 
-    // MARK: - Tags Row
+    // MARK: - Tags Section
 
-    private func tagsRow(_ tags: [String]) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(tags, id: \.self) { tag in
-                    Text(tag)
-                        .font(RF.tag)
-                        .foregroundStyle(Color.riffitPrimary)
-                        .padding(.vertical, 3)
-                        .padding(.horizontal, 8)
-                        .background(Color.riffitPrimaryTint)
-                        .clipShape(Capsule())
+    private var tagsSection: some View {
+        let activeTags = viewModel.tags(for: video.id)
+
+        return VStack(alignment: .leading, spacing: RS.sm) {
+            Text("Tags")
+                .font(RF.label)
+                .textCase(.uppercase)
+                .tracking(0.08 * 13)
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            // Wrapping flow of tag pills — all available tags shown,
+            // selected ones highlighted, tap to toggle
+            FlowLayout(spacing: 6) {
+                ForEach(viewModel.allTags, id: \.self) { tag in
+                    let isSelected = activeTags.contains(tag)
+                    Button {
+                        viewModel.toggleTag(for: video.id, tag: tag)
+                    } label: {
+                        Text(tag)
+                            .font(RF.tag)
+                            .foregroundStyle(isSelected ? Color.riffitOnPrimary : Color.riffitTextSecondary)
+                            .padding(.vertical, 5)
+                            .padding(.horizontal, 10)
+                            .background(isSelected ? Color.riffitPrimary : Color.riffitSurface)
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(isSelected ? Color.clear : Color.riffitBorderDefault, lineWidth: 0.5)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // "+" button to create a new custom tag
+                if showNewTagField {
+                    HStack(spacing: RS.xs) {
+                        TextField("New tag", text: $newTagText)
+                            .font(RF.tag)
+                            .foregroundStyle(Color.riffitTextPrimary)
+                            .frame(width: 80)
+                            .onSubmit {
+                                submitNewTag()
+                            }
+
+                        Button {
+                            submitNewTag()
+                        } label: {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.callout)
+                                .foregroundStyle(Color.riffitPrimary)
+                        }
+                    }
+                    .padding(.vertical, 3)
+                    .padding(.horizontal, 8)
+                    .background(Color.riffitSurface)
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
+                    )
+                } else {
+                    Button {
+                        showNewTagField = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.caption)
+                            .foregroundStyle(Color.riffitTextTertiary)
+                            .frame(width: 28, height: 28)
+                            .background(Color.riffitSurface)
+                            .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
+    }
+
+    private func submitNewTag() {
+        let trimmed = newTagText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            viewModel.addCustomTag(trimmed)
+            // Auto-select the new tag on this video
+            viewModel.toggleTag(for: video.id, tag: trimmed)
+        }
+        newTagText = ""
+        showNewTagField = false
     }
 
     // MARK: - Transcript Section

@@ -14,6 +14,8 @@ struct AddInspirationView: View {
     @State private var selectedTags: Set<String> = []
     @State private var selectedFolderId: UUID?
     @State private var showURLError: Bool = false
+    @State private var showNewTagField: Bool = false
+    @State private var newTagText: String = ""
 
     var body: some View {
         VStack(spacing: RS.lg) {
@@ -138,7 +140,7 @@ struct AddInspirationView: View {
     private var tagSelector: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: RS.sm) {
-                ForEach(IdeaTag.defaults, id: \.self) { tag in
+                ForEach(viewModel.allTags, id: \.self) { tag in
                     TagPill(
                         label: tag,
                         isSelected: selectedTags.contains(tag)
@@ -149,9 +151,71 @@ struct AddInspirationView: View {
                             selectedTags.insert(tag)
                         }
                     }
+                    // Long-press to delete any tag from the available list
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            selectedTags.remove(tag)
+                            viewModel.removeAvailableTag(tag)
+                        } label: {
+                            Label("Delete Tag", systemImage: "trash")
+                        }
+                    }
+                }
+
+                // Inline new tag creation
+                if showNewTagField {
+                    HStack(spacing: RS.xs) {
+                        TextField("Tag name", text: $newTagText)
+                            .font(RF.caption)
+                            .foregroundStyle(Color.riffitTextPrimary)
+                            .frame(width: 80)
+                            .onSubmit { submitCaptureTag() }
+
+                        Button {
+                            submitCaptureTag()
+                        } label: {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.callout)
+                                .foregroundStyle(Color.riffitPrimary)
+                        }
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, RS.smPlus)
+                    .background(Color.riffitSurface)
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
+                    )
+                } else {
+                    Button {
+                        showNewTagField = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.caption)
+                            .foregroundStyle(Color.riffitTextTertiary)
+                            .frame(width: 32, height: 32)
+                            .background(Color.riffitSurface)
+                            .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
+    }
+
+    private func submitCaptureTag() {
+        let trimmed = newTagText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            viewModel.addCustomTag(trimmed)
+            selectedTags.insert(trimmed)
+        }
+        newTagText = ""
+        showNewTagField = false
     }
 
     // MARK: - Folder Picker

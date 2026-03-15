@@ -7,6 +7,9 @@ struct StorybankView: View {
     @StateObject private var viewModel = StorybankViewModel()
     @State private var showNewStoryAlert: Bool = false
     @State private var newStoryTitle: String = ""
+    @State private var showNewFolderAlert: Bool = false
+    @State private var newFolderName: String = ""
+    @State private var showActionSheet: Bool = false
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -33,13 +36,29 @@ struct StorybankView: View {
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    newStoryTitle = ""
-                    showNewStoryAlert = true
+                    showActionSheet = true
                 } label: {
                     Image(systemName: "plus")
                         .foregroundStyle(Color.riffitPrimary)
                 }
             }
+        }
+        .riffitModal(isPresented: $showActionSheet) {
+            RiffitActionModal(
+                actions: [
+                    .init(label: "New Story", icon: "doc.text") {
+                        newStoryTitle = ""
+                        showNewStoryAlert = true
+                    },
+                    .init(label: "New Folder", icon: "folder.badge.plus") {
+                        newFolderName = ""
+                        showNewFolderAlert = true
+                    },
+                ],
+                onDismiss: {
+                    showActionSheet = false
+                }
+            )
         }
         .riffitModal(isPresented: $showNewStoryAlert) {
             RiffitInputModal(
@@ -56,6 +75,21 @@ struct StorybankView: View {
                 }
             )
         }
+        .riffitModal(isPresented: $showNewFolderAlert) {
+            RiffitInputModal(
+                title: "New Folder",
+                placeholder: "Folder name",
+                actionLabel: "Create",
+                text: $newFolderName,
+                onCancel: {
+                    showNewFolderAlert = false
+                },
+                onAction: { name in
+                    viewModel.createFolder(name: name)
+                    showNewFolderAlert = false
+                }
+            )
+        }
         .task {
             await viewModel.fetchStories()
         }
@@ -66,11 +100,33 @@ struct StorybankView: View {
     private var storyList: some View {
         ScrollView {
             LazyVStack(spacing: RS.smPlus) {
-                ForEach(viewModel.stories) { story in
-                    NavigationLink(value: story) {
-                        StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id))
+                // Folders section
+                if !viewModel.folders.isEmpty {
+                    ForEach(viewModel.folders) { folder in
+                        StoryFolderDropTarget(folder: folder, viewModel: viewModel)
                     }
-                    .buttonStyle(.plain)
+                }
+
+                // Unfiled stories
+                let unfiled = viewModel.unfiledStories
+                if !unfiled.isEmpty {
+                    if !viewModel.folders.isEmpty {
+                        Text("Unfiled")
+                            .font(RF.tag)
+                            .textCase(.uppercase)
+                            .tracking(0.08 * 12)
+                            .foregroundStyle(Color.riffitTextTertiary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, RS.sm)
+                    }
+
+                    ForEach(unfiled) { story in
+                        NavigationLink(value: story) {
+                            StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id))
+                        }
+                        .buttonStyle(.plain)
+                        .draggable(story.id.uuidString)
+                    }
                 }
             }
             .padding(.horizontal, RS.md)
@@ -81,6 +137,9 @@ struct StorybankView: View {
         }
         .navigationDestination(for: Story.self) { story in
             StoryDetailView(story: story, viewModel: viewModel)
+        }
+        .navigationDestination(for: StoryFolder.self) { folder in
+            StoryFolderDetailView(folder: folder, viewModel: viewModel)
         }
     }
 
@@ -602,6 +661,193 @@ extension Story.Status {
         case .draft: return "Draft"
         case .ready: return "Ready"
         case .archived: return "Archived"
+        }
+    }
+}
+
+// MARK: - Story Folder Row
+
+/// Displays a folder in the Storybank list.
+struct StoryFolderRow: View {
+    let folder: StoryFolder
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: RS.smPlus) {
+            Image(systemName: "folder.fill")
+                .font(.title3)
+                .foregroundStyle(Color.riffitPrimary)
+
+            Text(folder.name)
+                .font(RF.heading)
+                .foregroundStyle(Color.riffitTextPrimary)
+
+            Spacer()
+
+            Text("\(count)")
+                .font(RF.caption)
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(Color.riffitTextTertiary)
+        }
+        .padding(RS.md)
+        .background(Color.riffitSurface)
+        .cornerRadius(RR.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: RR.card)
+                .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+        )
+    }
+}
+
+// MARK: - Story Folder Drop Target
+
+/// Wraps a StoryFolderRow with drop-target behavior so stories
+/// can be dragged onto a folder to organize them.
+struct StoryFolderDropTarget: View {
+    let folder: StoryFolder
+    @ObservedObject var viewModel: StorybankViewModel
+    @State private var isTargeted: Bool = false
+
+    var body: some View {
+        NavigationLink(value: folder) {
+            StoryFolderRow(
+                folder: folder,
+                count: viewModel.stories(in: folder).count
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: RR.card)
+                    .stroke(Color.riffitPrimary, lineWidth: isTargeted ? 2 : 0)
+            )
+            .scaleEffect(isTargeted ? 1.02 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: isTargeted)
+        }
+        .buttonStyle(.plain)
+        .dropDestination(for: String.self) { items, _ in
+            guard let idString = items.first,
+                  let storyId = UUID(uuidString: idString),
+                  viewModel.stories.contains(where: { $0.id == storyId })
+            else { return false }
+            viewModel.moveStory(storyId, to: folder.id)
+            return true
+        } isTargeted: { targeted in
+            isTargeted = targeted
+        }
+    }
+}
+
+// MARK: - Story Folder Detail View
+
+/// Shows the stories inside a folder. Supports renaming, deleting
+/// the folder, and removing stories from it.
+struct StoryFolderDetailView: View {
+    let folder: StoryFolder
+    @ObservedObject var viewModel: StorybankViewModel
+
+    @State private var showRenameAlert: Bool = false
+    @State private var renameText: String = ""
+    @State private var showDeleteConfirm: Bool = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            Color.riffitBackground
+                .ignoresSafeArea()
+
+            let folderStories = viewModel.stories(in: folder)
+
+            if folderStories.isEmpty {
+                VStack(spacing: RS.sm) {
+                    Text("No stories in this folder")
+                        .font(RF.bodyMd)
+                        .foregroundStyle(Color.riffitTextTertiary)
+
+                    Text("Drag stories here to organize them.")
+                        .font(RF.caption)
+                        .foregroundStyle(Color.riffitTextTertiary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, RS.lg)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: RS.smPlus) {
+                        ForEach(folderStories) { story in
+                            NavigationLink(value: story) {
+                                StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id))
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button {
+                                    viewModel.moveStory(story.id, to: nil)
+                                } label: {
+                                    Label("Remove from Folder", systemImage: "folder.badge.minus")
+                                }
+                            }
+                            .draggable(story.id.uuidString)
+                        }
+                    }
+                    .padding(.horizontal, RS.md)
+                    .padding(.vertical, RS.smPlus)
+                }
+                .navigationDestination(for: Story.self) { story in
+                    StoryDetailView(story: story, viewModel: viewModel)
+                }
+            }
+        }
+        .navigationTitle(folder.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button {
+                        renameText = folder.name
+                        showRenameAlert = true
+                    } label: {
+                        Label("Rename", systemImage: "pencil")
+                    }
+
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        Label("Delete Folder", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundStyle(Color.riffitPrimary)
+                }
+            }
+        }
+        .riffitModal(isPresented: $showRenameAlert) {
+            RiffitInputModal(
+                title: "Rename Folder",
+                placeholder: "Folder name",
+                actionLabel: "Save",
+                text: $renameText,
+                onCancel: {
+                    showRenameAlert = false
+                },
+                onAction: { name in
+                    viewModel.renameFolder(folder, to: name)
+                    showRenameAlert = false
+                }
+            )
+        }
+        .riffitModal(isPresented: $showDeleteConfirm) {
+            RiffitConfirmModal(
+                title: "Delete Folder?",
+                message: "Stories inside will be moved to Unfiled.",
+                actionLabel: "Delete",
+                onCancel: {
+                    showDeleteConfirm = false
+                },
+                onAction: {
+                    viewModel.deleteFolder(folder)
+                    showDeleteConfirm = false
+                    dismiss()
+                }
+            )
         }
     }
 }

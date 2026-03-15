@@ -10,20 +10,20 @@ struct AddReferenceView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedVideo: InspirationVideo?
-    @State private var selectedTag: String?
+    @State private var selectedSectionId: UUID?
     @State private var step: Step = .pickVideo
     @State private var searchText: String = ""
     @State private var selectedFolder: IdeaFolder?
 
     enum Step {
         case pickVideo
-        case pickTag
+        case pickSection
     }
 
-    /// The reference tags a creator can pick from.
-    private let referenceTags: [String] = [
-        "Hook", "Editing", "B-Roll", "Format", "Topic", "Inspiration"
-    ]
+    /// The story's asset sections — used as the reference destination options.
+    private var storySections: [AssetSection] {
+        viewModel.sections(for: story.id)
+    }
 
     /// Videos scoped to the current folder (or all active if no folder selected).
     private var scopedVideos: [InspirationVideo] {
@@ -62,11 +62,11 @@ struct AddReferenceView: View {
                 switch step {
                 case .pickVideo:
                     pickVideoStep
-                case .pickTag:
-                    pickTagStep
+                case .pickSection:
+                    pickSectionStep
                 }
             }
-            .navigationTitle(step == .pickVideo ? "Pick an Idea" : "What are you referencing?")
+            .navigationTitle(step == .pickVideo ? "Pick an Idea" : "Add to section")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -76,7 +76,7 @@ struct AddReferenceView: View {
                     .foregroundStyle(Color.riffitTextSecondary)
                 }
 
-                if step == .pickTag {
+                if step == .pickSection {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button {
                             withAnimation { step = .pickVideo }
@@ -203,7 +203,13 @@ struct AddReferenceView: View {
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     selectedVideo = video
-                                    withAnimation { step = .pickTag }
+                                    if storySections.isEmpty {
+                                        // No sections in this story — add reference directly
+                                        viewModel.addReference(to: story.id, videoId: video.id, tag: "")
+                                        dismiss()
+                                    } else {
+                                        withAnimation { step = .pickSection }
+                                    }
                                 }
                             }
                         }
@@ -247,47 +253,61 @@ struct AddReferenceView: View {
         .padding(.horizontal, RS.xl)
     }
 
-    // MARK: - Step 2: Pick Tag
+    // MARK: - Step 2: Pick Section
 
-    private var pickTagStep: some View {
+    private var pickSectionStep: some View {
         VStack(spacing: RS.lg) {
-            Text("What aspect of this video are you referencing?")
+            Text("Which section is this reference for?")
                 .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, RS.lg)
                 .padding(.top, RS.lg)
 
-            // Tag grid
+            // Section options — the story's asset sections
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: RS.smPlus) {
-                ForEach(referenceTags, id: \.self) { tag in
+                // "None" option for unsectioned references
+                Button {
+                    selectedSectionId = nil
+                    addSelectedReference(sectionName: "")
+                } label: {
+                    Text("No section")
+                        .font(RF.button)
+                        .foregroundStyle(Color.riffitTextPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, RS.smPlus)
+                        .background(Color.riffitSurface)
+                        .cornerRadius(RR.button)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: RR.button)
+                                .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                ForEach(storySections) { section in
                     Button {
-                        selectedTag = tag
+                        selectedSectionId = section.id
+                        addSelectedReference(sectionName: section.name)
                     } label: {
-                        Text(tag)
-                            .font(RF.button)
-                            .foregroundStyle(
-                                selectedTag == tag
-                                    ? Color.riffitOnPrimary
-                                    : Color.riffitTextPrimary
-                            )
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, RS.smPlus)
-                            .background(
-                                selectedTag == tag
-                                    ? Color.riffitPrimary
-                                    : Color.riffitSurface
-                            )
-                            .cornerRadius(RR.button)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: RR.button)
-                                    .stroke(
-                                        selectedTag == tag
-                                            ? Color.clear
-                                            : Color.riffitBorderDefault,
-                                        lineWidth: 0.5
-                                    )
-                            )
+                        HStack(spacing: RS.xs) {
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(Color.riffitTeal400)
+                                .frame(width: 3, height: 16)
+
+                            Text(section.name)
+                                .font(RF.button)
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(Color.riffitTextPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, RS.smPlus)
+                        .background(Color.riffitSurface)
+                        .cornerRadius(RR.button)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: RR.button)
+                                .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
+                        )
                     }
                     .buttonStyle(.plain)
                 }
@@ -295,19 +315,14 @@ struct AddReferenceView: View {
             .padding(.horizontal, RS.md)
 
             Spacer()
-
-            // Add reference button
-            RiffitButton(title: "Add Reference", variant: .primary) {
-                if let video = selectedVideo, let tag = selectedTag {
-                    viewModel.addReference(to: story.id, videoId: video.id, tag: tag)
-                    dismiss()
-                }
-            }
-            .padding(.horizontal, RS.md)
-            .padding(.bottom, RS.lg)
-            .opacity(selectedTag != nil ? 1.0 : 0.4)
-            .disabled(selectedTag == nil)
         }
+    }
+
+    /// Adds the selected video as a reference and dismisses.
+    private func addSelectedReference(sectionName: String) {
+        guard let video = selectedVideo else { return }
+        viewModel.addReference(to: story.id, videoId: video.id, tag: sectionName)
+        dismiss()
     }
 }
 

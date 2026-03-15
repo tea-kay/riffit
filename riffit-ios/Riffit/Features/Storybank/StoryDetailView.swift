@@ -632,14 +632,40 @@ struct ReferenceCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: RS.sm) {
-            // Tag pill
-            Text(reference.referenceTag)
-                .font(RF.tag)
-                .foregroundStyle(Color.riffitPrimary)
-                .padding(.vertical, 3)
-                .padding(.horizontal, 8)
-                .background(Color.riffitPrimaryTint)
-                .clipShape(Capsule())
+            // Section tag + idea tags on one line
+            let videoTags = libraryViewModel.tags(for: reference.inspirationVideoId)
+            let hasSection = !reference.referenceTag.isEmpty
+            if hasSection || !videoTags.isEmpty {
+                HStack(spacing: 6) {
+                    // Section tag first (teal)
+                    if hasSection {
+                        HStack(spacing: RS.xs) {
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(Color.riffitTeal400)
+                                .frame(width: 3, height: 12)
+
+                            Text(reference.referenceTag)
+                                .font(RF.tag)
+                                .foregroundStyle(Color.riffitTeal400)
+                        }
+                        .padding(.vertical, 3)
+                        .padding(.horizontal, 8)
+                        .background(Color.riffitTealTint)
+                        .clipShape(Capsule())
+                    }
+
+                    // Idea tags (gold)
+                    ForEach(videoTags, id: \.self) { tag in
+                        Text(tag)
+                            .font(RF.tag)
+                            .foregroundStyle(Color.riffitPrimary)
+                            .padding(.vertical, 3)
+                            .padding(.horizontal, 8)
+                            .background(Color.riffitPrimaryTint)
+                            .clipShape(Capsule())
+                    }
+                }
+            }
 
             // Video title from the Library
             Text(referenceTitle)
