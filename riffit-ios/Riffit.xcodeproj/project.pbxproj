@@ -48,6 +48,8 @@
 		DF48443B30025D9BD77DD5C9 /* InspirationVideo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E92F222108A8604D2B7ECA /* InspirationVideo.swift */; };
 		EC3E4AA1FEA733730E864EC8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 602FE9C75CD489434CB43DCB /* Assets.xcassets */; };
 		FAFA3855208C106A4A4E2E5A /* InspirationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B51C570A8060A401A8F4AE96 /* InspirationCard.swift */; };
+		D5E6F7A8B9C0D1E2F3A4B5C6 /* RiffitWordmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6F7A8B9C0D1E2F3A4B5C6D7 /* RiffitWordmark.swift */; };
+		F7A8B9C0D1E2F3A4B5C6D7E8 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A8B9C0D1E2F3A4B5C6D7E8F9 /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -104,6 +106,8 @@
 		DD4C85A1CB41022805ABBEF8 /* SocialConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialConnectView.swift; sourceTree = "<group>"; };
 		E3FD07C7FAC4D4F9790B251E /* RiffitFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitFonts.swift; sourceTree = "<group>"; };
 		FB7AE2E5C30E70F6F15FA681 /* AddInspirationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddInspirationView.swift; sourceTree = "<group>"; };
+		E6F7A8B9C0D1E2F3A4B5C6D7 /* RiffitWordmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitWordmark.swift; sourceTree = "<group>"; };
+		A8B9C0D1E2F3A4B5C6D7E8F9 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -111,6 +115,7 @@
 			isa = PBXGroup;
 			children = (
 				602FE9C75CD489434CB43DCB /* Assets.xcassets */,
+				A8B9C0D1E2F3A4B5C6D7E8F9 /* LaunchScreen.storyboard */,
 				B09163DD5F36C00D42047FB2 /* App */,
 				3DB2DD298956B95ABE7957D3 /* Components */,
 				065217055233F261CCA7764B /* Core */,
@@ -180,6 +185,7 @@
 				B51C570A8060A401A8F4AE96 /* InspirationCard.swift */,
 				1120BC2824BE7C4619C6A84D /* LoadingOverlay.swift */,
 				00798CA0356C2C648DDE4C3E /* RiffitButton.swift */,
+				E6F7A8B9C0D1E2F3A4B5C6D7 /* RiffitWordmark.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -375,6 +381,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				EC3E4AA1FEA733730E864EC8 /* Assets.xcassets in Resources */,
+				F7A8B9C0D1E2F3A4B5C6D7E8 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -424,6 +431,7 @@
 				769804D0DE5A9805163BA285 /* User.swift in Sources */,
 				ADEFD9559A7199A784AA3C3B /* VideoDeconstruction.swift in Sources */,
 				38025785851FC11D5C7D7363 /* View+Riffit.swift in Sources */,
+				D5E6F7A8B9C0D1E2F3A4B5C6 /* RiffitWordmark.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -475,7 +483,7 @@
 				INFOPLIST_GENERATION_MODE = GeneratedFile;
 				INFOPLIST_KEY_CFBundleDisplayName = Riffit;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -556,7 +564,7 @@
 				INFOPLIST_GENERATION_MODE = GeneratedFile;
 				INFOPLIST_KEY_CFBundleDisplayName = Riffit;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

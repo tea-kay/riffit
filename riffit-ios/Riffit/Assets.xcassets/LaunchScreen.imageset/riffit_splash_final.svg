@@ -1,0 +1,32 @@
+<svg width="100%" viewBox="0 0 680 970" xmlns="http://www.w3.org/2000/svg">
+
+  <rect width="680" height="960" fill="#F0EBD8" style="fill:rgb(240, 235, 216);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <defs>
+    <pattern id="g" width="85" height="85" patternUnits="userSpaceOnUse">
+      <path d="M 85 0 L 0 0 0 85" fill="none" stroke="#D8D0BC" stroke-width="0.4"/>
+    </pattern>
+  </defs>
+  <rect width="680" height="960" fill="url(#g)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Layer 1: Deep teal shadow -->
+  <text x="350" y="510" font-size="188" font-weight="900" fill="#062E34" font-family="Georgia,serif" font-style="italic" text-anchor="middle" letter-spacing="-4" style="fill:rgb(6, 46, 52);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Georgia, serif;font-size:188px;font-weight:900;font-style:italic;text-anchor:middle;dominant-baseline:auto">Riffit</text>
+
+  <!-- Layer 2: Coral shadow -->
+  <text x="348" y="507" font-size="188" font-weight="900" fill="#7A1F0D" font-family="Georgia,serif" font-style="italic" text-anchor="middle" letter-spacing="-4" style="fill:rgb(122, 31, 13);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Georgia, serif;font-size:188px;font-weight:900;font-style:italic;text-anchor:middle;dominant-baseline:auto">Riffit</text>
+
+  <!-- Layer 3: Thick dark teal outline -->
+  <text x="344" y="503" font-size="188" font-weight="900" fill="none" stroke="#0A4A52" stroke-width="34" stroke-linejoin="round" stroke-linecap="round" font-family="Georgia,serif" font-style="italic" text-anchor="middle" letter-spacing="-4" style="fill:none;stroke:rgb(10, 74, 82);color:rgb(255, 255, 255);stroke-width:34px;stroke-linecap:round;stroke-linejoin:round;opacity:1;font-family:Georgia, serif;font-size:188px;font-weight:900;font-style:italic;text-anchor:middle;dominant-baseline:auto">Riffit</text>
+
+  <!-- Layer 4: Mid teal outline -->
+  <text x="344" y="503" font-size="188" font-weight="900" fill="none" stroke="#0F6B75" stroke-width="22" stroke-linejoin="round" stroke-linecap="round" font-family="Georgia,serif" font-style="italic" text-anchor="middle" letter-spacing="-4" style="fill:none;stroke:rgb(15, 107, 117);color:rgb(255, 255, 255);stroke-width:22px;stroke-linecap:round;stroke-linejoin:round;opacity:1;font-family:Georgia, serif;font-size:188px;font-weight:900;font-style:italic;text-anchor:middle;dominant-baseline:auto">Riffit</text>
+
+  <!-- Layer 5: Amber ring -->
+  <text x="344" y="503" font-size="188" font-weight="900" fill="none" stroke="#E87820" stroke-width="6" stroke-linejoin="round" font-family="Georgia,serif" font-style="italic" text-anchor="middle" letter-spacing="-4" style="fill:none;stroke:rgb(232, 120, 32);color:rgb(255, 255, 255);stroke-width:6px;stroke-linecap:butt;stroke-linejoin:round;opacity:1;font-family:Georgia, serif;font-size:188px;font-weight:900;font-style:italic;text-anchor:middle;dominant-baseline:auto">Riffit</text>
+
+  <!-- Layer 6: Gold fill -->
+  <text x="344" y="503" font-size="188" font-weight="900" fill="#F0AA20" font-family="Georgia,serif" font-style="italic" text-anchor="middle" letter-spacing="-4" style="fill:rgb(240, 170, 32);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Georgia, serif;font-size:188px;font-weight:900;font-style:italic;text-anchor:middle;dominant-baseline:auto">Riffit</text>
+
+  <!-- Tagline — moved down -->
+  <text x="344" y="620" font-size="22" fill="#1A8A96" font-family="Georgia,serif" font-style="italic" text-anchor="middle" letter-spacing="4" style="fill:rgb(26, 138, 150);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Georgia, serif;font-size:22px;font-weight:400;font-style:italic;text-anchor:middle;dominant-baseline:auto">scroll, riff, post</text>
+
+</svg>

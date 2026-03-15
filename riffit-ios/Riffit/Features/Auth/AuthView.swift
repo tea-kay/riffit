@@ -41,12 +41,12 @@ struct AuthView: View {
 
     private var brandSection: some View {
         VStack(spacing: .md) {
-            Text("Riffit")
-                .font(.custom("Georgia-BoldItalic", size: 56))
-                .foregroundStyle(Color.riffitPrimaryText)
+            RiffitWordmark(fontSize: 56)
+                .frame(height: 80)
 
             Text("scroll, riff, post")
-                .riffitTagline()
+                .font(.custom("Georgia-Italic", size: 16))
+                .tracking(4)
                 .foregroundStyle(Color.riffitTeal400)
         }
     }
