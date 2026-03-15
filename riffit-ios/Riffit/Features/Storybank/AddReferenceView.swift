@@ -13,6 +13,7 @@ struct AddReferenceView: View {
     @State private var selectedTag: String?
     @State private var step: Step = .pickVideo
     @State private var searchText: String = ""
+    @State private var selectedFolder: IdeaFolder?
 
     enum Step {
         case pickVideo
@@ -24,22 +25,26 @@ struct AddReferenceView: View {
         "Hook", "Editing", "B-Roll", "Format", "Topic", "Inspiration"
     ]
 
-    /// Filtered videos based on search query.
+    /// Videos scoped to the current folder (or all active if no folder selected).
+    private var scopedVideos: [InspirationVideo] {
+        if let folder = selectedFolder {
+            return libraryViewModel.videos(in: folder).filter { $0.status != .archived }
+        }
+        return libraryViewModel.activeVideos
+    }
+
+    /// Filtered videos based on search query within the current scope.
     private var filteredVideos: [InspirationVideo] {
-        let active = libraryViewModel.activeVideos
-        guard !searchText.isEmpty else { return active }
+        guard !searchText.isEmpty else { return scopedVideos }
 
         let query = searchText.lowercased()
-        return active.filter { video in
-            // Search by title
+        return scopedVideos.filter { video in
             if let title = video.title, title.lowercased().contains(query) {
                 return true
             }
-            // Search by note text
             if let note = video.userNote, note.lowercased().contains(query) {
                 return true
             }
-            // Search by tags
             let tags = libraryViewModel.tags(for: video.id)
             if tags.contains(where: { $0.lowercased().contains(query) }) {
                 return true
@@ -120,23 +125,93 @@ struct AddReferenceView: View {
             .padding(.horizontal, RS.md)
             .padding(.vertical, RS.sm)
 
-            if filteredVideos.isEmpty {
+            // Breadcrumb when inside a folder — tap to go back
+            if let folder = selectedFolder {
+                Button {
+                    withAnimation { selectedFolder = nil }
+                } label: {
+                    HStack(spacing: RS.xs) {
+                        Image(systemName: "chevron.left")
+                            .font(.caption)
+                        Text("All Ideas")
+                            .font(RF.caption)
+                        Text("/")
+                            .font(RF.caption)
+                            .foregroundStyle(Color.riffitTextTertiary)
+                        Text(folder.name)
+                            .font(RF.caption)
+                            .fontWeight(.medium)
+                    }
+                    .foregroundStyle(Color.riffitTeal400)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, RS.md)
+                .padding(.bottom, RS.sm)
+            }
+
+            if filteredVideos.isEmpty && (selectedFolder != nil || !libraryViewModel.folders.isEmpty == false) {
+                Spacer()
+                emptyPickerState
+                Spacer()
+            } else if filteredVideos.isEmpty && selectedFolder == nil && libraryViewModel.folders.isEmpty {
                 Spacer()
                 emptyPickerState
                 Spacer()
             } else {
                 ScrollView {
                     LazyVStack(spacing: RS.smPlus) {
-                        ForEach(filteredVideos) { video in
-                            PickerCard(
-                                video: video,
-                                tags: libraryViewModel.tags(for: video.id)
-                            )
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                selectedVideo = video
-                                withAnimation { step = .pickTag }
+                        // Show folders at top level when not searching and no folder selected
+                        if selectedFolder == nil && searchText.isEmpty && !libraryViewModel.folders.isEmpty {
+                            ForEach(libraryViewModel.folders) { folder in
+                                PickerFolderRow(
+                                    folder: folder,
+                                    count: libraryViewModel.videos(in: folder).filter { $0.status != .archived }.count
+                                )
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    withAnimation { selectedFolder = folder }
+                                }
                             }
+                        }
+
+                        // Videos (unfiled at top level, or all in selected folder)
+                        let videosToShow: [InspirationVideo] = {
+                            // At top level with no search, show only unfiled videos
+                            // (filed ones are accessible through their folders)
+                            if selectedFolder == nil && searchText.isEmpty && !libraryViewModel.folders.isEmpty {
+                                return filteredVideos.filter { libraryViewModel.videoFolderMap[$0.id] == nil }
+                            }
+                            return filteredVideos
+                        }()
+
+                        if !videosToShow.isEmpty {
+                            // "Unfiled" label when folders exist and we're at top level
+                            if selectedFolder == nil && searchText.isEmpty && !libraryViewModel.folders.isEmpty {
+                                Text("Unfiled")
+                                    .font(RF.tag)
+                                    .textCase(.uppercase)
+                                    .tracking(0.08 * 12)
+                                    .foregroundStyle(Color.riffitTextTertiary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+
+                            ForEach(videosToShow) { video in
+                                PickerCard(
+                                    video: video,
+                                    tags: libraryViewModel.tags(for: video.id)
+                                )
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    selectedVideo = video
+                                    withAnimation { step = .pickTag }
+                                }
+                            }
+                        }
+
+                        // Show empty state if nothing to display
+                        if videosToShow.isEmpty && (selectedFolder != nil || libraryViewModel.folders.isEmpty) {
+                            emptyPickerState
+                                .padding(.top, RS.xl3)
                         }
                     }
                     .padding(.horizontal, RS.md)
@@ -308,5 +383,42 @@ struct PickerCard: View {
             return String(path.prefix(30)) + "..."
         }
         return path.count > 1 ? String(path.dropFirst()) : (url.host ?? video.url)
+    }
+}
+
+// MARK: - Picker Folder Row
+
+/// Folder row in the reference picker — matches the Library folder style.
+struct PickerFolderRow: View {
+    let folder: IdeaFolder
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: RS.smPlus) {
+            Image(systemName: "folder.fill")
+                .font(.title3)
+                .foregroundStyle(Color.riffitPrimary)
+
+            Text(folder.name)
+                .font(RF.label)
+                .foregroundStyle(Color.riffitTextPrimary)
+
+            Spacer()
+
+            Text("\(count)")
+                .font(RF.caption)
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(Color.riffitTextTertiary)
+        }
+        .padding(RS.md)
+        .background(Color.riffitSurface)
+        .cornerRadius(RR.input)
+        .overlay(
+            RoundedRectangle(cornerRadius: RR.input)
+                .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+        )
     }
 }
