@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		0C0C3D99022F0B87CD5FCF50 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8195FF2AC4D4715DE367914 /* SettingsView.swift */; };
 		0F988D44FF442B5538405218 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 883FDE84D7B7AFF219379886 /* ShareViewController.swift */; };
-		10B990E25FD094CE69DCCF96 /* RiffitSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10BA7CDC3821AC5664F16466 /* RiffitSpacing.swift */; };
+		CC11DD22EE33FF44AA55BB66 /* RiffitTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD22EE33FF44AA55BB66CC77 /* RiffitTheme.swift */; };
 		1457C7442AEBE91EBD705812 /* SocialConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4C85A1CB41022805ABBEF8 /* SocialConnectView.swift */; };
 		1D8795CEF94FF6F9816E2E99 /* RiffitApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E3E18E921EEEEA4A1811D08 /* RiffitApp.swift */; };
 		287C3C14CE2B464B9A70AE9F /* LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCFFDEC95DDE5AEC083E6F70 /* LibraryViewModel.swift */; };
@@ -33,7 +33,6 @@
 		A26B8432B3C1BBC837F10417 /* InterviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C8324F7E1E52BBC5D8F498B /* InterviewView.swift */; };
 		ADEFD9559A7199A784AA3C3B /* VideoDeconstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA88E5355C855A2C69D50BD4 /* VideoDeconstruction.swift */; };
 		B0AE71E45D4098C325AC7EBA /* CreatorTypeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C629D838BA4CD611A819F8B7 /* CreatorTypeView.swift */; };
-		B7F985472D882D573AB1B248 /* RiffitFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3FD07C7FAC4D4F9790B251E /* RiffitFonts.swift */; };
 		BD30DA85B13097342CF6A12B /* FolderDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698DD03AD3E62BF69020BE35 /* FolderDetailView.swift */; };
 		C40DAFF1CE73611699B384F9 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AF98CEE92E42C689BCCC586 /* MainTabView.swift */; };
 		C1A2B3C4D5E6F7081920A1B2 /* Story.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3A4B5C6D7E8F9001122 /* Story.swift */; };
@@ -74,7 +73,7 @@
 		069D025481ECE0A021008223 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		08D17B3D22B4EF12F4E471B3 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		0C8324F7E1E52BBC5D8F498B /* InterviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewView.swift; sourceTree = "<group>"; };
-		10BA7CDC3821AC5664F16466 /* RiffitSpacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitSpacing.swift; sourceTree = "<group>"; };
+		DD22EE33FF44AA55BB66CC77 /* RiffitTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitTheme.swift; sourceTree = "<group>"; };
 		1120BC2824BE7C4619C6A84D /* LoadingOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingOverlay.swift; sourceTree = "<group>"; };
 		126DFD1BB604F005D6E78DD2 /* InspirationDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspirationDetailView.swift; sourceTree = "<group>"; };
 		155EA98817C649A20CD8E5F4 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
@@ -111,7 +110,6 @@
 		D4A7A5B5B7C509A2567B9D16 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		DCFFDEC95DDE5AEC083E6F70 /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryViewModel.swift; sourceTree = "<group>"; };
 		DD4C85A1CB41022805ABBEF8 /* SocialConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialConnectView.swift; sourceTree = "<group>"; };
-		E3FD07C7FAC4D4F9790B251E /* RiffitFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitFonts.swift; sourceTree = "<group>"; };
 		FB7AE2E5C30E70F6F15FA681 /* AddInspirationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddInspirationView.swift; sourceTree = "<group>"; };
 		E6F7A8B9C0D1E2F3A4B5C6D7 /* RiffitWordmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitWordmark.swift; sourceTree = "<group>"; };
 		A8B9C0D1E2F3A4B5C6D7E8F9 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -284,8 +282,7 @@
 			isa = PBXGroup;
 			children = (
 				C6DF108017C95F089FE41062 /* RiffitColors.swift */,
-				E3FD07C7FAC4D4F9790B251E /* RiffitFonts.swift */,
-				10BA7CDC3821AC5664F16466 /* RiffitSpacing.swift */,
+				DD22EE33FF44AA55BB66CC77 /* RiffitTheme.swift */,
 			);
 			path = Design;
 			sourceTree = "<group>";
@@ -462,8 +459,7 @@
 				1D8795CEF94FF6F9816E2E99 /* RiffitApp.swift in Sources */,
 				3630990DBB8E9773F3C77176 /* RiffitButton.swift in Sources */,
 				D3749D5D3757E22BA0FAD5D2 /* RiffitColors.swift in Sources */,
-				B7F985472D882D573AB1B248 /* RiffitFonts.swift in Sources */,
-				10B990E25FD094CE69DCCF96 /* RiffitSpacing.swift in Sources */,
+				CC11DD22EE33FF44AA55BB66 /* RiffitTheme.swift in Sources */,
 				0C0C3D99022F0B87CD5FCF50 /* SettingsView.swift in Sources */,
 				1457C7442AEBE91EBD705812 /* SocialConnectView.swift in Sources */,
 				C5F6A7B8C9D0E1F2A3B4C5D6 /* AddReferenceView.swift in Sources */,

@@ -18,21 +18,13 @@ struct RiffitButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .modifier(ButtonFontModifier(variant: variant))
+                .font(RF.button)
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
                 .foregroundStyle(foregroundColor)
                 .background(backgroundColor)
-                .cornerRadius(.buttonRadius)
+                .cornerRadius(RR.button)
                 .overlay(borderOverlay)
-        }
-    }
-
-    /// All button variants use Lora Medium 16pt.
-    private struct ButtonFontModifier: ViewModifier {
-        let variant: Variant
-        func body(content: Content) -> some View {
-            content.font(.riffitButton)
         }
     }
 
@@ -66,7 +58,7 @@ struct RiffitButton: View {
     private var borderOverlay: some View {
         switch variant {
         case .secondary:
-            RoundedRectangle(cornerRadius: .buttonRadius)
+            RoundedRectangle(cornerRadius: RR.button)
                 .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
         default:
             EmptyView()

@@ -51,21 +51,21 @@ struct AddReferenceView: View {
             }
         }
         .presentationDetents([.large])
-        .presentationCornerRadius(.sheetRadius)
+        .presentationCornerRadius(RR.modal)
     }
 
     // MARK: - Step 1: Pick Video
 
     private var pickVideoStep: some View {
-        VStack(spacing: .md) {
+        VStack(spacing: RS.md) {
             // Placeholder — in a real implementation, this would query the
             // user's InspirationVideo list from Supabase or a shared view model.
             Text("Your saved ideas will appear here.\nConnect your Library to add references.")
-                .riffitBody()
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, .xl)
-                .padding(.top, .xl2)
+                .padding(.horizontal, RS.xl)
+                .padding(.top, RS.xl2)
 
             Spacer()
         }
@@ -74,37 +74,37 @@ struct AddReferenceView: View {
     // MARK: - Step 2: Pick Tag
 
     private var pickTagStep: some View {
-        VStack(spacing: .lg) {
+        VStack(spacing: RS.lg) {
             Text("What aspect of this video are you referencing?")
-                .riffitBody()
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, .lg)
-                .padding(.top, .lg)
+                .padding(.horizontal, RS.lg)
+                .padding(.top, RS.lg)
 
             // Tag grid
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: .smPlus) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: RS.smPlus) {
                 ForEach(referenceTags, id: \.self) { tag in
                     Button {
                         selectedTag = tag
                     } label: {
                         Text(tag)
-                            .font(.riffitButton)
+                            .font(RF.button)
                             .foregroundStyle(
                                 selectedTag == tag
                                     ? Color.riffitOnPrimary
                                     : Color.riffitTextPrimary
                             )
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, .smPlus)
+                            .padding(.vertical, RS.smPlus)
                             .background(
                                 selectedTag == tag
                                     ? Color.riffitPrimary
                                     : Color.riffitSurface
                             )
-                            .cornerRadius(.buttonRadius)
+                            .cornerRadius(RR.button)
                             .overlay(
-                                RoundedRectangle(cornerRadius: .buttonRadius)
+                                RoundedRectangle(cornerRadius: RR.button)
                                     .stroke(
                                         selectedTag == tag
                                             ? Color.clear
@@ -116,7 +116,7 @@ struct AddReferenceView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, .md)
+            .padding(.horizontal, RS.md)
 
             Spacer()
 
@@ -127,8 +127,8 @@ struct AddReferenceView: View {
                     dismiss()
                 }
             }
-            .padding(.horizontal, .md)
-            .padding(.bottom, .lg)
+            .padding(.horizontal, RS.md)
+            .padding(.bottom, RS.lg)
             .opacity(selectedTag != nil ? 1.0 : 0.4)
             .disabled(selectedTag == nil)
         }

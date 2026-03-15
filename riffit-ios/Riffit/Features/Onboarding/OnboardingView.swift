@@ -62,11 +62,11 @@ struct OnboardingView: View {
                         viewModel.currentStep = .creatorType
                     }
                 } label: {
-                    HStack(spacing: .xs) {
+                    HStack(spacing: RS.xs) {
                         Image(systemName: "chevron.left")
                         Text("Back")
                     }
-                    .riffitCallout()
+                    .font(RF.bodyMd)
                     .foregroundStyle(Color.riffitPrimary)
                 }
 
@@ -77,13 +77,13 @@ struct OnboardingView: View {
                     Button("Continue") {
                         viewModel.finishInterview()
                     }
-                    .riffitCallout()
+                    .font(RF.bodyMd)
                     .fontWeight(.medium)
                     .foregroundStyle(Color.riffitPrimary)
                 }
             }
-            .padding(.horizontal, .md)
-            .padding(.vertical, .smPlus)
+            .padding(.horizontal, RS.md)
+            .padding(.vertical, RS.smPlus)
 
             InterviewView(viewModel: viewModel)
         }

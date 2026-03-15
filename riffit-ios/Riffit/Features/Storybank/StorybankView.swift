@@ -28,7 +28,7 @@ struct StorybankView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("Storybank")
-                    .riffitPageTitle()
+                    .font(RF.title)
                     .foregroundStyle(Color.riffitTextPrimary)
             }
             ToolbarItem(placement: .primaryAction) {
@@ -65,7 +65,7 @@ struct StorybankView: View {
 
     private var storyList: some View {
         ScrollView {
-            LazyVStack(spacing: .smPlus) {
+            LazyVStack(spacing: RS.smPlus) {
                 ForEach(viewModel.stories) { story in
                     NavigationLink(value: story) {
                         StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id))
@@ -73,8 +73,8 @@ struct StorybankView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, .md)
-            .padding(.vertical, .smPlus)
+            .padding(.horizontal, RS.md)
+            .padding(.vertical, RS.smPlus)
         }
         .refreshable {
             await viewModel.fetchStories()
@@ -96,7 +96,7 @@ struct StorybankView: View {
                 storybankGridBackground
             }
 
-            VStack(spacing: .md) {
+            VStack(spacing: RS.md) {
                 Spacer()
 
                 if colorScheme == .dark {
@@ -110,13 +110,13 @@ struct StorybankView: View {
                 Text(colorScheme == .dark
                      ? "Every story needs a spark"
                      : "Your story starts here")
-                    .font(.riffitHeading)
+                    .font(RF.heading)
                     .foregroundStyle(Color.riffitTextPrimary)
 
                 Text(colorScheme == .dark
                      ? "Start building your first story."
                      : "Build your first story.")
-                    .font(.riffitCaption)
+                    .font(RF.caption)
                     .foregroundStyle(colorScheme == .dark
                         ? Color(hex: 0x555555)
                         : Color.riffitTextSecondary)
@@ -125,8 +125,8 @@ struct StorybankView: View {
                     newStoryTitle = ""
                     showNewStoryAlert = true
                 }
-                .padding(.horizontal, .xl2)
-                .padding(.top, .sm)
+                .padding(.horizontal, RS.xl2)
+                .padding(.top, RS.sm)
 
                 Spacer()
             }
@@ -523,11 +523,11 @@ struct StoryCard: View {
     let countsLabel: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: .sm) {
+        VStack(alignment: .leading, spacing: RS.sm) {
             // Title + status badge
             HStack {
                 Text(story.title)
-                    .riffitHeading()
+                    .font(RF.heading)
                     .foregroundStyle(Color.riffitTextPrimary)
                     .lineLimit(2)
 
@@ -538,20 +538,20 @@ struct StoryCard: View {
 
             // Asset/reference counts
             Text(countsLabel)
-                .riffitCaption()
+                .font(RF.caption)
                 .foregroundStyle(Color.riffitTextSecondary)
 
             // Last updated
             Text(story.updatedAt.relativeTimestamp)
-                .riffitCaption()
+                .font(RF.caption)
                 .foregroundStyle(Color.riffitTextTertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.md)
+        .padding(RS.md)
         .background(Color.riffitSurface)
-        .cornerRadius(.cardRadius)
+        .cornerRadius(RR.card)
         .overlay(
-            RoundedRectangle(cornerRadius: .cardRadius)
+            RoundedRectangle(cornerRadius: RR.card)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
     }
@@ -565,7 +565,7 @@ struct StoryStatusBadge: View {
 
     var body: some View {
         Text(status.label)
-            .font(.riffitTag)
+            .font(RF.tag)
             .foregroundStyle(foregroundColor)
             .padding(.vertical, 3)
             .padding(.horizontal, 8)

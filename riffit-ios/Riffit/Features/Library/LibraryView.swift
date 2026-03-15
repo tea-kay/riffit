@@ -28,7 +28,7 @@ struct LibraryView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("Ideas")
-                    .riffitPageTitle()
+                    .font(RF.title)
                     .foregroundStyle(Color.riffitTextPrimary)
             }
             ToolbarItem(placement: .primaryAction) {
@@ -83,7 +83,7 @@ struct LibraryView: View {
 
     private var mainContent: some View {
         ScrollView {
-            LazyVStack(spacing: .smPlus) {
+            LazyVStack(spacing: RS.smPlus) {
                 // Folders section
                 if !viewModel.folders.isEmpty {
                     foldersSection
@@ -105,8 +105,8 @@ struct LibraryView: View {
                     }
                 }
             }
-            .padding(.horizontal, .md)
-            .padding(.vertical, .smPlus)
+            .padding(.horizontal, RS.md)
+            .padding(.vertical, RS.smPlus)
         }
         .refreshable {
             await viewModel.refresh()
@@ -131,10 +131,12 @@ struct LibraryView: View {
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
-            .riffitLabel()
+            .font(RF.label)
+            .textCase(.uppercase)
+            .tracking(0.08 * 13)
             .foregroundStyle(Color.riffitTextTertiary)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, .sm)
+            .padding(.top, RS.sm)
     }
 
     // MARK: - Empty State
@@ -144,7 +146,7 @@ struct LibraryView: View {
             // Grid background — adaptive: beige in light, dark in dark
             gridBackground
 
-            VStack(spacing: .md) {
+            VStack(spacing: RS.md) {
                 Spacer()
 
                 // Wave barrel illustration
@@ -152,18 +154,18 @@ struct LibraryView: View {
                     .frame(width: 180, height: 180)
 
                 Text("Nothing here yet")
-                    .font(.riffitHeading)
+                    .font(RF.heading)
                     .foregroundStyle(Color.riffitTextPrimary)
 
                 Text("Catch a reel. Drop it here.")
-                    .font(.riffitCaption)
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitTextSecondary)
 
                 RiffitButton(title: "Drop your first reel", variant: .primary) {
                     showAddSheet = true
                 }
-                .padding(.horizontal, .xl2)
-                .padding(.top, .sm)
+                .padding(.horizontal, RS.xl2)
+                .padding(.top, RS.sm)
 
                 Spacer()
             }
@@ -212,30 +214,30 @@ struct FolderRow: View {
     let count: Int
 
     var body: some View {
-        HStack(spacing: .smPlus) {
+        HStack(spacing: RS.smPlus) {
             Image(systemName: "folder.fill")
                 .font(.title3)
                 .foregroundStyle(Color.riffitPrimary)
 
             Text(folder.name)
-                .riffitHeading()
+                .font(RF.heading)
                 .foregroundStyle(Color.riffitTextPrimary)
 
             Spacer()
 
             Text("\(count)")
-                .riffitCaption()
+                .font(RF.caption)
                 .foregroundStyle(Color.riffitTextTertiary)
 
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundStyle(Color.riffitTextTertiary)
         }
-        .padding(.md)
+        .padding(RS.md)
         .background(Color.riffitSurface)
-        .cornerRadius(.cardRadius)
+        .cornerRadius(RR.card)
         .overlay(
-            RoundedRectangle(cornerRadius: .cardRadius)
+            RoundedRectangle(cornerRadius: RR.card)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
     }
@@ -258,7 +260,7 @@ struct FolderDropTarget: View {
             )
             // Highlight border when a drag hovers over this folder
             .overlay(
-                RoundedRectangle(cornerRadius: .cardRadius)
+                RoundedRectangle(cornerRadius: RR.card)
                     .stroke(Color.riffitPrimary, lineWidth: isTargeted ? 2 : 0)
             )
             .scaleEffect(isTargeted ? 1.02 : 1.0)
@@ -287,16 +289,16 @@ struct IdeaRow: View {
     let tags: [String]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: .sm) {
+        VStack(alignment: .leading, spacing: RS.sm) {
             // Note — the primary identifier
             if let note = video.userNote, !note.isEmpty {
                 Text(note)
-                    .riffitHeading()
+                    .font(RF.heading)
                     .foregroundStyle(Color.riffitTextPrimary)
                     .lineLimit(2)
             } else {
                 Text("No note")
-                    .riffitHeading()
+                    .font(RF.heading)
                     .foregroundStyle(Color.riffitTextTertiary)
                     .italic()
             }
@@ -306,7 +308,7 @@ struct IdeaRow: View {
                 HStack(spacing: 6) {
                     ForEach(tags, id: \.self) { tag in
                         Text(tag)
-                            .font(.riffitTag)
+                            .font(RF.tag)
                             .foregroundStyle(Color.riffitPrimary)
                             .padding(.vertical, 3)
                             .padding(.horizontal, 8)
@@ -323,17 +325,17 @@ struct IdeaRow: View {
                     .foregroundStyle(Color.riffitTeal400)
 
                 Text(shortURL)
-                    .riffitCaption()
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitTextTertiary)
                     .lineLimit(1)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.md)
+        .padding(RS.md)
         .background(Color.riffitSurface)
-        .cornerRadius(.cardRadius)
+        .cornerRadius(RR.card)
         .overlay(
-            RoundedRectangle(cornerRadius: .cardRadius)
+            RoundedRectangle(cornerRadius: RR.card)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
     }

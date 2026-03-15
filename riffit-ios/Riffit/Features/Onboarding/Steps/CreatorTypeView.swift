@@ -11,34 +11,34 @@ struct CreatorTypeView: View {
             headerSection
 
             ScrollView {
-                VStack(spacing: .smPlus) {
+                VStack(spacing: RS.smPlus) {
                     ForEach(CreatorTypeOption.allOptions) { option in
                         CreatorTypeCard(option: option) {
                             onSelect(option.type)
                         }
                     }
                 }
-                .padding(.horizontal, .md)
-                .padding(.bottom, .xl)
+                .padding(.horizontal, RS.md)
+                .padding(.bottom, RS.xl)
             }
         }
         .background(Color.riffitBackground)
     }
 
     private var headerSection: some View {
-        VStack(spacing: .sm) {
+        VStack(spacing: RS.sm) {
             Text("What kind of creator are you?")
-                .riffitDisplay()
+                .font(RF.largeTitle)
                 .foregroundStyle(Color.riffitTextPrimary)
 
             Text("This helps us tailor the experience to your goals.")
-                .riffitBody()
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextSecondary)
         }
         .multilineTextAlignment(.center)
-        .padding(.horizontal, .lg)
-        .padding(.top, .xl)
-        .padding(.bottom, .lg)
+        .padding(.horizontal, RS.lg)
+        .padding(.top, RS.xl)
+        .padding(.bottom, RS.lg)
     }
 }
 
@@ -100,22 +100,22 @@ struct CreatorTypeCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: .md) {
+            HStack(spacing: RS.md) {
                 // Icon in a teal-tinted container
                 Image(systemName: option.icon)
                     .font(.title2)
                     .foregroundStyle(Color.riffitTeal400)
                     .frame(width: 48, height: 48)
                     .background(Color.riffitTealTint)
-                    .cornerRadius(.buttonRadius)
+                    .cornerRadius(RR.button)
 
-                VStack(alignment: .leading, spacing: .xs) {
+                VStack(alignment: .leading, spacing: RS.xs) {
                     Text(option.title)
-                        .riffitHeading()
+                        .font(RF.heading)
                         .foregroundStyle(Color.riffitTextPrimary)
 
                     Text(option.description)
-                        .riffitCaption()
+                        .font(RF.caption)
                         .foregroundStyle(Color.riffitTextSecondary)
                         .lineLimit(2)
                 }
@@ -126,11 +126,11 @@ struct CreatorTypeCard: View {
                     .font(.caption)
                     .foregroundStyle(Color.riffitTextTertiary)
             }
-            .padding(.md)
+            .padding(RS.md)
             .background(Color.riffitSurface)
-            .cornerRadius(.cardRadius)
+            .cornerRadius(RR.card)
             .overlay(
-                RoundedRectangle(cornerRadius: .cardRadius)
+                RoundedRectangle(cornerRadius: RR.card)
                     .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
             )
         }

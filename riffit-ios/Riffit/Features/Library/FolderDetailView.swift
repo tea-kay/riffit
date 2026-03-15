@@ -22,7 +22,7 @@ struct FolderDetailView: View {
                 emptyFolder
             } else {
                 ScrollView {
-                    LazyVStack(spacing: .smPlus) {
+                    LazyVStack(spacing: RS.smPlus) {
                         ForEach(folderVideos) { video in
                             NavigationLink(value: video) {
                                 IdeaRow(video: video, tags: viewModel.tags(for: video.id))
@@ -38,8 +38,8 @@ struct FolderDetailView: View {
                             .draggable(video.id.uuidString)
                         }
                     }
-                    .padding(.horizontal, .md)
-                    .padding(.vertical, .smPlus)
+                    .padding(.horizontal, RS.md)
+                    .padding(.vertical, RS.smPlus)
                 }
                 .navigationDestination(for: InspirationVideo.self) { video in
                     InspirationDetailView(video: video, viewModel: viewModel)
@@ -101,17 +101,17 @@ struct FolderDetailView: View {
     }
 
     private var emptyFolder: some View {
-        VStack(spacing: .md) {
+        VStack(spacing: RS.md) {
             Image(systemName: "folder")
                 .font(.system(size: 48))
                 .foregroundStyle(Color.riffitTextTertiary)
 
             Text("This folder is empty")
-                .riffitBody()
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextSecondary)
 
             Text("Drag ideas here from the main list.")
-                .riffitCaption()
+                .font(RF.caption)
                 .foregroundStyle(Color.riffitTextTertiary)
         }
     }

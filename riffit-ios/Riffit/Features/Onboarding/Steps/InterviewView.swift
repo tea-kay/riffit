@@ -33,7 +33,7 @@ struct InterviewView: View {
     private var chatMessages: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: .md) {
+                LazyVStack(spacing: RS.md) {
                     ForEach(viewModel.messages) { message in
                         MessageBubble(message: message)
                             .id(message.id)
@@ -45,8 +45,8 @@ struct InterviewView: View {
                             .id("typing")
                     }
                 }
-                .padding(.horizontal, .md)
-                .padding(.vertical, .md)
+                .padding(.horizontal, RS.md)
+                .padding(.vertical, RS.md)
             }
             .onChange(of: viewModel.messages.count) {
                 // Auto-scroll to the latest message
@@ -73,15 +73,15 @@ struct InterviewView: View {
             Divider()
                 .overlay(Color.riffitBorderSubtle)
 
-            HStack(spacing: .smPlus) {
+            HStack(spacing: RS.smPlus) {
                 TextField("Type your response...", text: $viewModel.currentInput, axis: .vertical)
                     .lineLimit(1...5)
-                    .modifier(RiffitTextFieldStyle())
-                    .padding(.smPlus)
+                    .font(RF.bodyMd)
+                    .padding(RS.smPlus)
                     .background(Color.riffitSurface)
-                    .cornerRadius(.inputRadius)
+                    .cornerRadius(RR.input)
                     .overlay(
-                        RoundedRectangle(cornerRadius: .inputRadius)
+                        RoundedRectangle(cornerRadius: RR.input)
                             .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
                     )
                     .focused($isInputFocused)
@@ -98,8 +98,8 @@ struct InterviewView: View {
                 }
                 .disabled(viewModel.currentInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isWaitingForAI)
             }
-            .padding(.horizontal, .md)
-            .padding(.vertical, .smPlus)
+            .padding(.horizontal, RS.md)
+            .padding(.vertical, RS.smPlus)
         }
         .background(Color.riffitBackground)
     }
@@ -149,11 +149,11 @@ struct MessageBubble: View {
             }
 
             Text(message.content)
-                .riffitBody()
+                .font(RF.bodyMd)
                 .foregroundStyle(foregroundColor)
-                .padding(.smPlus)
+                .padding(RS.smPlus)
                 .background(backgroundColor)
-                .cornerRadius(.inputRadius)
+                .cornerRadius(RR.input)
 
             if message.role == .assistant {
                 Spacer(minLength: 60)
@@ -191,9 +191,9 @@ struct TypingIndicator: View {
                         .opacity(dotOpacity(for: index))
                 }
             }
-            .padding(.smPlus)
+            .padding(RS.smPlus)
             .background(Color.riffitSurface)
-            .cornerRadius(.inputRadius)
+            .cornerRadius(RR.input)
 
             Spacer(minLength: 60)
         }

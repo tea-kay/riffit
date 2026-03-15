@@ -13,20 +13,20 @@ struct InspirationCard: View {
     let video: InspirationVideo
 
     var body: some View {
-        VStack(alignment: .leading, spacing: .smPlus) {
+        VStack(alignment: .leading, spacing: RS.smPlus) {
             // Top row: platform label
             platformLabel
 
             // Video URL (truncated to show domain)
             Text(displayTitle)
-                .riffitHeading()
+                .font(RF.heading)
                 .foregroundStyle(Color.riffitTextPrimary)
                 .lineLimit(2)
 
             // User note (if present)
             if let note = video.userNote, !note.isEmpty {
                 Text(note)
-                    .riffitCaption()
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitTextSecondary)
                     .lineLimit(2)
             }
@@ -34,11 +34,11 @@ struct InspirationCard: View {
             // Footer: status or alignment info
             footerContent
         }
-        .padding(.md)
+        .padding(RS.md)
         .background(Color.riffitSurface)
-        .cornerRadius(.cardRadius)
+        .cornerRadius(RR.card)
         .overlay(
-            RoundedRectangle(cornerRadius: .cardRadius)
+            RoundedRectangle(cornerRadius: RR.card)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
         .opacity(video.status == .archived ? 0.5 : 1.0)
@@ -54,7 +54,9 @@ struct InspirationCard: View {
                 .frame(width: 6, height: 6)
 
             Text(video.platform.displayLabel)
-                .riffitLabel()
+                .font(RF.label)
+                .textCase(.uppercase)
+                .tracking(0.08 * 13)
                 .foregroundStyle(Color.riffitTextTertiary)
         }
     }
@@ -68,12 +70,12 @@ struct InspirationCard: View {
             StatusTag(text: "Waiting to analyze", color: Color.riffitTextTertiary)
 
         case .analyzing:
-            HStack(spacing: .sm) {
+            HStack(spacing: RS.sm) {
                 ProgressView()
                     .controlSize(.small)
                     .tint(Color.riffitPrimary)
                 Text("Analyzing...")
-                    .riffitCaption()
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitTextSecondary)
             }
 
@@ -85,7 +87,7 @@ struct InspirationCard: View {
                 Spacer()
                 if let score = video.alignmentScore {
                     Text("\(score)")
-                        .font(.riffitSerif(24, weight: .bold))
+                        .font(RF.display(24))
                         .foregroundStyle(Color.riffitPrimary)
                 }
             }
@@ -125,10 +127,10 @@ struct StatusTag: View {
 
     var body: some View {
         Text(text)
-            .riffitCaption()
+            .font(RF.caption)
             .foregroundStyle(color)
-            .padding(.vertical, .xs)
-            .padding(.horizontal, .sm)
+            .padding(.vertical, RS.xs)
+            .padding(.horizontal, RS.sm)
             .background(color.opacity(0.1))
             .clipShape(Capsule())
     }

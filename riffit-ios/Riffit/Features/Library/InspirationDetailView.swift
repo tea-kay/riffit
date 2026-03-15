@@ -16,7 +16,7 @@ struct InspirationDetailView: View {
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: .lg) {
+                    VStack(alignment: .leading, spacing: RS.lg) {
                         // Embedded video webview
                         videoPlayer
 
@@ -49,7 +49,7 @@ struct InspirationDetailView: View {
                             .frame(height: 1)
                             .id("commentsBottom")
                     }
-                    .padding(.md)
+                    .padding(RS.md)
                 }
                 .onChange(of: viewModel.comments(for: video.id).count) { _ in
                     withAnimation {
@@ -71,9 +71,9 @@ struct InspirationDetailView: View {
     private var videoPlayer: some View {
         VideoWebView(url: video.url)
             .frame(height: 280)
-            .cornerRadius(.cardRadius)
+            .cornerRadius(RR.card)
             .overlay(
-                RoundedRectangle(cornerRadius: .cardRadius)
+                RoundedRectangle(cornerRadius: RR.card)
                     .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
             )
     }
@@ -85,7 +85,7 @@ struct InspirationDetailView: View {
             HStack(spacing: 6) {
                 ForEach(tags, id: \.self) { tag in
                     Text(tag)
-                        .font(.riffitTag)
+                        .font(RF.tag)
                         .foregroundStyle(Color.riffitPrimary)
                         .padding(.vertical, 3)
                         .padding(.horizontal, 8)
@@ -99,20 +99,22 @@ struct InspirationDetailView: View {
     // MARK: - Alignment Section
 
     private var alignmentSection: some View {
-        VStack(alignment: .leading, spacing: .smPlus) {
+        VStack(alignment: .leading, spacing: RS.smPlus) {
             Text("Alignment")
-                .riffitLabel()
+                .font(RF.label)
+                .textCase(.uppercase)
+                .tracking(0.08 * 13)
                 .foregroundStyle(Color.riffitTextTertiary)
 
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: .sm) {
+                VStack(alignment: .leading, spacing: RS.sm) {
                     if let verdict = video.alignmentVerdict {
                         AlignmentBadge(verdict: verdict)
                     }
 
                     if let reasoning = video.alignmentReasoning {
                         Text(reasoning)
-                            .riffitBody()
+                            .font(RF.bodyMd)
                             .foregroundStyle(Color.riffitTextSecondary)
                     }
                 }
@@ -122,11 +124,11 @@ struct InspirationDetailView: View {
                 if let score = video.alignmentScore {
                     VStack(spacing: 2) {
                         Text("\(score)")
-                            .font(.riffitSerif(36, weight: .bold))
+                            .font(RF.display(36))
                             .foregroundStyle(Color.riffitPrimary)
 
                         Text("/ 100")
-                            .riffitCaption()
+                            .font(RF.caption)
                             .foregroundStyle(Color.riffitTextTertiary)
                     }
                 }
@@ -138,14 +140,16 @@ struct InspirationDetailView: View {
     // MARK: - Transcript Section
 
     private func transcriptSection(_ transcript: String) -> some View {
-        VStack(alignment: .leading, spacing: .smPlus) {
+        VStack(alignment: .leading, spacing: RS.smPlus) {
             Text("Transcript")
-                .riffitLabel()
+                .font(RF.label)
+                .textCase(.uppercase)
+                .tracking(0.08 * 13)
                 .foregroundStyle(Color.riffitTextTertiary)
 
-            VStack(alignment: .leading, spacing: .sm) {
+            VStack(alignment: .leading, spacing: RS.sm) {
                 Text(transcript)
-                    .riffitBody()
+                    .font(RF.bodyMd)
                     .foregroundStyle(Color.riffitTextSecondary)
                     .lineLimit(showFullTranscript ? nil : 6)
 
@@ -155,7 +159,7 @@ struct InspirationDetailView: View {
                             showFullTranscript.toggle()
                         }
                     }
-                    .riffitCaption()
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitTeal400)
                 }
             }
@@ -166,7 +170,7 @@ struct InspirationDetailView: View {
     // MARK: - Status Section
 
     private var statusSection: some View {
-        HStack(spacing: .smPlus) {
+        HStack(spacing: RS.smPlus) {
             if video.status == .analyzing {
                 ProgressView()
                     .controlSize(.small)
@@ -177,7 +181,7 @@ struct InspirationDetailView: View {
             }
 
             Text(video.status == .analyzing ? "Analysis in progress..." : "Waiting to analyze")
-                .riffitBody()
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .center)
@@ -189,9 +193,11 @@ struct InspirationDetailView: View {
     private var commentsSection: some View {
         let comments = viewModel.comments(for: video.id)
 
-        return VStack(alignment: .leading, spacing: .smPlus) {
+        return VStack(alignment: .leading, spacing: RS.smPlus) {
             Text("Notes")
-                .riffitLabel()
+                .font(RF.label)
+                .textCase(.uppercase)
+                .tracking(0.08 * 13)
                 .foregroundStyle(Color.riffitTextTertiary)
 
             if comments.isEmpty {
@@ -205,26 +211,26 @@ struct InspirationDetailView: View {
     }
 
     private var emptyCommentsState: some View {
-        VStack(spacing: .sm) {
+        VStack(spacing: RS.sm) {
             Text("No notes yet")
-                .riffitBody()
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextTertiary)
 
             Text("Add your first thought below.")
-                .riffitCaption()
+                .font(RF.caption)
                 .foregroundStyle(Color.riffitTextTertiary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, .lg)
+        .padding(.vertical, RS.lg)
     }
 
     // MARK: - Comment Input Bar
 
     private var commentInputBar: some View {
-        HStack(alignment: .bottom, spacing: .smPlus) {
+        HStack(alignment: .bottom, spacing: RS.smPlus) {
             TextField("Add a note...", text: $newCommentText, axis: .vertical)
                 .lineLimit(1...5)
-                .modifier(RiffitTextFieldStyle())
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextPrimary)
                 .focused($isCommentFieldFocused)
 
@@ -239,8 +245,8 @@ struct InspirationDetailView: View {
             }
             .disabled(!canSend)
         }
-        .padding(.horizontal, .md)
-        .padding(.vertical, .smPlus)
+        .padding(.horizontal, RS.md)
+        .padding(.vertical, RS.smPlus)
         .background(Color.riffitSurface)
         .overlay(
             Rectangle()
@@ -270,31 +276,31 @@ struct CommentBubble: View {
     let comment: IdeaComment
 
     var body: some View {
-        VStack(alignment: .leading, spacing: .xs) {
+        VStack(alignment: .leading, spacing: RS.xs) {
             // Author + timestamp
             HStack {
                 Text(comment.authorName)
-                    .riffitCaption()
+                    .font(RF.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(Color.riffitTextPrimary)
 
                 Spacer()
 
                 Text(comment.createdAt.relativeTimestamp)
-                    .riffitCaption()
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitTextTertiary)
             }
 
             // Comment text
             Text(comment.text)
-                .riffitBody()
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextSecondary)
         }
-        .padding(.smPlus)
+        .padding(RS.smPlus)
         .background(Color.riffitSurface)
-        .cornerRadius(.inputRadius)
+        .cornerRadius(RR.input)
         .overlay(
-            RoundedRectangle(cornerRadius: .inputRadius)
+            RoundedRectangle(cornerRadius: RR.input)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
     }

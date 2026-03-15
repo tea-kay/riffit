@@ -15,13 +15,13 @@ struct SocialConnectView: View {
             headerSection
 
             ScrollView {
-                VStack(spacing: .md) {
+                VStack(spacing: RS.md) {
                     ForEach($accounts) { $account in
                         SocialAccountRow(account: $account)
                     }
                 }
-                .padding(.horizontal, .md)
-                .padding(.bottom, .lg)
+                .padding(.horizontal, RS.md)
+                .padding(.bottom, RS.lg)
             }
 
             bottomButtons
@@ -32,29 +32,29 @@ struct SocialConnectView: View {
     // MARK: - Header
 
     private var headerSection: some View {
-        VStack(spacing: .sm) {
+        VStack(spacing: RS.sm) {
             Text("Connect your accounts")
-                .riffitDisplay()
+                .font(RF.largeTitle)
                 .foregroundStyle(Color.riffitTextPrimary)
 
             Text("Add your social handles so we can understand your brand context. This is optional — you can always do this later.")
-                .riffitBody()
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextSecondary)
         }
         .multilineTextAlignment(.center)
-        .padding(.horizontal, .lg)
-        .padding(.top, .xl)
-        .padding(.bottom, .lg)
+        .padding(.horizontal, RS.lg)
+        .padding(.top, RS.xl)
+        .padding(.bottom, RS.lg)
     }
 
     // MARK: - Bottom Buttons
 
     private var bottomButtons: some View {
-        VStack(spacing: .smPlus) {
+        VStack(spacing: RS.smPlus) {
             Divider()
                 .overlay(Color.riffitBorderSubtle)
 
-            VStack(spacing: .smPlus) {
+            VStack(spacing: RS.smPlus) {
                 // Continue button — only enabled if at least one handle is filled
                 RiffitButton(title: "Continue", variant: .primary) {
                     // TODO: Save filled accounts to Supabase
@@ -66,12 +66,12 @@ struct SocialConnectView: View {
                     onComplete()
                 } label: {
                     Text("Skip for now")
-                        .riffitCallout()
+                        .font(RF.bodyMd)
                         .foregroundStyle(Color.riffitTextSecondary)
                 }
             }
-            .padding(.horizontal, .md)
-            .padding(.bottom, .md)
+            .padding(.horizontal, RS.md)
+            .padding(.bottom, RS.md)
         }
         .background(Color.riffitBackground)
     }
@@ -138,32 +138,34 @@ struct SocialAccountRow: View {
     @Binding var account: SocialAccountInput
 
     var body: some View {
-        HStack(spacing: .smPlus) {
+        HStack(spacing: RS.smPlus) {
             // Platform icon
             Image(systemName: account.platform.icon)
                 .font(.body)
                 .foregroundStyle(Color.riffitTeal400)
                 .frame(width: 36, height: 36)
                 .background(Color.riffitTealTint)
-                .cornerRadius(.tagRadius)
+                .cornerRadius(RR.tag)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(account.platform.displayName)
-                    .riffitLabel()
+                    .font(RF.label)
+                    .textCase(.uppercase)
+                    .tracking(0.08 * 13)
                     .foregroundStyle(Color.riffitTextTertiary)
 
                 TextField(account.platform.placeholder, text: $account.handle)
-                    .modifier(RiffitTextFieldStyle())
+                    .font(RF.bodyMd)
                     .foregroundStyle(Color.riffitTextPrimary)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
             }
         }
-        .padding(.smPlus)
+        .padding(RS.smPlus)
         .background(Color.riffitSurface)
-        .cornerRadius(.inputRadius)
+        .cornerRadius(RR.input)
         .overlay(
-            RoundedRectangle(cornerRadius: .inputRadius)
+            RoundedRectangle(cornerRadius: RR.input)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
     }

@@ -115,22 +115,3 @@ extension Color {
         self.init(red: red, green: green, blue: blue, opacity: opacity)
     }
 }
-
-// MARK: - Corner Radius Constants
-
-extension CGFloat {
-    /// Tag/chip corner radius — 6pt
-    static let tagRadius: CGFloat = 6
-
-    /// Button corner radius — 10pt
-    static let buttonRadius: CGFloat = 10
-
-    /// Input/row corner radius — 14pt
-    static let inputRadius: CGFloat = 14
-
-    /// Card corner radius — 20pt
-    static let cardRadius: CGFloat = 20
-
-    /// Sheet corner radius (top corners only) — 20pt
-    static let sheetRadius: CGFloat = 20
-}

@@ -10,17 +10,17 @@ struct LoadingOverlay: View {
             Color.black.opacity(0.4)
                 .ignoresSafeArea()
 
-            VStack(spacing: .md) {
+            VStack(spacing: RS.md) {
                 ProgressView()
                     .tint(Color.riffitPrimary)
 
                 Text(message)
-                    .font(.riffitBody)
+                    .font(RF.bodyMd)
                     .foregroundStyle(Color.riffitTextPrimary)
             }
-            .padding(.xl)
+            .padding(RS.xl)
             .background(Color.riffitElevated)
-            .cornerRadius(.cardRadius)
+            .cornerRadius(RR.card)
         }
     }
 }

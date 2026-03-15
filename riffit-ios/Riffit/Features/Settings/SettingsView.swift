@@ -11,7 +11,7 @@ struct SettingsView: View {
                 .ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: .smPlus) {
+                VStack(spacing: RS.smPlus) {
                     // Appearance
                     NavigationLink {
                         AppearanceSettingsView()
@@ -28,8 +28,8 @@ struct SettingsView: View {
                     settingsRow(icon: "person.crop.circle", title: "Account", detail: nil)
                     settingsRow(icon: "creditcard", title: "Subscription", detail: nil)
                 }
-                .padding(.horizontal, .md)
-                .padding(.vertical, .smPlus)
+                .padding(.horizontal, RS.md)
+                .padding(.vertical, RS.smPlus)
             }
         }
         .navigationTitle("Settings")
@@ -37,7 +37,7 @@ struct SettingsView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("Settings")
-                    .riffitPageTitle()
+                    .font(RF.title)
                     .foregroundStyle(Color.riffitTextPrimary)
             }
         }
@@ -46,21 +46,21 @@ struct SettingsView: View {
     // MARK: - Settings Row
 
     private func settingsRow(icon: String, title: String, detail: String?) -> some View {
-        HStack(spacing: .smPlus) {
+        HStack(spacing: RS.smPlus) {
             Image(systemName: icon)
                 .font(.body)
                 .foregroundStyle(Color.riffitPrimary)
                 .frame(width: 28, height: 28)
 
             Text(title)
-                .riffitBody()
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextPrimary)
 
             Spacer()
 
             if let detail {
                 Text(detail)
-                    .riffitCaption()
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitTextTertiary)
             }
 
@@ -68,11 +68,11 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(Color.riffitTextTertiary)
         }
-        .padding(.md)
+        .padding(RS.md)
         .background(Color.riffitSurface)
-        .cornerRadius(.inputRadius)
+        .cornerRadius(RR.input)
         .overlay(
-            RoundedRectangle(cornerRadius: .inputRadius)
+            RoundedRectangle(cornerRadius: RR.input)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
     }
@@ -89,21 +89,21 @@ struct AppearanceSettingsView: View {
             Color.riffitBackground
                 .ignoresSafeArea()
 
-            VStack(spacing: .smPlus) {
+            VStack(spacing: RS.smPlus) {
                 ForEach(AppearanceMode.allCases, id: \.self) { mode in
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             appState.appearanceMode = mode
                         }
                     } label: {
-                        HStack(spacing: .smPlus) {
+                        HStack(spacing: RS.smPlus) {
                             Image(systemName: mode.icon)
                                 .font(.body)
                                 .foregroundStyle(Color.riffitPrimary)
                                 .frame(width: 28, height: 28)
 
                             Text(mode.label)
-                                .riffitBody()
+                                .font(RF.bodyMd)
                                 .foregroundStyle(Color.riffitTextPrimary)
 
                             Spacer()
@@ -115,11 +115,11 @@ struct AppearanceSettingsView: View {
                                     .foregroundStyle(Color.riffitPrimary)
                             }
                         }
-                        .padding(.md)
+                        .padding(RS.md)
                         .background(Color.riffitSurface)
-                        .cornerRadius(.inputRadius)
+                        .cornerRadius(RR.input)
                         .overlay(
-                            RoundedRectangle(cornerRadius: .inputRadius)
+                            RoundedRectangle(cornerRadius: RR.input)
                                 .stroke(
                                     appState.appearanceMode == mode
                                         ? Color.riffitPrimary
@@ -133,8 +133,8 @@ struct AppearanceSettingsView: View {
 
                 Spacer()
             }
-            .padding(.horizontal, .md)
-            .padding(.vertical, .smPlus)
+            .padding(.horizontal, RS.md)
+            .padding(.vertical, RS.smPlus)
         }
         .navigationTitle("Appearance")
         .navigationBarTitleDisplayMode(.inline)

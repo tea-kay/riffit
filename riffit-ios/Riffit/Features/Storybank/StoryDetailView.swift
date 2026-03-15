@@ -14,11 +14,11 @@ struct StoryDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: .xl) {
+            VStack(alignment: .leading, spacing: RS.xl) {
                 assetsSection
                 referencesSection
             }
-            .padding(.md)
+            .padding(RS.md)
         }
         .background(Color.riffitBackground)
         .navigationTitle(story.title)
@@ -67,10 +67,12 @@ struct StoryDetailView: View {
     // MARK: - Assets Section
 
     private var assetsSection: some View {
-        VStack(alignment: .leading, spacing: .smPlus) {
+        VStack(alignment: .leading, spacing: RS.smPlus) {
             HStack {
                 Text("My Assets")
-                    .riffitLabel()
+                    .font(RF.label)
+                    .textCase(.uppercase)
+                    .tracking(0.08 * 13)
                     .foregroundStyle(Color.riffitTextTertiary)
 
                 Spacer()
@@ -126,26 +128,28 @@ struct StoryDetailView: View {
     }
 
     private var emptyAssetsState: some View {
-        VStack(spacing: .sm) {
+        VStack(spacing: RS.sm) {
             Text("No assets yet")
-                .riffitBody()
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextTertiary)
 
             Text("Add voice notes, video, images, or text.")
-                .riffitCaption()
+                .font(RF.caption)
                 .foregroundStyle(Color.riffitTextTertiary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, .lg)
+        .padding(.vertical, RS.lg)
     }
 
     // MARK: - References Section
 
     private var referencesSection: some View {
-        VStack(alignment: .leading, spacing: .smPlus) {
+        VStack(alignment: .leading, spacing: RS.smPlus) {
             HStack {
                 Text("References")
-                    .riffitLabel()
+                    .font(RF.label)
+                    .textCase(.uppercase)
+                    .tracking(0.08 * 13)
                     .foregroundStyle(Color.riffitTextTertiary)
 
                 Spacer()
@@ -153,10 +157,10 @@ struct StoryDetailView: View {
                 Button {
                     showAddReferenceSheet = true
                 } label: {
-                    HStack(spacing: .xs) {
+                    HStack(spacing: RS.xs) {
                         Image(systemName: "plus.circle.fill")
                         Text("Add from Library")
-                            .riffitCaption()
+                            .font(RF.caption)
                             .fontWeight(.medium)
                     }
                     .foregroundStyle(Color.riffitPrimary)
@@ -183,17 +187,17 @@ struct StoryDetailView: View {
     }
 
     private var emptyReferencesState: some View {
-        VStack(spacing: .sm) {
+        VStack(spacing: RS.sm) {
             Text("No references yet")
-                .riffitBody()
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextTertiary)
 
             Text("Pull ideas from your Library.")
-                .riffitCaption()
+                .font(RF.caption)
                 .foregroundStyle(Color.riffitTextTertiary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, .lg)
+        .padding(.vertical, RS.lg)
     }
 }
 
@@ -204,7 +208,7 @@ struct AssetRow: View {
     let asset: StoryAsset
 
     var body: some View {
-        HStack(spacing: .smPlus) {
+        HStack(spacing: RS.smPlus) {
             // Drag handle
             Image(systemName: "line.3.horizontal")
                 .font(.caption)
@@ -214,17 +218,17 @@ struct AssetRow: View {
             assetIcon
                 .frame(width: 32, height: 32)
                 .background(Color.riffitTealTint)
-                .cornerRadius(.tagRadius)
+                .cornerRadius(RR.tag)
 
             // Content preview
             VStack(alignment: .leading, spacing: 2) {
                 Text(assetTypeLabel)
-                    .riffitCaption()
+                    .font(RF.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(Color.riffitTextPrimary)
 
                 Text(previewText)
-                    .riffitCaption()
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitTextSecondary)
                     .lineLimit(1)
             }
@@ -234,15 +238,15 @@ struct AssetRow: View {
             // Duration for voice/video
             if let duration = asset.durationSeconds {
                 Text(formatDuration(duration))
-                    .riffitCaption()
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitTextTertiary)
             }
         }
-        .padding(.smPlus)
+        .padding(RS.smPlus)
         .background(Color.riffitSurface)
-        .cornerRadius(.inputRadius)
+        .cornerRadius(RR.input)
         .overlay(
-            RoundedRectangle(cornerRadius: .inputRadius)
+            RoundedRectangle(cornerRadius: RR.input)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
     }
@@ -307,10 +311,10 @@ struct ReferenceCard: View {
     @ObservedObject var viewModel: StorybankViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: .sm) {
+        VStack(alignment: .leading, spacing: RS.sm) {
             // Tag pill
             Text(reference.referenceTag)
-                .font(.riffitTag)
+                .font(RF.tag)
                 .foregroundStyle(Color.riffitPrimary)
                 .padding(.vertical, 3)
                 .padding(.horizontal, 8)
@@ -320,29 +324,29 @@ struct ReferenceCard: View {
             // Original note from the library video (if available)
             // Look up the video's userNote through the shared library
             Text("Linked inspiration")
-                .riffitBody()
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextPrimary)
                 .lineLimit(2)
 
             // AI relevance note
             if let note = reference.aiRelevanceNote {
                 Text(note)
-                    .riffitCaption()
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitTextSecondary)
                     .italic()
             } else {
                 Text("AI relevance note pending...")
-                    .riffitCaption()
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitTextTertiary)
                     .italic()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.smPlus)
+        .padding(RS.smPlus)
         .background(Color.riffitSurface)
-        .cornerRadius(.inputRadius)
+        .cornerRadius(RR.input)
         .overlay(
-            RoundedRectangle(cornerRadius: .inputRadius)
+            RoundedRectangle(cornerRadius: RR.input)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
     }
@@ -359,26 +363,26 @@ struct AddTextAssetSheet: View {
     @State private var text: String = ""
 
     var body: some View {
-        VStack(spacing: .lg) {
+        VStack(spacing: RS.lg) {
             // Drag handle
             Capsule()
                 .fill(Color.riffitTextTertiary.opacity(0.5))
                 .frame(width: 36, height: 5)
-                .padding(.top, .smPlus)
+                .padding(.top, RS.smPlus)
 
             Text("Add Text")
-                .riffitHeading()
+                .font(RF.heading)
                 .foregroundStyle(Color.riffitTextPrimary)
 
             TextField("Write your thoughts...", text: $text, axis: .vertical)
                 .lineLimit(3...8)
-                .modifier(RiffitTextFieldStyle())
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextPrimary)
-                .padding(.smPlus)
+                .padding(RS.smPlus)
                 .background(Color.riffitSurface)
-                .cornerRadius(.inputRadius)
+                .cornerRadius(RR.input)
                 .overlay(
-                    RoundedRectangle(cornerRadius: .inputRadius)
+                    RoundedRectangle(cornerRadius: RR.input)
                         .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
                 )
 
@@ -392,11 +396,11 @@ struct AddTextAssetSheet: View {
                 dismiss()
             }
         }
-        .padding(.horizontal, .md)
-        .padding(.bottom, .lg)
+        .padding(.horizontal, RS.md)
+        .padding(.bottom, RS.lg)
         .background(Color.riffitBackground)
         .presentationDetents([.medium])
         .presentationDragIndicator(.hidden)
-        .presentationCornerRadius(.sheetRadius)
+        .presentationCornerRadius(RR.modal)
     }
 }

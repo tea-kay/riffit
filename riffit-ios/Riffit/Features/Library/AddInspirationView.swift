@@ -14,12 +14,12 @@ struct AddInspirationView: View {
     @State private var showURLError: Bool = false
 
     var body: some View {
-        VStack(spacing: .lg) {
+        VStack(spacing: RS.lg) {
             // Drag handle
             Capsule()
                 .fill(Color.riffitTextTertiary.opacity(0.5))
                 .frame(width: 36, height: 5)
-                .padding(.top, .smPlus)
+                .padding(.top, RS.smPlus)
 
             // URL preview
             urlPreview
@@ -27,13 +27,13 @@ struct AddInspirationView: View {
             // Note field
             TextField("What caught your eye?", text: $userNote, axis: .vertical)
                 .lineLimit(2...4)
-                .modifier(RiffitTextFieldStyle())
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextPrimary)
-                .padding(.smPlus)
+                .padding(RS.smPlus)
                 .background(Color.riffitSurface)
-                .cornerRadius(.inputRadius)
+                .cornerRadius(RR.input)
                 .overlay(
-                    RoundedRectangle(cornerRadius: .inputRadius)
+                    RoundedRectangle(cornerRadius: RR.input)
                         .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
                 )
 
@@ -52,31 +52,31 @@ struct AddInspirationView: View {
                 save()
             }
         }
-        .padding(.horizontal, .md)
-        .padding(.bottom, .lg)
+        .padding(.horizontal, RS.md)
+        .padding(.bottom, RS.lg)
         .background(Color.riffitBackground)
         .presentationDetents([.medium])
         .presentationDragIndicator(.hidden) // We draw our own handle
-        .presentationCornerRadius(.sheetRadius)
+        .presentationCornerRadius(RR.modal)
     }
 
     // MARK: - URL Preview
 
     private var urlPreview: some View {
-        VStack(spacing: .sm) {
-            HStack(spacing: .smPlus) {
+        VStack(spacing: RS.sm) {
+            HStack(spacing: RS.smPlus) {
                 // IG icon
                 Image(systemName: "camera")
                     .font(.callout)
                     .foregroundStyle(Color.riffitTeal400)
                     .frame(width: 32, height: 32)
                     .background(Color.riffitTealTint)
-                    .cornerRadius(.tagRadius)
+                    .cornerRadius(RR.tag)
 
                 if urlText.isEmpty {
                     // Empty state — prompt to paste
                     TextField("Paste an Instagram link...", text: $urlText)
-                        .modifier(RiffitTextFieldStyle())
+                        .font(RF.bodyMd)
                         .foregroundStyle(Color.riffitTextPrimary)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
@@ -84,7 +84,7 @@ struct AddInspirationView: View {
                 } else {
                     // Show the pasted URL, tappable to edit
                     Text(displayURL)
-                        .riffitCallout()
+                        .font(RF.bodyMd)
                         .foregroundStyle(Color.riffitTextPrimary)
                         .lineLimit(1)
 
@@ -101,17 +101,17 @@ struct AddInspirationView: View {
                     }
                 }
             }
-            .padding(.smPlus)
+            .padding(RS.smPlus)
             .background(Color.riffitSurface)
-            .cornerRadius(.inputRadius)
+            .cornerRadius(RR.input)
             .overlay(
-                RoundedRectangle(cornerRadius: .inputRadius)
+                RoundedRectangle(cornerRadius: RR.input)
                     .stroke(showURLError ? Color.riffitDanger : Color.riffitBorderDefault, lineWidth: 0.5)
             )
 
             if showURLError {
                 Text("Paste a valid Instagram link.")
-                    .riffitCaption()
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitDanger)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -122,7 +122,7 @@ struct AddInspirationView: View {
 
     private var tagSelector: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: .sm) {
+            HStack(spacing: RS.sm) {
                 ForEach(IdeaTag.defaults, id: \.self) { tag in
                     TagPill(
                         label: tag,
@@ -142,13 +142,13 @@ struct AddInspirationView: View {
     // MARK: - Folder Picker
 
     private var folderPicker: some View {
-        HStack(spacing: .smPlus) {
+        HStack(spacing: RS.smPlus) {
             Image(systemName: "folder")
                 .font(.callout)
                 .foregroundStyle(Color.riffitPrimary)
                 .frame(width: 32, height: 32)
                 .background(Color.riffitPrimaryTint)
-                .cornerRadius(.tagRadius)
+                .cornerRadius(RR.tag)
 
             Menu {
                 Button {
@@ -167,7 +167,7 @@ struct AddInspirationView: View {
             } label: {
                 HStack {
                     Text(selectedFolderName)
-                        .riffitCallout()
+                        .font(RF.bodyMd)
                         .foregroundStyle(Color.riffitTextPrimary)
 
                     Spacer()
@@ -178,11 +178,11 @@ struct AddInspirationView: View {
                 }
             }
         }
-        .padding(.smPlus)
+        .padding(RS.smPlus)
         .background(Color.riffitSurface)
-        .cornerRadius(.inputRadius)
+        .cornerRadius(RR.input)
         .overlay(
-            RoundedRectangle(cornerRadius: .inputRadius)
+            RoundedRectangle(cornerRadius: RR.input)
                 .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
         )
     }
@@ -250,10 +250,10 @@ struct TagPill: View {
     var body: some View {
         Button(action: onTap) {
             Text(label)
-                .font(.riffitButton)
+                .font(RF.button)
                 .foregroundStyle(isSelected ? Color.riffitOnPrimary : Color.riffitTextSecondary)
                 .padding(.vertical, 8)
-                .padding(.horizontal, .md)
+                .padding(.horizontal, RS.md)
                 .background(isSelected ? Color.riffitPrimary : Color.riffitSurface)
                 .clipShape(Capsule())
                 .overlay(

@@ -20,7 +20,7 @@ struct AuthView: View {
 
                 VStack(spacing: 0) {
                     // Wordmark + tagline centered in upper 60%
-                    VStack(spacing: .xl) {
+                    VStack(spacing: RS.xl) {
                         RiffitWordmark(fontSize: wordmarkFontSize)
                             .frame(
                                 width: geo.size.width - 80,
@@ -28,7 +28,7 @@ struct AuthView: View {
                             )
 
                         Text("scroll, riff, post")
-                            .font(.riffitSans(13, weight: .light))
+                            .font(RF.body(13, weight: .light))
                             .tracking(4)
                             .foregroundStyle(Color.riffitTeal400)
                     }
@@ -52,7 +52,7 @@ struct AuthView: View {
     // MARK: - Bottom Section
 
     private var bottomSection: some View {
-        VStack(spacing: .md) {
+        VStack(spacing: RS.md) {
             // Apple Sign In button
             SignInWithAppleButton(
                 .continue,
@@ -67,7 +67,7 @@ struct AuthView: View {
             )
             .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
             .frame(height: 50)
-            .cornerRadius(.buttonRadius)
+            .cornerRadius(RR.button)
 
             // Debug-only bypass for simulator testing
             #if DEBUG
@@ -77,30 +77,30 @@ struct AuthView: View {
                 appState.isOnboardingComplete = true
             } label: {
                 Text("Continue as Test User")
-                    .riffitCallout()
+                    .font(RF.bodyMd)
                     .foregroundStyle(Color.riffitTextSecondary)
             }
             #endif
 
             // Terms and privacy caption
             Text("By continuing, you agree to the [Terms of Service](https://riffit.com/terms) and [Privacy Policy](https://riffit.com/privacy).")
-                .riffitCaption()
+                .font(RF.caption)
                 .foregroundStyle(Color.riffitTextTertiary)
                 .multilineTextAlignment(.center)
                 .tint(Color.riffitTextTertiary)
         }
-        .padding(.horizontal, .lg)
+        .padding(.horizontal, RS.lg)
     }
 
     // MARK: - Error Banner
 
     private func errorBanner(_ error: Error) -> some View {
         VStack {
-            HStack(spacing: .sm) {
+            HStack(spacing: RS.sm) {
                 Image(systemName: "exclamationmark.triangle")
                     .foregroundStyle(Color.riffitDanger)
                 Text(error.localizedDescription)
-                    .riffitCaption()
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitTextPrimary)
                 Spacer()
                 Button {
@@ -111,14 +111,14 @@ struct AuthView: View {
                         .foregroundStyle(Color.riffitTextSecondary)
                 }
             }
-            .padding(.smPlus)
+            .padding(RS.smPlus)
             .background(Color.riffitDangerTint)
-            .cornerRadius(.buttonRadius)
-            .padding(.horizontal, .md)
+            .cornerRadius(RR.button)
+            .padding(.horizontal, RS.md)
 
             Spacer()
         }
-        .padding(.top, .xl2)
+        .padding(.top, RS.xl2)
         .transition(.move(edge: .top).combined(with: .opacity))
         .animation(.easeOut(duration: 0.3), value: viewModel.error != nil)
     }

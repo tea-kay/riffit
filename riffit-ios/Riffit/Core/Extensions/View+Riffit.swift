@@ -6,11 +6,11 @@ extension View {
     /// 20pt corner radius, and subtle border.
     func riffitCard() -> some View {
         self
-            .padding(.md)
+            .padding(RS.md)
             .background(Color.riffitSurface)
-            .cornerRadius(.cardRadius)
+            .cornerRadius(RR.card)
             .overlay(
-                RoundedRectangle(cornerRadius: .cardRadius)
+                RoundedRectangle(cornerRadius: RR.card)
                     .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
             )
     }
@@ -19,9 +19,9 @@ extension View {
     /// 14pt corner radius.
     func riffitRow() -> some View {
         self
-            .padding(.md)
+            .padding(RS.md)
             .background(Color.riffitSurface)
-            .cornerRadius(.inputRadius)
+            .cornerRadius(RR.input)
     }
 
     /// Presents content as a centered modal dialog with dimmed backdrop.
@@ -69,37 +69,37 @@ struct RiffitInputModal: View {
     }
 
     var body: some View {
-        VStack(spacing: .lg) {
+        VStack(spacing: RS.lg) {
             Text(title)
-                .font(.riffitHeading)
+                .font(RF.heading)
                 .foregroundStyle(Color.riffitTextPrimary)
 
             TextField(placeholder, text: $text)
-                .modifier(RiffitTextFieldStyle())
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextPrimary)
-                .padding(.smPlus)
+                .padding(RS.smPlus)
                 .background(Color.riffitBackground)
-                .cornerRadius(.inputRadius)
+                .cornerRadius(RR.input)
                 .overlay(
-                    RoundedRectangle(cornerRadius: .inputRadius)
+                    RoundedRectangle(cornerRadius: RR.input)
                         .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
                 )
 
             // Buttons
-            HStack(spacing: .smPlus) {
+            HStack(spacing: RS.smPlus) {
                 // Cancel
                 Button {
                     onCancel()
                 } label: {
                     Text("Cancel")
-                        .font(.riffitButton)
+                        .font(RF.button)
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
                         .foregroundStyle(Color.riffitTextSecondary)
                         .background(Color.riffitBackground)
-                        .cornerRadius(.buttonRadius)
+                        .cornerRadius(RR.button)
                         .overlay(
-                            RoundedRectangle(cornerRadius: .buttonRadius)
+                            RoundedRectangle(cornerRadius: RR.button)
                                 .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
                         )
                 }
@@ -111,19 +111,19 @@ struct RiffitInputModal: View {
                     }
                 } label: {
                     Text(actionLabel)
-                        .font(.riffitButton)
+                        .font(RF.button)
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
                         .foregroundStyle(Color.riffitOnPrimary)
                         .background(trimmedText.isEmpty ? Color.riffitPrimary.opacity(0.4) : Color.riffitPrimary)
-                        .cornerRadius(.buttonRadius)
+                        .cornerRadius(RR.button)
                 }
                 .disabled(trimmedText.isEmpty)
             }
         }
-        .padding(.lg)
+        .padding(RS.lg)
         .background(Color.riffitSurface)
-        .cornerRadius(.cardRadius)
+        .cornerRadius(RR.card)
         .padding(.horizontal, 32)
     }
 }
@@ -140,31 +140,31 @@ struct RiffitConfirmModal: View {
     let onAction: () -> Void
 
     var body: some View {
-        VStack(spacing: .lg) {
+        VStack(spacing: RS.lg) {
             Text(title)
-                .font(.riffitHeading)
+                .font(RF.heading)
                 .foregroundStyle(Color.riffitTextPrimary)
 
             Text(message)
-                .font(.riffitBody)
+                .font(RF.bodyMd)
                 .foregroundStyle(Color.riffitTextSecondary)
                 .multilineTextAlignment(.center)
 
             // Buttons
-            HStack(spacing: .smPlus) {
+            HStack(spacing: RS.smPlus) {
                 // Cancel
                 Button {
                     onCancel()
                 } label: {
                     Text("Cancel")
-                        .font(.riffitButton)
+                        .font(RF.button)
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
                         .foregroundStyle(Color.riffitTextSecondary)
                         .background(Color.riffitBackground)
-                        .cornerRadius(.buttonRadius)
+                        .cornerRadius(RR.button)
                         .overlay(
-                            RoundedRectangle(cornerRadius: .buttonRadius)
+                            RoundedRectangle(cornerRadius: RR.button)
                                 .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
                         )
                 }
@@ -174,18 +174,18 @@ struct RiffitConfirmModal: View {
                     onAction()
                 } label: {
                     Text(actionLabel)
-                        .font(.riffitButton)
+                        .font(RF.button)
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
                         .foregroundStyle(.white)
                         .background(Color.riffitDanger)
-                        .cornerRadius(.buttonRadius)
+                        .cornerRadius(RR.button)
                 }
             }
         }
-        .padding(.lg)
+        .padding(RS.lg)
         .background(Color.riffitSurface)
-        .cornerRadius(.cardRadius)
+        .cornerRadius(RR.card)
         .padding(.horizontal, 32)
     }
 }
@@ -205,20 +205,20 @@ struct RiffitActionModal: View {
     }
 
     var body: some View {
-        VStack(spacing: .smPlus) {
+        VStack(spacing: RS.smPlus) {
             ForEach(Array(actions.enumerated()), id: \.offset) { _, item in
                 Button {
                     onDismiss()
                     item.action()
                 } label: {
-                    HStack(spacing: .smPlus) {
+                    HStack(spacing: RS.smPlus) {
                         Image(systemName: item.icon)
                             .font(.body)
                             .foregroundStyle(Color.riffitPrimary)
                             .frame(width: 28, height: 28)
 
                         Text(item.label)
-                            .font(.riffitButton)
+                            .font(RF.button)
                             .foregroundStyle(Color.riffitTextPrimary)
 
                         Spacer()
@@ -227,16 +227,16 @@ struct RiffitActionModal: View {
                             .font(.caption)
                             .foregroundStyle(Color.riffitTextTertiary)
                     }
-                    .padding(.md)
+                    .padding(RS.md)
                     .background(Color.riffitBackground)
-                    .cornerRadius(.inputRadius)
+                    .cornerRadius(RR.input)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.lg)
+        .padding(RS.lg)
         .background(Color.riffitSurface)
-        .cornerRadius(.cardRadius)
+        .cornerRadius(RR.card)
         .padding(.horizontal, 32)
     }
 }
