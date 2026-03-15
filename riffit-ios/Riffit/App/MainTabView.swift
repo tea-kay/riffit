@@ -18,7 +18,7 @@ struct MainTabView: View {
                 LibraryView()
             }
             .tabItem {
-                Label("Library", systemImage: "house")
+                Label("Ideas", systemImage: "lightbulb")
             }
             .tag(Tab.library)
 

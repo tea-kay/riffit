@@ -56,7 +56,7 @@ class LibraryViewModel: ObservableObject {
 
     // MARK: - Add Video
 
-    func addVideo(url: String, platform: InspirationVideo.Platform, userNote: String?, tags: [String]?) async {
+    func addVideo(url: String, platform: InspirationVideo.Platform, userNote: String?, tags: [String]?, folderId: UUID? = nil) async {
         isSubmitting = true
 
         // TODO: Save to Supabase + call analyze-video edge function
@@ -78,6 +78,11 @@ class LibraryViewModel: ObservableObject {
 
         if let tags, !tags.isEmpty {
             videoTagsMap[newVideo.id] = tags
+        }
+
+        // File into folder if one was selected
+        if let folderId {
+            videoFolderMap[newVideo.id] = folderId
         }
 
         // Seed the first comment from the user note

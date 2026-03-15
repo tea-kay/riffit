@@ -10,6 +10,7 @@ struct AddInspirationView: View {
     @State private var urlText: String = ""
     @State private var userNote: String = ""
     @State private var selectedTags: Set<String> = []
+    @State private var selectedFolderId: UUID?
     @State private var showURLError: Bool = false
 
     var body: some View {
@@ -38,6 +39,11 @@ struct AddInspirationView: View {
 
             // Tag selector
             tagSelector
+
+            // Folder picker — only shown when folders exist
+            if !viewModel.folders.isEmpty {
+                folderPicker
+            }
 
             Spacer()
 
@@ -133,6 +139,62 @@ struct AddInspirationView: View {
         }
     }
 
+    // MARK: - Folder Picker
+
+    private var folderPicker: some View {
+        HStack(spacing: .smPlus) {
+            Image(systemName: "folder")
+                .font(.callout)
+                .foregroundStyle(Color.riffitPrimary)
+                .frame(width: 32, height: 32)
+                .background(Color.riffitPrimaryTint)
+                .cornerRadius(.tagRadius)
+
+            Menu {
+                Button {
+                    selectedFolderId = nil
+                } label: {
+                    Label("No folder", systemImage: selectedFolderId == nil ? "checkmark" : "")
+                }
+
+                ForEach(viewModel.folders) { folder in
+                    Button {
+                        selectedFolderId = folder.id
+                    } label: {
+                        Label(folder.name, systemImage: selectedFolderId == folder.id ? "checkmark" : "")
+                    }
+                }
+            } label: {
+                HStack {
+                    Text(selectedFolderName)
+                        .riffitCallout()
+                        .foregroundStyle(Color.riffitTextPrimary)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(Color.riffitTextTertiary)
+                }
+            }
+        }
+        .padding(.smPlus)
+        .background(Color.riffitSurface)
+        .cornerRadius(.inputRadius)
+        .overlay(
+            RoundedRectangle(cornerRadius: .inputRadius)
+                .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
+        )
+    }
+
+    private var selectedFolderName: String {
+        if let folderId = selectedFolderId,
+           let folder = viewModel.folders.first(where: { $0.id == folderId }) {
+            return folder.name
+        }
+        return "No folder"
+    }
+
     // MARK: - Display URL
 
     /// Shows a shortened version of the URL for the preview pill.
@@ -163,7 +225,8 @@ struct AddInspirationView: View {
                 url: trimmedURL,
                 platform: .instagram,
                 userNote: trimmedNote.isEmpty ? nil : trimmedNote,
-                tags: tags.isEmpty ? nil : tags
+                tags: tags.isEmpty ? nil : tags,
+                folderId: selectedFolderId
             )
         }
 
