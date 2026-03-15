@@ -27,7 +27,7 @@ struct AddInspirationView: View {
             // Note field
             TextField("What caught your eye?", text: $userNote, axis: .vertical)
                 .lineLimit(2...4)
-                .riffitBody()
+                .modifier(RiffitTextFieldStyle())
                 .foregroundStyle(Color.riffitTextPrimary)
                 .padding(.smPlus)
                 .background(Color.riffitSurface)
@@ -76,7 +76,7 @@ struct AddInspirationView: View {
                 if urlText.isEmpty {
                     // Empty state — prompt to paste
                     TextField("Paste an Instagram link...", text: $urlText)
-                        .riffitCallout()
+                        .modifier(RiffitTextFieldStyle())
                         .foregroundStyle(Color.riffitTextPrimary)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
@@ -250,8 +250,7 @@ struct TagPill: View {
     var body: some View {
         Button(action: onTap) {
             Text(label)
-                .riffitCaption()
-                .fontWeight(.medium)
+                .font(.riffitButton)
                 .foregroundStyle(isSelected ? Color.riffitOnPrimary : Color.riffitTextSecondary)
                 .padding(.vertical, 8)
                 .padding(.horizontal, .md)

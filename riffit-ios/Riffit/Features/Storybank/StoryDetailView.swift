@@ -372,7 +372,7 @@ struct AddTextAssetSheet: View {
 
             TextField("Write your thoughts...", text: $text, axis: .vertical)
                 .lineLimit(3...8)
-                .riffitBody()
+                .modifier(RiffitTextFieldStyle())
                 .foregroundStyle(Color.riffitTextPrimary)
                 .padding(.smPlus)
                 .background(Color.riffitSurface)

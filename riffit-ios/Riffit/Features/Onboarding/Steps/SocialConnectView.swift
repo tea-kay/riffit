@@ -153,7 +153,7 @@ struct SocialAccountRow: View {
                     .foregroundStyle(Color.riffitTextTertiary)
 
                 TextField(account.platform.placeholder, text: $account.handle)
-                    .riffitBody()
+                    .modifier(RiffitTextFieldStyle())
                     .foregroundStyle(Color.riffitTextPrimary)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)

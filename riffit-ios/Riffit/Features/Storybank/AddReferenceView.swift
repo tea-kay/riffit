@@ -89,8 +89,7 @@ struct AddReferenceView: View {
                         selectedTag = tag
                     } label: {
                         Text(tag)
-                            .riffitCallout()
-                            .fontWeight(.medium)
+                            .font(.riffitButton)
                             .foregroundStyle(
                                 selectedTag == tag
                                     ? Color.riffitOnPrimary

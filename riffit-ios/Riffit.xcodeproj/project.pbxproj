@@ -50,7 +50,10 @@
 		FAFA3855208C106A4A4E2E5A /* InspirationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B51C570A8060A401A8F4AE96 /* InspirationCard.swift */; };
 		D5E6F7A8B9C0D1E2F3A4B5C6 /* RiffitWordmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6F7A8B9C0D1E2F3A4B5C6D7 /* RiffitWordmark.swift */; };
 		F7A8B9C0D1E2F3A4B5C6D7E8 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A8B9C0D1E2F3A4B5C6D7E8F9 /* LaunchScreen.storyboard */; };
-		AA11BB22CC33DD44EE55FF01 /* AbrilFatface-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF11 /* AbrilFatface-Regular.ttf */; };
+		AA11BB22CC33DD44EE55FF01 /* Lora-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF11 /* Lora-Regular.ttf */; };
+		BB22CC33DD44EE55FF660101 /* Lora-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF661111 /* Lora-Medium.ttf */; };
+		BB22CC33DD44EE55FF660102 /* Lora-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF661112 /* Lora-Bold.ttf */; };
+		BB22CC33DD44EE55FF660103 /* Lora-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF661113 /* Lora-Italic.ttf */; };
 		AA11BB22CC33DD44EE55FF02 /* DMSans-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF12 /* DMSans-Light.ttf */; };
 		AA11BB22CC33DD44EE55FF03 /* DMSans-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF13 /* DMSans-Regular.ttf */; };
 		AA11BB22CC33DD44EE55FF04 /* DMSans-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF14 /* DMSans-Medium.ttf */; };
@@ -112,7 +115,10 @@
 		FB7AE2E5C30E70F6F15FA681 /* AddInspirationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddInspirationView.swift; sourceTree = "<group>"; };
 		E6F7A8B9C0D1E2F3A4B5C6D7 /* RiffitWordmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitWordmark.swift; sourceTree = "<group>"; };
 		A8B9C0D1E2F3A4B5C6D7E8F9 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		AA11BB22CC33DD44EE55FF11 /* AbrilFatface-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "AbrilFatface-Regular.ttf"; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF11 /* Lora-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Lora-Regular.ttf"; sourceTree = "<group>"; };
+		BB22CC33DD44EE55FF661111 /* Lora-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Lora-Medium.ttf"; sourceTree = "<group>"; };
+		BB22CC33DD44EE55FF661112 /* Lora-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Lora-Bold.ttf"; sourceTree = "<group>"; };
+		BB22CC33DD44EE55FF661113 /* Lora-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Lora-Italic.ttf"; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF12 /* DMSans-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-Light.ttf"; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF13 /* DMSans-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-Regular.ttf"; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF14 /* DMSans-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-Medium.ttf"; sourceTree = "<group>"; };
@@ -313,10 +319,13 @@
 		AA11BB22CC33DD44EE55FF21 /* Fonts */ = {
 			isa = PBXGroup;
 			children = (
-				AA11BB22CC33DD44EE55FF11 /* AbrilFatface-Regular.ttf */,
 				AA11BB22CC33DD44EE55FF12 /* DMSans-Light.ttf */,
 				AA11BB22CC33DD44EE55FF14 /* DMSans-Medium.ttf */,
 				AA11BB22CC33DD44EE55FF13 /* DMSans-Regular.ttf */,
+				BB22CC33DD44EE55FF661112 /* Lora-Bold.ttf */,
+				BB22CC33DD44EE55FF661113 /* Lora-Italic.ttf */,
+				BB22CC33DD44EE55FF661111 /* Lora-Medium.ttf */,
+				AA11BB22CC33DD44EE55FF11 /* Lora-Regular.ttf */,
 			);
 			path = Fonts;
 			sourceTree = "<group>";
@@ -410,12 +419,15 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA11BB22CC33DD44EE55FF01 /* AbrilFatface-Regular.ttf in Resources */,
 				EC3E4AA1FEA733730E864EC8 /* Assets.xcassets in Resources */,
 				AA11BB22CC33DD44EE55FF02 /* DMSans-Light.ttf in Resources */,
 				AA11BB22CC33DD44EE55FF04 /* DMSans-Medium.ttf in Resources */,
 				AA11BB22CC33DD44EE55FF03 /* DMSans-Regular.ttf in Resources */,
 				F7A8B9C0D1E2F3A4B5C6D7E8 /* LaunchScreen.storyboard in Resources */,
+				AA11BB22CC33DD44EE55FF01 /* Lora-Regular.ttf in Resources */,
+				BB22CC33DD44EE55FF660101 /* Lora-Medium.ttf in Resources */,
+				BB22CC33DD44EE55FF660102 /* Lora-Bold.ttf in Resources */,
+				BB22CC33DD44EE55FF660103 /* Lora-Italic.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

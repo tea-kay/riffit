@@ -6,6 +6,7 @@ struct LibraryView: View {
     @StateObject private var viewModel = LibraryViewModel()
     @State private var showAddSheet: Bool = false
     @State private var showNewFolderAlert: Bool = false
+    @State private var showActionSheet: Bool = false
     @State private var newFolderName: String = ""
 
     var body: some View {
@@ -31,19 +32,8 @@ struct LibraryView: View {
                     .foregroundStyle(Color.riffitTextPrimary)
             }
             ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Button {
-                        showAddSheet = true
-                    } label: {
-                        Label("New Idea", systemImage: "lightbulb")
-                    }
-
-                    Button {
-                        newFolderName = ""
-                        showNewFolderAlert = true
-                    } label: {
-                        Label("New Folder", systemImage: "folder.badge.plus")
-                    }
+                Button {
+                    showActionSheet = true
                 } label: {
                     Image(systemName: "plus")
                         .foregroundStyle(Color.riffitPrimary)
@@ -53,15 +43,36 @@ struct LibraryView: View {
         .sheet(isPresented: $showAddSheet) {
             AddInspirationView(viewModel: viewModel)
         }
-        .alert("New Folder", isPresented: $showNewFolderAlert) {
-            TextField("Folder name", text: $newFolderName)
-            Button("Cancel", role: .cancel) {}
-            Button("Create") {
-                let trimmed = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty {
-                    viewModel.createFolder(name: trimmed)
+        .riffitModal(isPresented: $showActionSheet) {
+            RiffitActionModal(
+                actions: [
+                    .init(label: "New Idea", icon: "lightbulb") {
+                        showAddSheet = true
+                    },
+                    .init(label: "New Folder", icon: "folder.badge.plus") {
+                        newFolderName = ""
+                        showNewFolderAlert = true
+                    },
+                ],
+                onDismiss: {
+                    showActionSheet = false
                 }
-            }
+            )
+        }
+        .riffitModal(isPresented: $showNewFolderAlert) {
+            RiffitInputModal(
+                title: "New Folder",
+                placeholder: "Folder name",
+                actionLabel: "Create",
+                text: $newFolderName,
+                onCancel: {
+                    showNewFolderAlert = false
+                },
+                onAction: { name in
+                    viewModel.createFolder(name: name)
+                    showNewFolderAlert = false
+                }
+            )
         }
         .task {
             await viewModel.fetchVideos()

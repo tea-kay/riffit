@@ -122,7 +122,7 @@ struct InspirationDetailView: View {
                 if let score = video.alignmentScore {
                     VStack(spacing: 2) {
                         Text("\(score)")
-                            .font(.riffitDisplay(36))
+                            .font(.riffitSerif(36, weight: .bold))
                             .foregroundStyle(Color.riffitPrimary)
 
                         Text("/ 100")
@@ -224,7 +224,7 @@ struct InspirationDetailView: View {
         HStack(alignment: .bottom, spacing: .smPlus) {
             TextField("Add a note...", text: $newCommentText, axis: .vertical)
                 .lineLimit(1...5)
-                .riffitBody()
+                .modifier(RiffitTextFieldStyle())
                 .foregroundStyle(Color.riffitTextPrimary)
                 .focused($isCommentFieldFocused)
 

@@ -68,24 +68,35 @@ struct FolderDetailView: View {
                 }
             }
         }
-        .alert("Rename Folder", isPresented: $showRenameAlert) {
-            TextField("Folder name", text: $renameText)
-            Button("Cancel", role: .cancel) {}
-            Button("Save") {
-                let trimmed = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty {
-                    viewModel.renameFolder(folder, to: trimmed)
+        .riffitModal(isPresented: $showRenameAlert) {
+            RiffitInputModal(
+                title: "Rename Folder",
+                placeholder: "Folder name",
+                actionLabel: "Save",
+                text: $renameText,
+                onCancel: {
+                    showRenameAlert = false
+                },
+                onAction: { name in
+                    viewModel.renameFolder(folder, to: name)
+                    showRenameAlert = false
                 }
-            }
+            )
         }
-        .alert("Delete Folder?", isPresented: $showDeleteConfirm) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
-                viewModel.deleteFolder(folder)
-                dismiss()
-            }
-        } message: {
-            Text("Ideas inside will be moved back to Unfiled.")
+        .riffitModal(isPresented: $showDeleteConfirm) {
+            RiffitConfirmModal(
+                title: "Delete Folder?",
+                message: "Ideas inside will be moved back to Unfiled.",
+                actionLabel: "Delete",
+                onCancel: {
+                    showDeleteConfirm = false
+                },
+                onAction: {
+                    viewModel.deleteFolder(folder)
+                    showDeleteConfirm = false
+                    dismiss()
+                }
+            )
         }
     }
 

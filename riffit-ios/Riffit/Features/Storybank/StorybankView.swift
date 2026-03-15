@@ -41,15 +41,20 @@ struct StorybankView: View {
                 }
             }
         }
-        .alert("New Story", isPresented: $showNewStoryAlert) {
-            TextField("Story title", text: $newStoryTitle)
-            Button("Cancel", role: .cancel) {}
-            Button("Create") {
-                let trimmed = newStoryTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty {
-                    viewModel.createStory(title: trimmed)
+        .riffitModal(isPresented: $showNewStoryAlert) {
+            RiffitInputModal(
+                title: "New Story",
+                placeholder: "Story title",
+                actionLabel: "Create",
+                text: $newStoryTitle,
+                onCancel: {
+                    showNewStoryAlert = false
+                },
+                onAction: { title in
+                    viewModel.createStory(title: title)
+                    showNewStoryAlert = false
                 }
-            }
+            )
         }
         .task {
             await viewModel.fetchStories()

@@ -85,7 +85,7 @@ struct InspirationCard: View {
                 Spacer()
                 if let score = video.alignmentScore {
                     Text("\(score)")
-                        .font(.riffitDisplay(24))
+                        .font(.riffitSerif(24, weight: .bold))
                         .foregroundStyle(Color.riffitPrimary)
                 }
             }

@@ -3,37 +3,49 @@ import SwiftUI
 // MARK: - Font Statics
 
 /// Riffit design system fonts.
-/// Abril Fatface — all headings, titles, buttons, labels, tags.
+/// Lora — all headings, titles, buttons, labels, tags.
 /// DM Sans — body text, metadata, timestamps, URLs, captions.
 /// Georgia Bold Italic is used ONLY in RiffitWordmark (the splash logo).
 
 extension Font {
 
-    // MARK: Abril Fatface (Headings)
+    // MARK: Lora (Headings / UI Chrome)
 
-    /// Abril Fatface at a custom size — for any heading that doesn't
-    /// fit the preset tokens (e.g. alignment scores).
-    static func riffitDisplay(_ size: CGFloat) -> Font {
-        .custom("AbrilFatface-Regular", size: size)
+    /// Lora at a custom size, with optional italic and weight control.
+    /// - Regular (400), Medium (500), Bold (700), Italic (400-italic)
+    static func riffitSerif(
+        _ size: CGFloat,
+        italic: Bool = false,
+        weight: Font.Weight = .regular
+    ) -> Font {
+        switch (italic, weight) {
+        case (true, _):    return .custom("Lora-Italic", size: size)
+        case (_, .bold):   return .custom("Lora-Bold", size: size)
+        case (_, .medium): return .custom("Lora-Medium", size: size)
+        default:           return .custom("Lora-Regular", size: size)
+        }
     }
 
-    /// 32pt — hero text, display headings
-    static var riffitLargeTitle: Font { .riffitDisplay(32) }
+    /// 32pt Lora Bold — hero text, display headings
+    static var riffitLargeTitle: Font { riffitSerif(32, weight: .bold) }
 
-    /// 24pt — page titles (Ideas, Storybank, Settings)
-    static var riffitTitle: Font { .riffitDisplay(24) }
+    /// 24pt Lora Bold — page titles (Ideas, Storybank, Settings)
+    static var riffitTitle: Font { riffitSerif(24, weight: .bold) }
 
-    /// 20pt — card titles, section headings, empty state headlines
-    static var riffitHeading: Font { .riffitDisplay(20) }
+    /// 20pt Lora Bold — card titles, section headings, empty state headlines
+    static var riffitHeading: Font { riffitSerif(20, weight: .bold) }
 
-    /// 16pt — button text (all variants)
-    static var riffitButton: Font { .riffitDisplay(16) }
+    /// 16pt Lora Medium — button text (all variants)
+    static var riffitButton: Font { riffitSerif(16, weight: .medium) }
 
-    /// 13pt — section labels (NOTES, MY ASSETS, etc.)
-    static var riffitLabel: Font { .riffitDisplay(13) }
+    /// 13pt Lora Medium — section labels (NOTES, MY ASSETS, etc.)
+    static var riffitLabel: Font { riffitSerif(13, weight: .medium) }
 
-    /// 11pt — tag/badge text, status pills
-    static var riffitTag: Font { .riffitDisplay(11) }
+    /// 12pt Lora Medium — tag/badge text, status pills
+    static var riffitTag: Font { riffitSerif(12, weight: .medium) }
+
+    /// 12pt Lora Italic — italic tag variant
+    static var riffitTagItalic: Font { riffitSerif(12, italic: true) }
 
     // MARK: DM Sans (Body / Metadata)
 
@@ -63,26 +75,26 @@ extension Font {
 
 /// Convenience modifiers that apply the font tokens.
 /// These keep existing call sites like `.riffitBody()` working
-/// while routing to the new Abril Fatface / DM Sans fonts.
+/// while routing to the new Lora / DM Sans fonts.
 
 extension View {
 
-    /// Display/hero text — Abril Fatface 32pt
+    /// Display/hero text — Lora Bold 32pt
     func riffitDisplay() -> some View {
         self.font(.riffitLargeTitle)
     }
 
-    /// Page title — Abril Fatface 24pt
+    /// Page title — Lora Bold 24pt
     func riffitPageTitle() -> some View {
         self.font(.riffitTitle)
     }
 
-    /// Title — Abril Fatface 24pt
+    /// Title — Lora Bold 24pt
     func riffitTitle() -> some View {
         self.font(.riffitTitle)
     }
 
-    /// Heading — Abril Fatface 20pt
+    /// Heading — Lora Bold 20pt
     func riffitHeading() -> some View {
         self.font(.riffitHeading)
     }
@@ -107,7 +119,7 @@ extension View {
         self.font(.riffitCaption)
     }
 
-    /// Label — Abril Fatface 13pt, uppercase, letter-spaced 0.08em
+    /// Label — Lora Medium 13pt, uppercase, letter-spaced 0.08em
     func riffitLabel() -> some View {
         self
             .font(.riffitLabel)
@@ -115,7 +127,7 @@ extension View {
             .tracking(0.08 * 13)
     }
 
-    /// Primary button font — Abril Fatface 16pt
+    /// Primary button font — Lora Medium 16pt
     func riffitPrimaryButtonFont() -> some View {
         self.font(.riffitButton)
     }
@@ -125,5 +137,16 @@ extension View {
         self
             .font(.riffitSans(13, weight: .light))
             .kerning(1.0)
+    }
+}
+
+// MARK: - TextField Modifier
+
+/// Canonical modifier for all custom TextFields — applies DM Sans 16pt
+/// so placeholders and typed text use the Riffit body font.
+struct RiffitTextFieldStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.riffitBody)
     }
 }

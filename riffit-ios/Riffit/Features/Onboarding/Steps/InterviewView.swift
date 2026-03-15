@@ -76,7 +76,7 @@ struct InterviewView: View {
             HStack(spacing: .smPlus) {
                 TextField("Type your response...", text: $viewModel.currentInput, axis: .vertical)
                     .lineLimit(1...5)
-                    .riffitBody()
+                    .modifier(RiffitTextFieldStyle())
                     .padding(.smPlus)
                     .background(Color.riffitSurface)
                     .cornerRadius(.inputRadius)
