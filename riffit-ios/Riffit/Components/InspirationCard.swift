@@ -42,6 +42,7 @@ struct InspirationCard: View {
                 StatusTag(text: "Archived", color: Color.riffitTextTertiary)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(RS.md)
         .background(Color.riffitSurface)
         .cornerRadius(RR.card)

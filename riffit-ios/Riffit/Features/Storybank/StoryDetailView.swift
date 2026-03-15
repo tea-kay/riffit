@@ -11,8 +11,10 @@ struct StoryDetailView: View {
     @State private var showAddTextSheet: Bool = false
     @State private var showAddReferenceSheet: Bool = false
     @State private var editingAsset: StoryAsset?
+    @State private var selectedVideo: InspirationVideo?
     @State private var showRenameModal: Bool = false
     @State private var renameText: String = ""
+    @EnvironmentObject var libraryViewModel: LibraryViewModel
 
     /// Looks up the latest version of this story from the viewModel
     /// so the nav title reflects renames without re-entering the view.
@@ -72,6 +74,13 @@ struct StoryDetailView: View {
                 } else {
                     ForEach(viewModel.references(for: story.id)) { reference in
                         ReferenceCard(reference: reference, viewModel: viewModel)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                // Look up the linked video and navigate to its detail
+                                if let video = libraryViewModel.videos.first(where: { $0.id == reference.inspirationVideoId }) {
+                                    selectedVideo = video
+                                }
+                            }
                             .contextMenu {
                                 Button(role: .destructive) {
                                     viewModel.deleteReference(reference)
@@ -86,6 +95,10 @@ struct StoryDetailView: View {
                                 bottom: RS.xs, trailing: RS.md
                             ))
                     }
+                    .onMove { from, to in
+                        viewModel.moveReference(in: story.id, from: from, to: to)
+                    }
+                    .deleteDisabled(true)
                 }
             } header: {
                 referencesHeader
@@ -142,6 +155,11 @@ struct StoryDetailView: View {
         }
         .fullScreenCover(item: $editingAsset) { asset in
             EditTextAssetView(asset: asset, viewModel: viewModel)
+        }
+        .sheet(item: $selectedVideo) { video in
+            NavigationStack {
+                InspirationDetailView(video: video, viewModel: libraryViewModel)
+            }
         }
         .riffitModal(isPresented: $showRenameModal) {
             RiffitInputModal(

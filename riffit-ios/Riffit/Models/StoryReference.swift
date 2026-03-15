@@ -11,6 +11,7 @@ struct StoryReference: Codable, Identifiable, Hashable {
     let inspirationVideoId: UUID
     let referenceTag: String       // Hook, Editing, B-Roll, Format, Topic, Inspiration
     var aiRelevanceNote: String?   // AI-generated one-liner about why this is relevant
+    var displayOrder: Int          // Position in the references list (for reordering)
     let createdAt: Date
 
     enum CodingKeys: String, CodingKey {
@@ -19,6 +20,7 @@ struct StoryReference: Codable, Identifiable, Hashable {
         case inspirationVideoId = "inspiration_video_id"
         case referenceTag = "reference_tag"
         case aiRelevanceNote = "ai_relevance_note"
+        case displayOrder = "display_order"
         case createdAt = "created_at"
     }
 
@@ -28,6 +30,7 @@ struct StoryReference: Codable, Identifiable, Hashable {
         inspirationVideoId: UUID,
         referenceTag: String,
         aiRelevanceNote: String? = nil,
+        displayOrder: Int = 0,
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -35,6 +38,7 @@ struct StoryReference: Codable, Identifiable, Hashable {
         self.inspirationVideoId = inspirationVideoId
         self.referenceTag = referenceTag
         self.aiRelevanceNote = aiRelevanceNote
+        self.displayOrder = displayOrder
         self.createdAt = createdAt
     }
 }

@@ -157,16 +157,17 @@ class StorybankViewModel: ObservableObject {
     // MARK: - References
 
     func references(for storyId: UUID) -> [StoryReference] {
-        (storyReferencesMap[storyId] ?? []).sorted { $0.createdAt < $1.createdAt }
+        (storyReferencesMap[storyId] ?? []).sorted { $0.displayOrder < $1.displayOrder }
     }
 
     func addReference(to storyId: UUID, videoId: UUID, tag: String) {
+        let existing = references(for: storyId)
         let reference = StoryReference(
             storyId: storyId,
             inspirationVideoId: videoId,
             referenceTag: tag,
-            // TODO: Call Edge Function to generate AI relevance note
-            aiRelevanceNote: nil
+            aiRelevanceNote: nil,
+            displayOrder: existing.count
         )
         storyReferencesMap[storyId, default: []].append(reference)
         touchStory(storyId)
@@ -174,7 +175,25 @@ class StorybankViewModel: ObservableObject {
 
     func deleteReference(_ reference: StoryReference) {
         storyReferencesMap[reference.storyId]?.removeAll { $0.id == reference.id }
+        // Reindex display orders
+        if var refs = storyReferencesMap[reference.storyId] {
+            refs.sort { $0.displayOrder < $1.displayOrder }
+            for i in refs.indices {
+                refs[i].displayOrder = i
+            }
+            storyReferencesMap[reference.storyId] = refs
+        }
         touchStory(reference.storyId)
+    }
+
+    func moveReference(in storyId: UUID, from source: IndexSet, to destination: Int) {
+        var refs = references(for: storyId)
+        refs.move(fromOffsets: source, toOffset: destination)
+        for i in refs.indices {
+            refs[i].displayOrder = i
+        }
+        storyReferencesMap[storyId] = refs
+        touchStory(storyId)
     }
 
     // MARK: - Helpers
