@@ -221,49 +221,48 @@ struct AddInspirationView: View {
     // MARK: - Folder Picker
 
     private var folderPicker: some View {
-        HStack(spacing: RS.smPlus) {
-            Image(systemName: "folder")
-                .font(.callout)
-                .foregroundStyle(Color.riffitPrimary)
-                .frame(width: 32, height: 32)
-                .background(Color.riffitPrimaryTint)
-                .cornerRadius(RR.tag)
-
-            Menu {
-                Button {
-                    selectedFolderId = nil
-                } label: {
-                    Label("No folder", systemImage: selectedFolderId == nil ? "checkmark" : "")
-                }
-
-                ForEach(viewModel.folders) { folder in
-                    Button {
-                        selectedFolderId = folder.id
-                    } label: {
-                        Label(folder.name, systemImage: selectedFolderId == folder.id ? "checkmark" : "")
-                    }
-                }
+        Menu {
+            Button {
+                selectedFolderId = nil
             } label: {
-                HStack {
-                    Text(selectedFolderName)
-                        .font(RF.bodyMd)
-                        .foregroundStyle(Color.riffitTextPrimary)
+                Label("No folder", systemImage: selectedFolderId == nil ? "checkmark" : "folder")
+            }
 
-                    Spacer()
-
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption)
-                        .foregroundStyle(Color.riffitTextTertiary)
+            ForEach(viewModel.folders) { folder in
+                Button {
+                    selectedFolderId = folder.id
+                } label: {
+                    Label(folder.name, systemImage: selectedFolderId == folder.id ? "checkmark" : "folder")
                 }
             }
+        } label: {
+            HStack(spacing: RS.smPlus) {
+                Image(systemName: "folder")
+                    .font(.callout)
+                    .foregroundStyle(Color.riffitPrimary)
+                    .frame(width: 32, height: 32)
+                    .background(Color.riffitPrimaryTint)
+                    .cornerRadius(RR.tag)
+
+                Text(selectedFolderName)
+                    .font(RF.bodyMd)
+                    .foregroundStyle(Color.riffitTextPrimary)
+
+                Spacer()
+
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption)
+                    .foregroundStyle(Color.riffitTextTertiary)
+            }
+            .contentShape(Rectangle())
+            .padding(RS.smPlus)
+            .background(Color.riffitSurface)
+            .cornerRadius(RR.input)
+            .overlay(
+                RoundedRectangle(cornerRadius: RR.input)
+                    .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
+            )
         }
-        .padding(RS.smPlus)
-        .background(Color.riffitSurface)
-        .cornerRadius(RR.input)
-        .overlay(
-            RoundedRectangle(cornerRadius: RR.input)
-                .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
-        )
     }
 
     private var selectedFolderName: String {
