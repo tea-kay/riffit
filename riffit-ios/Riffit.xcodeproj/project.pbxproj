@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DD2233445566778899AA0005 /* VideoStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2233445566778899AA0005 /* VideoStorageService.swift */; };
+		DD2233445566778899AA0006 /* VideoPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2233445566778899AA0006 /* VideoPickerView.swift */; };
+		DD2233445566778899AA0007 /* VideoAttachmentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2233445566778899AA0007 /* VideoAttachmentSheet.swift */; };
+		DD2233445566778899AA0008 /* VideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2233445566778899AA0008 /* VideoPlayerView.swift */; };
 		BB1122334455667788990011 /* AudioRecorderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1122334455667788990011 /* AudioRecorderService.swift */; };
 		BB1122334455667788990022 /* AudioPlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1122334455667788990022 /* AudioPlayerService.swift */; };
 		BB1122334455667788990033 /* VoiceNoteRecordSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1122334455667788990033 /* VoiceNoteRecordSheet.swift */; };
@@ -80,6 +84,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		CC2233445566778899AA0005 /* VideoStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoStorageService.swift; sourceTree = "<group>"; };
+		CC2233445566778899AA0006 /* VideoPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPickerView.swift; sourceTree = "<group>"; };
+		CC2233445566778899AA0007 /* VideoAttachmentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoAttachmentSheet.swift; sourceTree = "<group>"; };
+		CC2233445566778899AA0008 /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerView.swift; sourceTree = "<group>"; };
 		AA1122334455667788990011 /* AudioRecorderService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorderService.swift; sourceTree = "<group>"; };
 		AA1122334455667788990022 /* AudioPlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerService.swift; sourceTree = "<group>"; };
 		AA1122334455667788990033 /* VoiceNoteRecordSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceNoteRecordSheet.swift; sourceTree = "<group>"; };
@@ -179,6 +187,8 @@
 			children = (
 				CC2233445566778899AA0002 /* CameraPickerView.swift */,
 				CC2233445566778899AA0001 /* ImageStorageService.swift */,
+				CC2233445566778899AA0006 /* VideoPickerView.swift */,
+				CC2233445566778899AA0005 /* VideoStorageService.swift */,
 			);
 			path = Media;
 			sourceTree = "<group>";
@@ -257,6 +267,8 @@
 				81284910A3F4946E96B3848F /* StorybankView.swift */,
 				2B41C262581B8EBD33B6C7DA /* StorybankViewModel.swift */,
 				A4B5C6D7E8F9A0B1C2D3E4F5 /* StoryDetailView.swift */,
+				CC2233445566778899AA0007 /* VideoAttachmentSheet.swift */,
+				CC2233445566778899AA0008 /* VideoPlayerView.swift */,
 				AA1122334455667788990044 /* VoiceNotePlayerView.swift */,
 				AA1122334455667788990033 /* VoiceNoteRecordSheet.swift */,
 			);
@@ -526,6 +538,10 @@
 				D4BC846EA6A4FDA4401C7C61 /* SupabaseClient.swift in Sources */,
 				769804D0DE5A9805163BA285 /* User.swift in Sources */,
 				ADEFD9559A7199A784AA3C3B /* VideoDeconstruction.swift in Sources */,
+				DD2233445566778899AA0005 /* VideoStorageService.swift in Sources */,
+				DD2233445566778899AA0006 /* VideoPickerView.swift in Sources */,
+				DD2233445566778899AA0007 /* VideoAttachmentSheet.swift in Sources */,
+				DD2233445566778899AA0008 /* VideoPlayerView.swift in Sources */,
 				BB1122334455667788990044 /* VoiceNotePlayerView.swift in Sources */,
 				BB1122334455667788990033 /* VoiceNoteRecordSheet.swift in Sources */,
 				38025785851FC11D5C7D7363 /* View+Riffit.swift in Sources */,

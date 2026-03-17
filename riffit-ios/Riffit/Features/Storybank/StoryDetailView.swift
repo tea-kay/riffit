@@ -11,8 +11,10 @@ struct StoryDetailView: View {
     @State private var showAddTextSheet: Bool = false
     @State private var showVoiceRecordSheet: Bool = false
     @State private var showImageAttachmentSheet: Bool = false
+    @State private var showVideoAttachmentSheet: Bool = false
     @State private var playingVoiceAsset: StoryAsset?
     @State private var viewingImageAsset: StoryAsset?
+    @State private var viewingVideoAsset: StoryAsset?
     @State private var showAddReferenceSheet: Bool = false
     @State private var showAddSectionModal: Bool = false
     @State private var newSectionName: String = ""
@@ -72,8 +74,8 @@ struct StoryDetailView: View {
                                         playingVoiceAsset = asset
                                     case .image:
                                         viewingImageAsset = asset
-                                    default:
-                                        break
+                                    case .video:
+                                        viewingVideoAsset = asset
                                     }
                                 }
                                 .contextMenu {
@@ -213,6 +215,12 @@ struct StoryDetailView: View {
         .fullScreenCover(item: $viewingImageAsset) { asset in
             ImageViewerView(asset: asset, viewModel: viewModel)
         }
+        .sheet(isPresented: $showVideoAttachmentSheet) {
+            VideoAttachmentSheet(storyId: story.id, viewModel: viewModel)
+        }
+        .fullScreenCover(item: $viewingVideoAsset) { asset in
+            VideoPlayerView(asset: asset, viewModel: viewModel)
+        }
         .riffitModal(isPresented: $showRenameModal) {
             RiffitInputModal(
                 title: "Rename Story",
@@ -296,7 +304,7 @@ struct StoryDetailView: View {
                 }
 
                 Button {
-                    // TODO: Video picker flow
+                    showVideoAttachmentSheet = true
                 } label: {
                     Label("Video", systemImage: "video")
                 }

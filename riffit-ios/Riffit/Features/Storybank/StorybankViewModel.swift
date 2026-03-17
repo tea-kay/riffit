@@ -177,11 +177,12 @@ class StorybankViewModel: ObservableObject {
         touchStory(storyId)
     }
 
-    func addVideoAsset(to storyId: UUID, fileUrl: String, durationSeconds: Int?) {
+    func addVideoAsset(to storyId: UUID, fileUrl: String, durationSeconds: Int?, name: String? = nil) {
         let existing = assets(for: storyId)
         let asset = StoryAsset(
             storyId: storyId,
             assetType: .video,
+            name: name,
             fileUrl: fileUrl,
             durationSeconds: durationSeconds,
             displayOrder: existing.count
