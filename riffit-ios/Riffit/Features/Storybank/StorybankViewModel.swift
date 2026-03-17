@@ -190,11 +190,12 @@ class StorybankViewModel: ObservableObject {
         touchStory(storyId)
     }
 
-    func addImageAsset(to storyId: UUID, fileUrl: String) {
+    func addImageAsset(to storyId: UUID, fileUrl: String, name: String? = nil) {
         let existing = assets(for: storyId)
         let asset = StoryAsset(
             storyId: storyId,
             assetType: .image,
+            name: name,
             fileUrl: fileUrl,
             displayOrder: existing.count
         )

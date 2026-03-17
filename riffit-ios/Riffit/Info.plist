@@ -4,6 +4,10 @@
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Riffit needs microphone access to record voice notes for your stories.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Riffit needs camera access to take photos for your stories.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Riffit needs photo library access to add images to your stories.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Lora-Regular.ttf</string>
