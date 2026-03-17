@@ -9,6 +9,8 @@ struct StoryDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showAddTextSheet: Bool = false
+    @State private var showVoiceRecordSheet: Bool = false
+    @State private var playingVoiceAsset: StoryAsset?
     @State private var showAddReferenceSheet: Bool = false
     @State private var showAddSectionModal: Bool = false
     @State private var newSectionName: String = ""
@@ -61,8 +63,13 @@ struct StoryDetailView: View {
                             AssetRow(asset: asset)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
-                                    if asset.assetType == .text {
+                                    switch asset.assetType {
+                                    case .text:
                                         editingAsset = asset
+                                    case .voiceNote:
+                                        playingVoiceAsset = asset
+                                    default:
+                                        break
                                     }
                                 }
                                 .contextMenu {
@@ -190,6 +197,12 @@ struct StoryDetailView: View {
                 InspirationDetailView(video: video, viewModel: libraryViewModel)
             }
         }
+        .sheet(isPresented: $showVoiceRecordSheet) {
+            VoiceNoteRecordSheet(storyId: story.id, viewModel: viewModel)
+        }
+        .fullScreenCover(item: $playingVoiceAsset) { asset in
+            VoiceNotePlayerView(asset: asset)
+        }
         .riffitModal(isPresented: $showRenameModal) {
             RiffitInputModal(
                 title: "Rename Story",
@@ -267,7 +280,7 @@ struct StoryDetailView: View {
             // Add asset button
             Menu {
                 Button {
-                    // TODO: Voice recording flow
+                    showVoiceRecordSheet = true
                 } label: {
                     Label("Voice Note", systemImage: "waveform")
                 }
