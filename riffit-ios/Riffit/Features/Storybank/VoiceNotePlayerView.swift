@@ -1,26 +1,32 @@
 import SwiftUI
 
 /// Full-screen player for a voice note asset.
-/// Shows play/pause, progress bar, and duration.
+/// Shows editable title, play/pause, progress bar, and duration.
 struct VoiceNotePlayerView: View {
     let asset: StoryAsset
+    @ObservedObject var viewModel: StorybankViewModel
     @StateObject private var player = AudioPlayerService()
     @Environment(\.dismiss) private var dismiss
+
+    @State private var titleText: String = ""
 
     var body: some View {
         NavigationStack {
             VStack(spacing: RS.xl) {
+                // Editable title
+                TextField("Voice Note", text: $titleText)
+                    .font(RF.heading)
+                    .foregroundStyle(Color.riffitTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, RS.lg)
+                    .padding(.top, RS.lg)
+
                 Spacer()
 
                 // Waveform icon
                 Image(systemName: "waveform")
                     .font(.system(size: 64))
                     .foregroundStyle(Color.riffitTeal400)
-
-                // Asset name
-                Text(asset.name ?? "Voice Note")
-                    .font(RF.heading)
-                    .foregroundStyle(Color.riffitTextPrimary)
 
                 // Time display
                 HStack {
@@ -41,12 +47,10 @@ struct VoiceNotePlayerView: View {
                 // Progress bar
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
-                        // Track
                         Capsule()
                             .fill(Color.riffitBorderDefault)
                             .frame(height: 4)
 
-                        // Fill
                         let progress = player.duration > 0
                             ? player.currentTime / player.duration
                             : 0
@@ -69,12 +73,20 @@ struct VoiceNotePlayerView: View {
 
                 Spacer()
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.riffitBackground)
             .navigationTitle("Voice Note")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
+                        // Save any title changes
+                        let trimmed = titleText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        viewModel.updateAsset(
+                            asset,
+                            name: trimmed.isEmpty ? nil : trimmed,
+                            text: asset.contentText ?? ""
+                        )
                         player.stop()
                         dismiss()
                     }
@@ -84,6 +96,7 @@ struct VoiceNotePlayerView: View {
             }
         }
         .onAppear {
+            titleText = asset.name ?? "Voice Note"
             if let path = asset.fileUrl {
                 let url = URL(fileURLWithPath: path)
                 player.load(url: url)

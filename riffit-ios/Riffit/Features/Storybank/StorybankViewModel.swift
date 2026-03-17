@@ -163,11 +163,12 @@ class StorybankViewModel: ObservableObject {
         touchStory(storyId)
     }
 
-    func addVoiceAsset(to storyId: UUID, fileUrl: String, durationSeconds: Int) {
+    func addVoiceAsset(to storyId: UUID, fileUrl: String, durationSeconds: Int, name: String? = nil) {
         let existing = assets(for: storyId)
         let asset = StoryAsset(
             storyId: storyId,
             assetType: .voiceNote,
+            name: name,
             fileUrl: fileUrl,
             durationSeconds: durationSeconds,
             displayOrder: existing.count

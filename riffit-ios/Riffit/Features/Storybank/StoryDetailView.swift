@@ -201,7 +201,7 @@ struct StoryDetailView: View {
             VoiceNoteRecordSheet(storyId: story.id, viewModel: viewModel)
         }
         .fullScreenCover(item: $playingVoiceAsset) { asset in
-            VoiceNotePlayerView(asset: asset)
+            VoiceNotePlayerView(asset: asset, viewModel: viewModel)
         }
         .riffitModal(isPresented: $showRenameModal) {
             RiffitInputModal(
