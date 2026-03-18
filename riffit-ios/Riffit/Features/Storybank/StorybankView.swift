@@ -4,7 +4,7 @@ import SwiftUI
 /// Each story collects assets (voice notes, video, images, text) and
 /// references to inspiration videos from the Library.
 struct StorybankView: View {
-    @StateObject private var viewModel = StorybankViewModel()
+    @EnvironmentObject var viewModel: StorybankViewModel
     @State private var showNewStoryAlert: Bool = false
     @State private var newStoryTitle: String = ""
     @State private var showNewFolderAlert: Bool = false

@@ -4,9 +4,19 @@ import SwiftUI
 /// app preferences, legal, and sign out.
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var storybankViewModel: StorybankViewModel
+    @EnvironmentObject var libraryViewModel: LibraryViewModel
 
     @State private var showComingSoon: Bool = false
     @State private var showSignOutConfirm: Bool = false
+
+    /// Dynamic subtitle for the "Your influences" row
+    private var influencesSubtitle: String {
+        let allRefs = storybankViewModel.storyReferencesMap.values.flatMap { $0 }
+        let grouped = Dictionary(grouping: allRefs, by: \.inspirationVideoId)
+        let count = grouped.values.filter { $0.count >= 3 }.count
+        return "\(count) video\(count == 1 ? "" : "s") referenced 3+ times"
+    }
 
     /// Bundle version string for the Legal section
     private var appVersion: String {
@@ -74,14 +84,14 @@ struct SettingsView: View {
                         .buttonStyle(.plain)
 
                         NavigationLink {
-                            comingSoonPlaceholder
+                            InfluencesView()
                         } label: {
                             iconRow(
                                 icon: "sparkles",
                                 iconColor: Color.riffitTeal400,
                                 iconBackground: Color.riffitTealTint,
                                 title: "Your influences",
-                                subtitle: "6 videos referenced 3+ times"
+                                subtitle: influencesSubtitle
                             )
                         }
                         .buttonStyle(.plain)

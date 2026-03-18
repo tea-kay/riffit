@@ -10,6 +10,7 @@ import SwiftUI
 struct MainTabView: View {
     @State private var selectedTab: Tab = .library
     @StateObject private var libraryViewModel = LibraryViewModel()
+    @StateObject private var storybankViewModel = StorybankViewModel()
 
     enum Tab: String {
         case library
@@ -45,5 +46,6 @@ struct MainTabView: View {
         }
         .tint(Color.riffitPrimary)
         .environmentObject(libraryViewModel)
+        .environmentObject(storybankViewModel)
     }
 }
