@@ -88,8 +88,8 @@ class LibraryViewModel: ObservableObject {
     }
 
     /// Adds a new comment to a video's thread.
-    func addComment(to videoId: UUID, text: String) {
-        let comment = IdeaComment(inspirationVideoId: videoId, text: text)
+    func addComment(to videoId: UUID, text: String, authorName: String = "You") {
+        let comment = IdeaComment(inspirationVideoId: videoId, authorName: authorName, text: text)
         videoCommentsMap[videoId, default: []].append(comment)
     }
 

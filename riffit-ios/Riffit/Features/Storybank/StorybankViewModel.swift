@@ -351,8 +351,8 @@ class StorybankViewModel: ObservableObject {
         (storyNotesMap[storyId] ?? []).sorted { $0.createdAt < $1.createdAt }
     }
 
-    func addNote(to storyId: UUID, text: String) {
-        let note = StoryNote(storyId: storyId, text: text)
+    func addNote(to storyId: UUID, text: String, authorName: String = "You") {
+        let note = StoryNote(storyId: storyId, authorName: authorName, text: text)
         storyNotesMap[storyId, default: []].append(note)
         touchStory(storyId)
     }

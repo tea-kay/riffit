@@ -37,7 +37,25 @@ struct StoryDetailView: View {
     @State private var newNoteText: String = ""
     @State private var editingNoteId: UUID?
     @State private var editingNoteText: String = ""
+    @AppStorage("riffit_full_name") private var fullName: String = "Timothy"
+    @AppStorage("riffit_username") private var username: String = ""
+    @AppStorage("riffit_profile_image") private var profileImageData: String = ""
     @EnvironmentObject var libraryViewModel: LibraryViewModel
+
+    /// The name shown on note bubbles — username if set, else full name, else "You"
+    private var noteDisplayName: String {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedUsername.isEmpty { return trimmedUsername }
+        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedName.isEmpty { return trimmedName }
+        return "You"
+    }
+
+    /// First character of noteDisplayName for the avatar fallback
+    private var noteAvatarInitial: String {
+        guard let first = noteDisplayName.first else { return "?" }
+        return String(first).uppercased()
+    }
 
     /// Looks up the latest version of this story from the viewModel
     /// so the nav title reflects renames without re-entering the view.
@@ -177,6 +195,9 @@ struct StoryDetailView: View {
                     ForEach(storyNotes) { note in
                         StoryNoteBubble(
                             note: note,
+                            displayName: noteDisplayName,
+                            initial: noteAvatarInitial,
+                            profileImageData: profileImageData,
                             isEditing: editingNoteId == note.id,
                             editText: editingNoteId == note.id ? $editingNoteText : .constant(""),
                             onTap: {
@@ -589,7 +610,7 @@ struct StoryDetailView: View {
             Button {
                 let trimmed = newNoteText.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else { return }
-                viewModel.addNote(to: story.id, text: trimmed)
+                viewModel.addNote(to: story.id, text: trimmed, authorName: noteDisplayName)
                 newNoteText = ""
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
@@ -791,68 +812,96 @@ struct SectionHeaderRow: View {
 
 // MARK: - Story Note Bubble
 
-/// A single note in the story thread. Tap to edit inline.
-/// Same visual pattern as CommentBubble in VideoDetailView.
+/// A single note in the story thread with avatar + content layout.
+/// Tap to enter inline edit mode — text becomes a TextEditor.
 struct StoryNoteBubble: View {
     let note: StoryNote
+    let displayName: String
+    let initial: String
+    let profileImageData: String
     let isEditing: Bool
     @Binding var editText: String
     let onTap: () -> Void
     let onSave: () -> Void
     let onCancel: () -> Void
 
+    /// Decodes the profile image from base64 — nil if empty or invalid
+    private var profileImage: UIImage? {
+        guard !profileImageData.isEmpty,
+              let data = Data(base64Encoded: profileImageData)
+        else { return nil }
+        return UIImage(data: data)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: RS.xs) {
-            // Author · timestamp or edit controls
-            HStack {
-                HStack(spacing: 0) {
-                    Text(note.authorName)
-                        .font(RF.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Color.riffitTextPrimary)
-
-                    Text(" · \(note.createdAt.relativeTimestamp)")
-                        .font(RF.caption)
-                        .foregroundStyle(Color.riffitTextTertiary)
-                }
-
-                Spacer()
-
-                if isEditing {
-                    Button {
-                        onCancel()
-                    } label: {
-                        Text("Cancel")
-                            .font(RF.caption)
-                            .foregroundStyle(Color.riffitTextTertiary)
-                    }
-
-                    Button {
-                        onSave()
-                    } label: {
-                        Text("Save")
-                            .font(RF.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(Color.riffitPrimary)
-                    }
-                } else {
-                    Text(note.createdAt.relativeTimestamp)
-                        .font(RF.caption)
-                        .foregroundStyle(Color.riffitTextTertiary)
-                }
+        HStack(alignment: .top, spacing: RS.sm) {
+            // Avatar — 28×28 circle, leading, top-aligned
+            if let image = profileImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 28, height: 28)
+                    .clipShape(Circle())
+            } else {
+                Text(initial)
+                    .font(.custom("DMSans-Medium", size: 11))
+                    .foregroundStyle(Color.riffitTeal400)
+                    .frame(width: 28, height: 28)
+                    .background(Color.riffitTealTint)
+                    .clipShape(Circle())
             }
 
-            // Inline edit or read-only
-            if isEditing {
-                TextEditor(text: $editText)
-                    .font(RF.bodyMd)
-                    .foregroundStyle(Color.riffitTextPrimary)
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: 40)
-            } else {
-                Text(note.text)
-                    .font(RF.bodyMd)
-                    .foregroundStyle(Color.riffitTextSecondary)
+            // Content
+            VStack(alignment: .leading, spacing: RS.xs) {
+                // Author row: name · time ago  |  or Save/Cancel when editing
+                HStack {
+                    HStack(spacing: 0) {
+                        Text(displayName)
+                            .font(RF.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(Color.riffitTextPrimary)
+
+                        if !isEditing {
+                            Text(" · \(note.createdAt.relativeTimestamp)")
+                                .font(RF.meta)
+                                .foregroundStyle(Color.riffitTextTertiary)
+                        }
+                    }
+
+                    Spacer()
+
+                    if isEditing {
+                        Button {
+                            onCancel()
+                        } label: {
+                            Text("Cancel")
+                                .font(RF.caption)
+                                .foregroundStyle(Color.riffitTextTertiary)
+                        }
+
+                        Button {
+                            onSave()
+                        } label: {
+                            Text("Save")
+                                .font(RF.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(Color.riffitPrimary)
+                        }
+                    }
+                }
+
+                // Note text or inline editor
+                if isEditing {
+                    TextEditor(text: $editText)
+                        .font(RF.bodyMd)
+                        .foregroundStyle(Color.riffitTextPrimary)
+                        .scrollContentBackground(.hidden)
+                        .frame(minHeight: 40)
+                } else {
+                    Text(note.text)
+                        .font(RF.bodyMd)
+                        .foregroundStyle(Color.riffitTextSecondary)
+                }
             }
         }
         .padding(RS.smPlus)

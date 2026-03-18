@@ -8,6 +8,25 @@ struct InspirationDetailView: View {
     let video: InspirationVideo
     @ObservedObject var viewModel: LibraryViewModel
 
+    @AppStorage("riffit_full_name") private var fullName: String = "Timothy"
+    @AppStorage("riffit_username") private var username: String = ""
+    @AppStorage("riffit_profile_image") private var profileImageData: String = ""
+
+    /// The name shown on note bubbles — username if set, else full name, else "You"
+    private var displayName: String {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedUsername.isEmpty { return trimmedUsername }
+        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedName.isEmpty { return trimmedName }
+        return "You"
+    }
+
+    /// First character of displayName for the avatar fallback
+    private var avatarInitial: String {
+        guard let first = displayName.first else { return "?" }
+        return String(first).uppercased()
+    }
+
     @State private var showFullTranscript: Bool = false
     @State private var newCommentText: String = ""
     @State private var showNewTagField: Bool = false
@@ -223,6 +242,9 @@ struct InspirationDetailView: View {
                 ForEach(comments) { comment in
                     CommentBubble(
                         comment: comment,
+                        displayName: displayName,
+                        initial: avatarInitial,
+                        profileImageData: profileImageData,
                         isEditing: editingCommentId == comment.id,
                         editText: editingCommentId == comment.id ? $editingCommentText : .constant(""),
                         onTap: {
@@ -299,70 +321,103 @@ struct InspirationDetailView: View {
         let trimmed = newCommentText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        viewModel.addComment(to: video.id, text: trimmed)
+        viewModel.addComment(to: video.id, text: trimmed, authorName: displayName)
         newCommentText = ""
     }
 }
 
 // MARK: - Comment Bubble
 
-/// A single comment in the thread. Left-aligned card style.
+/// A single comment in the thread with avatar + content layout.
 /// Tap to enter inline edit mode — text becomes a TextEditor.
 struct CommentBubble: View {
     let comment: IdeaComment
+    let displayName: String
+    let initial: String
+    let profileImageData: String
     let isEditing: Bool
     @Binding var editText: String
     let onTap: () -> Void
     let onSave: () -> Void
     let onCancel: () -> Void
 
+    /// Decodes the profile image from base64 — nil if empty or invalid
+    private var profileImage: UIImage? {
+        guard !profileImageData.isEmpty,
+              let data = Data(base64Encoded: profileImageData)
+        else { return nil }
+        return UIImage(data: data)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: RS.xs) {
-            // Author + timestamp
-            HStack {
-                Text(comment.authorName)
-                    .font(RF.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(Color.riffitTextPrimary)
-
-                Spacer()
-
-                if isEditing {
-                    // Save / Cancel buttons while editing
-                    Button {
-                        onCancel()
-                    } label: {
-                        Text("Cancel")
-                            .font(RF.caption)
-                            .foregroundStyle(Color.riffitTextTertiary)
-                    }
-
-                    Button {
-                        onSave()
-                    } label: {
-                        Text("Save")
-                            .font(RF.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(Color.riffitPrimary)
-                    }
-                } else {
-                    Text(comment.createdAt.relativeTimestamp)
-                        .font(RF.caption)
-                        .foregroundStyle(Color.riffitTextTertiary)
-                }
+        HStack(alignment: .top, spacing: RS.sm) {
+            // Avatar — 28×28 circle, leading, top-aligned
+            if let image = profileImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 28, height: 28)
+                    .clipShape(Circle())
+            } else {
+                Text(initial)
+                    .font(.custom("DMSans-Medium", size: 11))
+                    .foregroundStyle(Color.riffitTeal400)
+                    .frame(width: 28, height: 28)
+                    .background(Color.riffitTealTint)
+                    .clipShape(Circle())
             }
 
-            // Inline edit or read-only display
-            if isEditing {
-                TextEditor(text: $editText)
-                    .font(RF.bodyMd)
-                    .foregroundStyle(Color.riffitTextPrimary)
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: 40)
-            } else {
-                Text(comment.text)
-                    .font(RF.bodyMd)
-                    .foregroundStyle(Color.riffitTextSecondary)
+            // Content
+            VStack(alignment: .leading, spacing: RS.xs) {
+                // Author row: name · time ago  |  or  Save/Cancel when editing
+                HStack {
+                    HStack(spacing: 0) {
+                        Text(displayName)
+                            .font(RF.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(Color.riffitTextPrimary)
+
+                        if !isEditing {
+                            Text(" · \(comment.createdAt.relativeTimestamp)")
+                                .font(RF.meta)
+                                .foregroundStyle(Color.riffitTextTertiary)
+                        }
+                    }
+
+                    Spacer()
+
+                    if isEditing {
+                        Button {
+                            onCancel()
+                        } label: {
+                            Text("Cancel")
+                                .font(RF.caption)
+                                .foregroundStyle(Color.riffitTextTertiary)
+                        }
+
+                        Button {
+                            onSave()
+                        } label: {
+                            Text("Save")
+                                .font(RF.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(Color.riffitPrimary)
+                        }
+                    }
+                }
+
+                // Note text or inline editor
+                if isEditing {
+                    TextEditor(text: $editText)
+                        .font(RF.bodyMd)
+                        .foregroundStyle(Color.riffitTextPrimary)
+                        .scrollContentBackground(.hidden)
+                        .frame(minHeight: 40)
+                } else {
+                    Text(comment.text)
+                        .font(RF.bodyMd)
+                        .foregroundStyle(Color.riffitTextSecondary)
+                }
             }
         }
         .padding(RS.smPlus)
