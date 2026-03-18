@@ -394,15 +394,38 @@ struct StoryDetailView: View {
 struct AssetRow: View {
     let asset: StoryAsset
 
+    /// Tries to load a thumbnail for image/video assets from local files.
+    private var mediaThumbnail: UIImage? {
+        guard let path = asset.fileUrl else { return nil }
+
+        switch asset.assetType {
+        case .image:
+            return ImageStorageService.load(from: path)
+        case .video:
+            return VideoStorageService.generateThumbnail(for: path)
+                .flatMap { VideoStorageService.loadThumbnail(from: $0) }
+        default:
+            return nil
+        }
+    }
+
     var body: some View {
         HStack(spacing: RS.smPlus) {
-            // Type-specific filled icon
-            Image(systemName: assetIconName)
-                .font(.caption)
-                .foregroundStyle(Color.riffitTeal600)
-                .frame(width: 32, height: 32)
-                .background(Color.riffitTealTint)
-                .cornerRadius(RR.tag)
+            // Thumbnail for images/videos, icon for everything else
+            if let thumb = mediaThumbnail {
+                Image(uiImage: thumb)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 32, height: 32)
+                    .clipShape(RoundedRectangle(cornerRadius: RR.tag))
+            } else {
+                Image(systemName: assetIconName)
+                    .font(.caption)
+                    .foregroundStyle(Color.riffitTeal600)
+                    .frame(width: 32, height: 32)
+                    .background(Color.riffitTealTint)
+                    .cornerRadius(RR.tag)
+            }
 
             // Content preview
             VStack(alignment: .leading, spacing: 2) {
@@ -476,9 +499,9 @@ struct AssetRow: View {
         case .voiceNote:
             return asset.fileUrl ?? "Recording"
         case .video:
-            return asset.fileUrl ?? "Video clip"
+            return "Video clip"
         case .image:
-            return asset.fileUrl ?? "Photo"
+            return "Photo"
         case .text:
             return asset.contentText ?? "Empty text"
         }
