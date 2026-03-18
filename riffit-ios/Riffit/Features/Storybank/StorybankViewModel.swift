@@ -20,6 +20,9 @@ class StorybankViewModel: ObservableObject {
     /// Maps story ID → asset sections.
     @Published var storySectionsMap: [UUID: [AssetSection]] = [:]
 
+    /// Maps story ID → notes thread.
+    @Published var storyNotesMap: [UUID: [StoryNote]] = [:]
+
     var isEmpty: Bool { stories.isEmpty && folders.isEmpty }
 
     var unfiledStories: [Story] {
@@ -130,6 +133,7 @@ class StorybankViewModel: ObservableObject {
         storyAssetsMap.removeValue(forKey: story.id)
         storyReferencesMap.removeValue(forKey: story.id)
         storySectionsMap.removeValue(forKey: story.id)
+        storyNotesMap.removeValue(forKey: story.id)
         stories.removeAll { $0.id == story.id }
     }
 
@@ -338,6 +342,28 @@ class StorybankViewModel: ObservableObject {
         }
 
         touchStory(section.storyId)
+    }
+
+    // MARK: - Story Notes
+
+    /// Returns notes for a story, sorted oldest first (chat order).
+    func notes(for storyId: UUID) -> [StoryNote] {
+        (storyNotesMap[storyId] ?? []).sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func addNote(to storyId: UUID, text: String) {
+        let note = StoryNote(storyId: storyId, text: text)
+        storyNotesMap[storyId, default: []].append(note)
+        touchStory(storyId)
+    }
+
+    func updateNote(id noteId: UUID, storyId: UUID, newText: String) {
+        guard var notes = storyNotesMap[storyId],
+              let index = notes.firstIndex(where: { $0.id == noteId })
+        else { return }
+        notes[index].text = newText
+        storyNotesMap[storyId] = notes
+        touchStory(storyId)
     }
 
     // MARK: - Story Folders

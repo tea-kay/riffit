@@ -34,6 +34,9 @@ struct StoryDetailView: View {
     @State private var showExportAlert: Bool = false
     @State private var showPermissionAlert: Bool = false
     @State private var shareURL: URL?
+    @State private var newNoteText: String = ""
+    @State private var editingNoteId: UUID?
+    @State private var editingNoteText: String = ""
     @EnvironmentObject var libraryViewModel: LibraryViewModel
 
     /// Looks up the latest version of this story from the viewModel
@@ -160,6 +163,56 @@ struct StoryDetailView: View {
                 }
             } header: {
                 referencesHeader
+            }
+
+            // MARK: Notes Section
+            Section {
+                let storyNotes = viewModel.notes(for: story.id)
+                if storyNotes.isEmpty {
+                    emptyNotesState
+                        .listRowBackground(Color.riffitBackground)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 0, leading: RS.md, bottom: 0, trailing: RS.md))
+                } else {
+                    ForEach(storyNotes) { note in
+                        StoryNoteBubble(
+                            note: note,
+                            isEditing: editingNoteId == note.id,
+                            editText: editingNoteId == note.id ? $editingNoteText : .constant(""),
+                            onTap: {
+                                editingNoteId = note.id
+                                editingNoteText = note.text
+                            },
+                            onSave: {
+                                let trimmed = editingNoteText.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if !trimmed.isEmpty {
+                                    viewModel.updateNote(id: note.id, storyId: story.id, newText: trimmed)
+                                }
+                                editingNoteId = nil
+                            },
+                            onCancel: {
+                                editingNoteId = nil
+                            }
+                        )
+                        .listRowBackground(Color.riffitBackground)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(
+                            top: RS.xs, leading: RS.md,
+                            bottom: RS.xs, trailing: RS.md
+                        ))
+                    }
+                }
+
+                // Add note input row
+                noteInputRow
+                    .listRowBackground(Color.riffitBackground)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(
+                        top: RS.xs, leading: RS.md,
+                        bottom: RS.sm, trailing: RS.md
+                    ))
+            } header: {
+                notesHeader
             }
         }
         .listStyle(.plain)
@@ -499,6 +552,64 @@ struct StoryDetailView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, RS.lg)
     }
+
+    // MARK: - Notes
+
+    private var notesHeader: some View {
+        Text("Notes")
+            .font(RF.tag)
+            .textCase(.uppercase)
+            .tracking(0.08 * 12)
+            .foregroundStyle(Color.riffitTextTertiary)
+            .padding(.top, RS.md)
+            .padding(.bottom, RS.xs)
+    }
+
+    private var emptyNotesState: some View {
+        VStack(spacing: RS.sm) {
+            Text("No notes yet")
+                .font(RF.bodyMd)
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            Text("Add your first thought below.")
+                .font(RF.caption)
+                .foregroundStyle(Color.riffitTextTertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, RS.lg)
+    }
+
+    private var noteInputRow: some View {
+        HStack(alignment: .bottom, spacing: RS.smPlus) {
+            TextField("Add a note...", text: $newNoteText, axis: .vertical)
+                .lineLimit(1...5)
+                .font(RF.bodyMd)
+                .foregroundStyle(Color.riffitTextPrimary)
+
+            Button {
+                let trimmed = newNoteText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return }
+                viewModel.addNote(to: story.id, text: trimmed)
+                newNoteText = ""
+            } label: {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 30))
+                    .foregroundStyle(
+                        newNoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            ? Color.riffitTextTertiary
+                            : Color.riffitPrimary
+                    )
+            }
+            .disabled(newNoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .padding(RS.smPlus)
+        .background(Color.riffitSurface)
+        .cornerRadius(RR.input)
+        .overlay(
+            RoundedRectangle(cornerRadius: RR.input)
+                .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+        )
+    }
 }
 
 // MARK: - Asset Row
@@ -675,6 +786,88 @@ struct SectionHeaderRow: View {
             .buttonStyle(.plain)
         }
         .padding(.vertical, RS.xs)
+    }
+}
+
+// MARK: - Story Note Bubble
+
+/// A single note in the story thread. Tap to edit inline.
+/// Same visual pattern as CommentBubble in VideoDetailView.
+struct StoryNoteBubble: View {
+    let note: StoryNote
+    let isEditing: Bool
+    @Binding var editText: String
+    let onTap: () -> Void
+    let onSave: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: RS.xs) {
+            // Author · timestamp or edit controls
+            HStack {
+                HStack(spacing: 0) {
+                    Text(note.authorName)
+                        .font(RF.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.riffitTextPrimary)
+
+                    Text(" · \(note.createdAt.relativeTimestamp)")
+                        .font(RF.caption)
+                        .foregroundStyle(Color.riffitTextTertiary)
+                }
+
+                Spacer()
+
+                if isEditing {
+                    Button {
+                        onCancel()
+                    } label: {
+                        Text("Cancel")
+                            .font(RF.caption)
+                            .foregroundStyle(Color.riffitTextTertiary)
+                    }
+
+                    Button {
+                        onSave()
+                    } label: {
+                        Text("Save")
+                            .font(RF.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(Color.riffitPrimary)
+                    }
+                } else {
+                    Text(note.createdAt.relativeTimestamp)
+                        .font(RF.caption)
+                        .foregroundStyle(Color.riffitTextTertiary)
+                }
+            }
+
+            // Inline edit or read-only
+            if isEditing {
+                TextEditor(text: $editText)
+                    .font(RF.bodyMd)
+                    .foregroundStyle(Color.riffitTextPrimary)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 40)
+            } else {
+                Text(note.text)
+                    .font(RF.bodyMd)
+                    .foregroundStyle(Color.riffitTextSecondary)
+            }
+        }
+        .padding(RS.smPlus)
+        .background(isEditing ? Color.riffitElevated : Color.riffitSurface)
+        .cornerRadius(RR.input)
+        .overlay(
+            RoundedRectangle(cornerRadius: RR.input)
+                .stroke(isEditing ? Color.riffitPrimary.opacity(0.5) : Color.riffitBorderSubtle, lineWidth: isEditing ? 1 : 0.5)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if !isEditing {
+                onTap()
+            }
+        }
     }
 }
 
