@@ -919,7 +919,7 @@ Next action: Create Supabase project → run schema → connect iOS to Supabase.
 ### Prompt Template
 
 ```
-Read CLAUDE.md and CONTEXT_LATEST.md fully before writing any code.
+Read CLAUDE.md and CONTEXT.md fully before writing any code.
 
 Then read these files to understand the current state:
 - [file path 1]
@@ -945,7 +945,7 @@ Report: files created, files modified, zero build errors confirmed.
 
 **For a bug fix:**
 ```
-Read CLAUDE.md and CONTEXT_LATEST.md fully before writing any code.
+Read CLAUDE.md and CONTEXT.md fully before writing any code.
 
 Then read:
 - [file where the bug lives]
@@ -959,7 +959,7 @@ Report: exactly what changed and in which file.
 
 **For a new feature:**
 ```
-Read CLAUDE.md and CONTEXT_LATEST.md fully before writing any code.
+Read CLAUDE.md and CONTEXT.md fully before writing any code.
 
 Then read these files to understand the current state:
 - [relevant model file]
@@ -989,7 +989,7 @@ Report: files created, files modified, zero build errors confirmed.
 
 **For a read-only audit:**
 ```
-Read CLAUDE.md and CONTEXT_LATEST.md fully before writing any code.
+Read CLAUDE.md and CONTEXT.md fully before writing any code.
 
 Then read:
 - [files to audit]
@@ -1015,7 +1015,15 @@ Based on sessions that went well:
 
 ### After Every Session
 
-Append a log entry to CONTEXT_LATEST.md using the template:
+Two files to update:
+
+**1. Overwrite CONTEXT.md** with the current state of the app.
+Only current state — no history. This file should always answer
+"what does the app look like right now?" If models, file structure,
+or decisions changed, update those sections. If nothing structural
+changed, just update the "Last updated" date.
+
+**2. Append to CHANGES.md** using this template:
 
 ```markdown
 ### YYYY-MM-DD — [short description]
@@ -1033,4 +1041,14 @@ Append a log entry to CONTEXT_LATEST.md using the template:
 - [list modified files only]
 
 **Build status:** Zero errors confirmed
+```
+
+### Project Documentation Map
+
+```
+CLAUDE.md              — Architecture, rules, design tokens, prompt templates
+CONTEXT.md             — Current state only (overwrite each session)
+CHANGES.md             — Append-only changelog with dates
+DESIGN_SYSTEM_UPDATE.md — Visual design spec (stable, rarely changes)
+docs/history/          — Archived old context files
 ```

@@ -9,6 +9,18 @@ struct SettingsView: View {
 
     @State private var showComingSoon: Bool = false
     @State private var showSignOutConfirm: Bool = false
+    @AppStorage("riffit_full_name") private var fullName: String = "Timothy"
+    @AppStorage("riffit_username") private var username: String = ""
+    @AppStorage("riffit_profile_image") private var profileImageBase64: String = ""
+
+    /// Display name: @username if set, otherwise full name
+    private var displayName: String {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedUsername.isEmpty { return "@\(trimmedUsername)" }
+        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedName.isEmpty { return trimmedName }
+        return "Your name"
+    }
 
     /// Dynamic subtitle for the "Your influences" row
     private var influencesSubtitle: String {
@@ -203,22 +215,53 @@ struct SettingsView: View {
 
     // MARK: - Account Card
 
+    /// Loads profile image from base64 storage
+    private var profileImage: UIImage? {
+        guard !profileImageBase64.isEmpty,
+              let data = Data(base64Encoded: profileImageBase64)
+        else { return nil }
+        return UIImage(data: data)
+    }
+
+    /// First letter of display name for the avatar fallback (skips @ prefix)
+    private var avatarInitial: String {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedUsername.isEmpty, let first = trimmedUsername.first {
+            return String(first).uppercased()
+        }
+        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmedName.first else { return "?" }
+        return String(first).uppercased()
+    }
+
     private var accountCard: some View {
         HStack(spacing: RS.smPlus) {
-            // Avatar circle with initial
-            Text("T")
-                .font(RF.heading)
-                .foregroundStyle(Color.riffitTeal400)
-                .frame(width: 48, height: 48)
-                .background(Color.riffitTealTint)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.riffitTeal400, lineWidth: 1.5)
-                )
+            // Avatar — profile image or initial letter fallback
+            if let image = profileImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 48, height: 48)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(Color.riffitTeal400, lineWidth: 1.5)
+                    )
+            } else {
+                Text(avatarInitial)
+                    .font(RF.heading)
+                    .foregroundStyle(Color.riffitTeal400)
+                    .frame(width: 48, height: 48)
+                    .background(Color.riffitTealTint)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(Color.riffitTeal400, lineWidth: 1.5)
+                    )
+            }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Timothy")
+                Text(displayName)
                     .font(RF.heading)
                     .foregroundStyle(Color.riffitTextPrimary)
 

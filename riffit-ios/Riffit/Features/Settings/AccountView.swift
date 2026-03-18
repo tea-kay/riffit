@@ -20,10 +20,23 @@ struct AccountView: View {
         case username
     }
 
-    /// The first character of the full name, used as the avatar initial
+    /// Display name: @username if set, otherwise full name
+    private var displayName: String {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedUsername.isEmpty { return "@\(trimmedUsername)" }
+        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedName.isEmpty { return trimmedName }
+        return "Your name"
+    }
+
+    /// First letter of display name for avatar fallback (skips @ prefix)
     private var avatarInitial: String {
-        let trimmed = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let first = trimmed.first else { return "?" }
+        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedUsername.isEmpty, let first = trimmedUsername.first {
+            return String(first).uppercased()
+        }
+        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmedName.first else { return "?" }
         return String(first).uppercased()
     }
 
@@ -206,10 +219,8 @@ struct AccountView: View {
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: RS.xs) {
-                // Display name — reactively updates from fullName
-                Text(fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                     ? "Your name"
-                     : fullName)
+                // Display name — @username if set, otherwise full name
+                Text(displayName)
                     .font(.custom("Lora-Bold", size: 17))
                     .foregroundStyle(Color.riffitTextPrimary)
 
