@@ -93,6 +93,15 @@ class LibraryViewModel: ObservableObject {
         videoCommentsMap[videoId, default: []].append(comment)
     }
 
+    /// Updates the text of an existing comment.
+    func updateComment(id commentId: UUID, videoId: UUID, newText: String) {
+        guard var comments = videoCommentsMap[videoId],
+              let index = comments.firstIndex(where: { $0.id == commentId })
+        else { return }
+        comments[index].text = newText
+        videoCommentsMap[videoId] = comments
+    }
+
     // MARK: - Fetch
 
     func fetchVideos() async {

@@ -8,7 +8,7 @@ struct IdeaComment: Identifiable, Codable, Hashable {
     let id: UUID
     let inspirationVideoId: UUID
     let authorName: String   // "You" for now, real names when shared folders land
-    let text: String
+    var text: String
     let createdAt: Date
 
     init(inspirationVideoId: UUID, authorName: String = "You", text: String) {

@@ -13,6 +13,8 @@ struct InspirationDetailView: View {
     @State private var showNewTagField: Bool = false
     @State private var newTagText: String = ""
     @State private var titleText: String = ""
+    @State private var editingCommentId: UUID?
+    @State private var editingCommentText: String = ""
     @FocusState private var isCommentFieldFocused: Bool
 
     var body: some View {
@@ -219,7 +221,25 @@ struct InspirationDetailView: View {
                 emptyCommentsState
             } else {
                 ForEach(comments) { comment in
-                    CommentBubble(comment: comment)
+                    CommentBubble(
+                        comment: comment,
+                        isEditing: editingCommentId == comment.id,
+                        editText: editingCommentId == comment.id ? $editingCommentText : .constant(""),
+                        onTap: {
+                            editingCommentId = comment.id
+                            editingCommentText = comment.text
+                        },
+                        onSave: {
+                            let trimmed = editingCommentText.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !trimmed.isEmpty {
+                                viewModel.updateComment(id: comment.id, videoId: video.id, newText: trimmed)
+                            }
+                            editingCommentId = nil
+                        },
+                        onCancel: {
+                            editingCommentId = nil
+                        }
+                    )
                 }
             }
         }
@@ -286,9 +306,15 @@ struct InspirationDetailView: View {
 
 // MARK: - Comment Bubble
 
-/// A single comment in the thread. Left-aligned card style (not a DM bubble).
+/// A single comment in the thread. Left-aligned card style.
+/// Tap to enter inline edit mode — text becomes a TextEditor.
 struct CommentBubble: View {
     let comment: IdeaComment
+    let isEditing: Bool
+    @Binding var editText: String
+    let onTap: () -> Void
+    let onSave: () -> Void
+    let onCancel: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: RS.xs) {
@@ -301,23 +327,57 @@ struct CommentBubble: View {
 
                 Spacer()
 
-                Text(comment.createdAt.relativeTimestamp)
-                    .font(RF.caption)
-                    .foregroundStyle(Color.riffitTextTertiary)
+                if isEditing {
+                    // Save / Cancel buttons while editing
+                    Button {
+                        onCancel()
+                    } label: {
+                        Text("Cancel")
+                            .font(RF.caption)
+                            .foregroundStyle(Color.riffitTextTertiary)
+                    }
+
+                    Button {
+                        onSave()
+                    } label: {
+                        Text("Save")
+                            .font(RF.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(Color.riffitPrimary)
+                    }
+                } else {
+                    Text(comment.createdAt.relativeTimestamp)
+                        .font(RF.caption)
+                        .foregroundStyle(Color.riffitTextTertiary)
+                }
             }
 
-            // Comment text
-            Text(comment.text)
-                .font(RF.bodyMd)
-                .foregroundStyle(Color.riffitTextSecondary)
+            // Inline edit or read-only display
+            if isEditing {
+                TextEditor(text: $editText)
+                    .font(RF.bodyMd)
+                    .foregroundStyle(Color.riffitTextPrimary)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 40)
+            } else {
+                Text(comment.text)
+                    .font(RF.bodyMd)
+                    .foregroundStyle(Color.riffitTextSecondary)
+            }
         }
         .padding(RS.smPlus)
-        .background(Color.riffitSurface)
+        .background(isEditing ? Color.riffitElevated : Color.riffitSurface)
         .cornerRadius(RR.input)
         .overlay(
             RoundedRectangle(cornerRadius: RR.input)
-                .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+                .stroke(isEditing ? Color.riffitPrimary.opacity(0.5) : Color.riffitBorderSubtle, lineWidth: isEditing ? 1 : 0.5)
         )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if !isEditing {
+                onTap()
+            }
+        }
     }
 }
 
