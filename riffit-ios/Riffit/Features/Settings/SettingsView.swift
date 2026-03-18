@@ -20,8 +20,13 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(spacing: RS.lg) {
-                    // ── Account card (standalone, not in a list section) ──
-                    accountCard
+                    // ── Account card (standalone, navigates to AccountView) ──
+                    NavigationLink {
+                        AccountView()
+                    } label: {
+                        accountCard
+                    }
+                    .buttonStyle(.plain)
 
                     // ── Plan section ──
                     settingsSection("Plan") {
@@ -189,50 +194,45 @@ struct SettingsView: View {
     // MARK: - Account Card
 
     private var accountCard: some View {
-        VStack(spacing: RS.md) {
-            // Identity row
-            HStack(spacing: RS.smPlus) {
-                // Avatar circle with initial
-                Text("T")
+        HStack(spacing: RS.smPlus) {
+            // Avatar circle with initial
+            Text("T")
+                .font(RF.heading)
+                .foregroundStyle(Color.riffitTeal400)
+                .frame(width: 48, height: 48)
+                .background(Color.riffitTealTint)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.riffitTeal400, lineWidth: 1.5)
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Timothy")
                     .font(RF.heading)
-                    .foregroundStyle(Color.riffitTeal400)
-                    .frame(width: 48, height: 48)
-                    .background(Color.riffitTealTint)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color.riffitTeal400, lineWidth: 1.5)
-                    )
+                    .foregroundStyle(Color.riffitTextPrimary)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Timothy")
-                        .font(RF.heading)
-                        .foregroundStyle(Color.riffitTextPrimary)
-
-                    Text("Creator · Free plan")
-                        .font(RF.caption)
-                        .foregroundStyle(Color.riffitTextSecondary)
-                }
-
-                Spacer()
-
-                // Free badge
-                Text("Free")
-                    .font(RF.tag)
-                    .foregroundStyle(Color.riffitPrimary)
-                    .padding(.vertical, 3)
-                    .padding(.horizontal, 8)
-                    .background(Color.riffitPrimaryTint)
-                    .clipShape(Capsule())
+                Text("Creator · Free plan")
+                    .font(RF.caption)
+                    .foregroundStyle(Color.riffitTextSecondary)
             }
 
-            // Action pills
-            HStack(spacing: RS.sm) {
-                accountPill(icon: "plus", label: "New account")
-                accountPill(icon: "arrow.left.arrow.right", label: "Switch account")
-                accountPill(icon: "circle.circle", label: "Join workspace")
-            }
+            Spacer()
+
+            // Free badge + chevron
+            Text("Free")
+                .font(RF.tag)
+                .foregroundStyle(Color.riffitPrimary)
+                .padding(.vertical, 3)
+                .padding(.horizontal, 8)
+                .background(Color.riffitPrimaryTint)
+                .clipShape(Capsule())
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(Color.riffitTextTertiary)
         }
+        .contentShape(Rectangle())
         .padding(RS.md)
         .background(Color.riffitSurface)
         .cornerRadius(RR.card)
@@ -240,32 +240,6 @@ struct SettingsView: View {
             RoundedRectangle(cornerRadius: RR.card)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
-    }
-
-    private func accountPill(icon: String, label: String) -> some View {
-        Button {
-            showComingSoon = true
-        } label: {
-            VStack(spacing: RS.xs) {
-                Image(systemName: icon)
-                    .font(.caption)
-                    .foregroundStyle(Color.riffitTextSecondary)
-
-                Text(label)
-                    .font(RF.meta)
-                    .foregroundStyle(Color.riffitTextSecondary)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, RS.sm)
-            .background(Color.riffitBackground)
-            .cornerRadius(RR.tag)
-            .overlay(
-                RoundedRectangle(cornerRadius: RR.tag)
-                    .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Section Builder
@@ -335,6 +309,7 @@ struct SettingsView: View {
                     .clipShape(Capsule())
             }
         }
+        .contentShape(Rectangle())
         .padding(RS.md)
         .background(Color.riffitSurface)
         .cornerRadius(RR.input)

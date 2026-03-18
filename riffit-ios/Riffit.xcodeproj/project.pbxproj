@@ -16,6 +16,7 @@
 		BB1122334455667788990033 /* VoiceNoteRecordSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1122334455667788990033 /* VoiceNoteRecordSheet.swift */; };
 		BB1122334455667788990044 /* VoiceNotePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1122334455667788990044 /* VoiceNotePlayerView.swift */; };
 		0C0C3D99022F0B87CD5FCF50 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8195FF2AC4D4715DE367914 /* SettingsView.swift */; };
+		0C0C3D99022F0B87CD5FCF51 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8195FF2AC4D4715DE367915 /* AccountView.swift */; };
 		0F988D44FF442B5538405218 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 883FDE84D7B7AFF219379886 /* ShareViewController.swift */; };
 		CC11DD22EE33FF44AA55BB66 /* RiffitTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD22EE33FF44AA55BB66CC77 /* RiffitTheme.swift */; };
 		1457C7442AEBE91EBD705812 /* SocialConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4C85A1CB41022805ABBEF8 /* SocialConnectView.swift */; };
@@ -130,6 +131,7 @@
 		98851F6A343B7A67BC0CFB22 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		A3782FCAF634A66428418A55 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		A8195FF2AC4D4715DE367914 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A8195FF2AC4D4715DE367915 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		A86F3E7E51DB992CF83A1068 /* EdgeFunctions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeFunctions.swift; sourceTree = "<group>"; };
 		B51C570A8060A401A8F4AE96 /* InspirationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspirationCard.swift; sourceTree = "<group>"; };
 		B58725C9ED0FE78FCE0F9095 /* View+Riffit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+Riffit.swift"; sourceTree = "<group>"; };
@@ -370,6 +372,7 @@
 		BDB44233C99E48229E1E53AD /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				A8195FF2AC4D4715DE367915 /* AccountView.swift */,
 				A8195FF2AC4D4715DE367914 /* SettingsView.swift */,
 			);
 			path = Settings;
@@ -535,6 +538,7 @@
 				D3749D5D3757E22BA0FAD5D2 /* RiffitColors.swift in Sources */,
 				CC11DD22EE33FF44AA55BB66 /* RiffitTheme.swift in Sources */,
 				0C0C3D99022F0B87CD5FCF50 /* SettingsView.swift in Sources */,
+				0C0C3D99022F0B87CD5FCF51 /* AccountView.swift in Sources */,
 				1457C7442AEBE91EBD705812 /* SocialConnectView.swift in Sources */,
 				C5F6A7B8C9D0E1F2A3B4C5D6 /* AddReferenceView.swift in Sources */,
 				C1A2B3C4D5E6F7081920A1B2 /* Story.swift in Sources */,
