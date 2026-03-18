@@ -893,9 +893,144 @@ Before writing any Swift code, complete:
 - [x] Xcode project created
 - [x] Library tab: ideas, folders, drag-and-drop, detail view with comments
 - [x] Storybank tab: story list, detail view with assets + references
+- [x] Media asset recording/picking (voice, video, image)
+- [x] Settings tab: account, appearance, influences analytics
+- [x] Asset export to Camera Roll
+- [x] Notes threads on ideas and stories
 - [ ] Supabase project created
-- [ ] Media asset recording/picking (voice, video, image)
-- [ ] AI relevance note generation
 - [ ] Persistence (Supabase integration)
+- [ ] Onboarding flow
+- [ ] RevenueCat subscription logic
+- [ ] Share extension functionality
+- [ ] Test target + tests
+- [ ] CI configuration
 
 Next action: Create Supabase project → run schema → connect iOS to Supabase.
+
+---
+
+## Session Startup
+
+> **Every new Claude Code session must start with this.**
+> Copy the prompt template below, fill in the bracketed fields,
+> and paste it as the first message. This prevents Claude from
+> jumping into code without understanding what exists.
+
+### Prompt Template
+
+```
+Read CLAUDE.md and CONTEXT_LATEST.md fully before writing any code.
+
+Then read these files to understand the current state:
+- [file path 1]
+- [file path 2]
+
+Task: [one thing only — describe what and why, not how]
+
+Design constraints:
+- Never hardcode colors — always use RiffitColors tokens
+- All fonts via RiffitTheme (RF/RS/RR typealiases)
+- All spacing from RiffitTheme.Spacing constants
+- No force unwraps — use if let, guard let, or optional chaining
+- No UIKit unless there is no SwiftUI equivalent
+- Comments explaining WHY, not just what
+- New files must be added to project.pbxproj
+
+Do not change anything outside the scope of this task.
+Build. Confirm zero errors.
+Report: files created, files modified, zero build errors confirmed.
+```
+
+### Template Variants
+
+**For a bug fix:**
+```
+Read CLAUDE.md and CONTEXT_LATEST.md fully before writing any code.
+
+Then read:
+- [file where the bug lives]
+
+One fix only: [describe the bug and expected behavior]
+
+Do not change anything else.
+Build. Confirm zero errors.
+Report: exactly what changed and in which file.
+```
+
+**For a new feature:**
+```
+Read CLAUDE.md and CONTEXT_LATEST.md fully before writing any code.
+
+Then read these files to understand the current state:
+- [relevant model file]
+- [relevant view file]
+- [relevant viewmodel file]
+
+Task: [what to build — describe the feature, not the implementation]
+
+Architecture decisions — follow these exactly:
+- [any specific patterns to use, e.g. "use flat list approach"]
+- [any specific data model requirements]
+
+View layout:
+- [describe sections, rows, components]
+- [describe interactions: tap, long-press, drag]
+
+Design constraints:
+- Never hardcode colors — always use RiffitColors tokens
+- All fonts via RiffitTheme
+- No force unwraps
+- No UIKit
+
+Do not change anything outside the scope of this task.
+Build. Confirm zero errors.
+Report: files created, files modified, zero build errors confirmed.
+```
+
+**For a read-only audit:**
+```
+Read CLAUDE.md and CONTEXT_LATEST.md fully before writing any code.
+
+Then read:
+- [files to audit]
+
+Tell me:
+1. [specific question]
+2. [specific question]
+
+Do not write any code. Report only.
+```
+
+### What Makes a Good Prompt
+
+Based on sessions that went well:
+- **One task per prompt.** Never combine a bug fix with a feature.
+- **Describe what and why, not how.** Let Claude figure out the implementation.
+  Exception: design tokens and architecture constraints — be explicit.
+- **Name the files to read.** Claude won't guess which files are relevant.
+- **State what NOT to change.** "Do not touch SettingsView" prevents drift.
+- **End with a build check.** "Build. Confirm zero errors." catches regressions.
+- **Ask Claude to read before writing.** "Read X. Then tell me what you see."
+  before "Now change it" catches misunderstandings early.
+
+### After Every Session
+
+Append a log entry to CONTEXT_LATEST.md using the template:
+
+```markdown
+### YYYY-MM-DD — [short description]
+
+**What changed:**
+- [bullet per feature/fix, include file names]
+
+**Decisions made:**
+- [any new "do not re-add" items or architecture choices]
+
+**Files created:**
+- [list new files only]
+
+**Files modified:**
+- [list modified files only]
+
+**Build status:** Zero errors confirmed
+```
