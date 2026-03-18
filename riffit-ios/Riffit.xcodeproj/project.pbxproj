@@ -71,6 +71,8 @@
 		DD2233445566778899AA0002 /* CameraPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2233445566778899AA0002 /* CameraPickerView.swift */; };
 		DD2233445566778899AA0003 /* ImageAttachmentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2233445566778899AA0003 /* ImageAttachmentSheet.swift */; };
 		DD2233445566778899AA0004 /* ImageViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2233445566778899AA0004 /* ImageViewerView.swift */; };
+		FF3344556677889900AA0001 /* AssetExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE3344556677889900AA0001 /* AssetExportService.swift */; };
+		FF3344556677889900AA0002 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE3344556677889900AA0002 /* ShareSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -151,6 +153,8 @@
 		CC2233445566778899AA0002 /* CameraPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPickerView.swift; sourceTree = "<group>"; };
 		CC2233445566778899AA0003 /* ImageAttachmentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAttachmentSheet.swift; sourceTree = "<group>"; };
 		CC2233445566778899AA0004 /* ImageViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageViewerView.swift; sourceTree = "<group>"; };
+		EE3344556677889900AA0001 /* AssetExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetExportService.swift; sourceTree = "<group>"; };
+		EE3344556677889900AA0002 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -185,6 +189,7 @@
 		CC2233445566778899AA0010 /* Media */ = {
 			isa = PBXGroup;
 			children = (
+				EE3344556677889900AA0001 /* AssetExportService.swift */,
 				CC2233445566778899AA0002 /* CameraPickerView.swift */,
 				CC2233445566778899AA0001 /* ImageStorageService.swift */,
 				CC2233445566778899AA0006 /* VideoPickerView.swift */,
@@ -254,6 +259,7 @@
 				1120BC2824BE7C4619C6A84D /* LoadingOverlay.swift */,
 				00798CA0356C2C648DDE4C3E /* RiffitButton.swift */,
 				E6F7A8B9C0D1E2F3A4B5C6D7 /* RiffitWordmark.swift */,
+				EE3344556677889900AA0002 /* ShareSheet.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -550,6 +556,8 @@
 				DD2233445566778899AA0003 /* ImageAttachmentSheet.swift in Sources */,
 				DD2233445566778899AA0001 /* ImageStorageService.swift in Sources */,
 				DD2233445566778899AA0004 /* ImageViewerView.swift in Sources */,
+				FF3344556677889900AA0001 /* AssetExportService.swift in Sources */,
+				FF3344556677889900AA0002 /* ShareSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,5 +1,11 @@
 import SwiftUI
 
+/// Identifiable wrapper for a URL, used to drive the share sheet binding.
+private struct ShareItem: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
 /// Detail view for a single Story. Two sections:
 /// 1. My Assets — voice notes, video, images, text (reorderable via drag handles)
 /// 2. References — links to inspiration videos from the Library
@@ -24,6 +30,10 @@ struct StoryDetailView: View {
     @State private var renameText: String = ""
     @State private var renamingSection: AssetSection?
     @State private var renameSectionText: String = ""
+    @State private var exportMessage: String?
+    @State private var showExportAlert: Bool = false
+    @State private var showPermissionAlert: Bool = false
+    @State private var shareURL: URL?
     @EnvironmentObject var libraryViewModel: LibraryViewModel
 
     /// Looks up the latest version of this story from the viewModel
@@ -79,6 +89,12 @@ struct StoryDetailView: View {
                                     }
                                 }
                                 .contextMenu {
+                                    Button {
+                                        exportSingleAsset(asset)
+                                    } label: {
+                                        Label("Save to Device", systemImage: "square.and.arrow.down")
+                                    }
+
                                     Button(role: .destructive) {
                                         viewModel.deleteAsset(asset)
                                     } label: {
@@ -170,9 +186,9 @@ struct StoryDetailView: View {
                     }
 
                     Button {
-                        // TODO: Share flow
+                        exportAllAssets()
                     } label: {
-                        Label("Share", systemImage: "square.and.arrow.up")
+                        Label("Save All Assets", systemImage: "square.and.arrow.down.on.square")
                     }
 
                     Divider()
@@ -270,6 +286,105 @@ struct StoryDetailView: View {
                     renamingSection = nil
                 }
             )
+        }
+        .alert("Export Result", isPresented: $showExportAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(exportMessage ?? "Done")
+        }
+        .alert("Photo Library Access Required", isPresented: $showPermissionAlert) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Riffit needs photo library access to save assets. Enable it in Settings.")
+        }
+        .sheet(item: Binding(
+            get: { shareURL.map { ShareItem(url: $0) } },
+            set: { if $0 == nil { shareURL = nil } }
+        )) { item in
+            ShareSheet(items: [item.url])
+        }
+    }
+
+    // MARK: - Export Helpers
+
+    private func exportSingleAsset(_ asset: StoryAsset) {
+        Task {
+            let (result, url) = await AssetExportService.export(asset)
+
+            switch result {
+            case .success:
+                if let url {
+                    // Text asset — present share sheet
+                    shareURL = url
+                } else {
+                    exportMessage = "Saved to device"
+                    showExportAlert = true
+                }
+            case .permissionDenied:
+                showPermissionAlert = true
+            case .fileNotFound:
+                exportMessage = "File not found — it may have been deleted"
+                showExportAlert = true
+            case .failed(let reason):
+                exportMessage = "Export failed: \(reason)"
+                showExportAlert = true
+            }
+        }
+    }
+
+    private func exportAllAssets() {
+        Task {
+            let allAssets = viewModel.assets(for: story.id)
+            guard !allAssets.isEmpty else {
+                exportMessage = "No assets to export"
+                showExportAlert = true
+                return
+            }
+
+            var saved = 0
+            var skipped = 0
+            var denied = false
+            var textURLs: [URL] = []
+
+            for asset in allAssets {
+                let (result, url) = await AssetExportService.export(asset)
+
+                switch result {
+                case .success:
+                    if let url {
+                        textURLs.append(url)
+                    }
+                    saved += 1
+                case .permissionDenied:
+                    denied = true
+                case .fileNotFound:
+                    skipped += 1
+                case .failed:
+                    skipped += 1
+                }
+            }
+
+            if denied {
+                showPermissionAlert = true
+                return
+            }
+
+            // If there are text files, share them via share sheet
+            if !textURLs.isEmpty {
+                shareURL = textURLs.first
+            }
+
+            var message = "Saved \(saved) asset\(saved == 1 ? "" : "s")"
+            if skipped > 0 {
+                message += ", \(skipped) skipped"
+            }
+            exportMessage = message
+            showExportAlert = true
         }
     }
 

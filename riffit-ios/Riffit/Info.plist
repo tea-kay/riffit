@@ -8,6 +8,8 @@
 	<string>Riffit needs camera access to take photos for your stories.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Riffit needs photo library access to add images to your stories.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Riffit needs permission to save photos and videos to your Camera Roll.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Lora-Regular.ttf</string>
