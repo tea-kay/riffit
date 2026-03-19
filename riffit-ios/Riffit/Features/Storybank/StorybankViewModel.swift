@@ -137,6 +137,67 @@ class StorybankViewModel: ObservableObject {
         stories.removeAll { $0.id == story.id }
     }
 
+    /// Creates a copy of a story with all its assets, references, sections, and notes.
+    func duplicateStory(_ story: Story) {
+        let newStory = Story(
+            creatorProfileId: story.creatorProfileId,
+            title: story.title + " Copy"
+        )
+        stories.insert(newStory, at: 0)
+
+        // Duplicate sections with ID mapping so assets land in the right copied section
+        var sectionIdMap: [UUID: UUID] = [:]
+        if let sections = storySectionsMap[story.id] {
+            var copiedSections: [AssetSection] = []
+            for section in sections {
+                let newSection = AssetSection(
+                    storyId: newStory.id,
+                    name: section.name,
+                    displayOrder: section.displayOrder
+                )
+                sectionIdMap[section.id] = newSection.id
+                copiedSections.append(newSection)
+            }
+            storySectionsMap[newStory.id] = copiedSections
+        }
+
+        // Duplicate assets, remapping sectionIds
+        if let assets = storyAssetsMap[story.id] {
+            storyAssetsMap[newStory.id] = assets.map { asset in
+                StoryAsset(
+                    storyId: newStory.id,
+                    assetType: asset.assetType,
+                    name: asset.name,
+                    sectionId: asset.sectionId.flatMap { sectionIdMap[$0] },
+                    contentText: asset.contentText,
+                    fileUrl: asset.fileUrl,
+                    durationSeconds: asset.durationSeconds,
+                    displayOrder: asset.displayOrder
+                )
+            }
+        }
+
+        // Duplicate references
+        if let refs = storyReferencesMap[story.id] {
+            storyReferencesMap[newStory.id] = refs.map { ref in
+                StoryReference(
+                    storyId: newStory.id,
+                    inspirationVideoId: ref.inspirationVideoId,
+                    referenceTag: ref.referenceTag,
+                    aiRelevanceNote: ref.aiRelevanceNote,
+                    displayOrder: ref.displayOrder
+                )
+            }
+        }
+
+        // Duplicate notes
+        if let notes = storyNotesMap[story.id] {
+            storyNotesMap[newStory.id] = notes.map { note in
+                StoryNote(storyId: newStory.id, authorName: note.authorName, text: note.text)
+            }
+        }
+    }
+
     func updateStoryTitle(_ story: Story, to title: String) {
         guard let index = stories.firstIndex(where: { $0.id == story.id }) else { return }
         stories[index].title = title

@@ -34,6 +34,7 @@ struct StoryDetailView: View {
     @State private var showExportAlert: Bool = false
     @State private var showPermissionAlert: Bool = false
     @State private var shareURL: URL?
+    @State private var showStoryShareSheet: Bool = false
     @State private var newNoteText: String = ""
     @State private var editingNoteId: UUID?
     @State private var editingNoteText: String = ""
@@ -260,10 +261,29 @@ struct StoryDetailView: View {
                     }
 
                     Button {
+                        showStoryShareSheet = true
+                    } label: {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
+
+                    Button {
                         exportAllAssets()
                     } label: {
                         Label("Save All Assets", systemImage: "square.and.arrow.down.on.square")
                     }
+
+                    Button {
+                        viewModel.duplicateStory(story)
+                        dismiss()
+                    } label: {
+                        Label("Duplicate", systemImage: "plus.square.on.square")
+                    }
+
+                    // Compose — v2 AI brief generation, visually disabled
+                    Button { } label: {
+                        Label("Compose", systemImage: "sparkles")
+                    }
+                    .disabled(true)
 
                     Divider()
 
@@ -310,6 +330,9 @@ struct StoryDetailView: View {
         }
         .fullScreenCover(item: $viewingVideoAsset) { asset in
             VideoPlayerView(asset: asset, viewModel: viewModel)
+        }
+        .sheet(isPresented: $showStoryShareSheet) {
+            ShareSheet(items: [currentStory.title])
         }
         .riffitModal(isPresented: $showRenameModal) {
             RiffitInputModal(
@@ -1041,6 +1064,18 @@ struct ReferenceCard: View {
         return video.platform.displayLabel + " reel"
     }
 
+    /// Platform dot color matching InspirationCard and InfluencesView
+    private var platformDotColor: Color {
+        guard let video = linkedVideo else { return Color.riffitTextTertiary }
+        switch video.platform {
+        case .youtube:   return Color(red: 232/255, green: 69/255, blue: 60/255)
+        case .tiktok:    return Color(red: 105/255, green: 201/255, blue: 208/255)
+        case .instagram: return Color(red: 193/255, green: 53/255, blue: 132/255)
+        case .linkedin:  return Color(red: 0/255, green: 119/255, blue: 181/255)
+        case .x:         return Color.riffitTextTertiary
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: RS.sm) {
             // Section tag + idea tags on one line
@@ -1084,12 +1119,41 @@ struct ReferenceCard: View {
                 .foregroundStyle(Color.riffitTextPrimary)
                 .lineLimit(2)
 
-            // AI relevance note (generated when AI features are enabled)
-            if let note = reference.aiRelevanceNote {
-                Text(note)
-                    .font(RF.caption)
-                    .foregroundStyle(Color.riffitTextSecondary)
-                    .italic()
+            // Platform indicator + tag pill
+            if let video = linkedVideo {
+                HStack {
+                    // Platform dot + name
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(platformDotColor)
+                            .frame(width: 6, height: 6)
+
+                        Text(video.platform.displayLabel)
+                            .font(RF.tag)
+                            .textCase(.uppercase)
+                            .tracking(0.06 * 11)
+                            .foregroundStyle(Color.riffitTextTertiary)
+                    }
+
+                    Spacer()
+                }
+            }
+
+            // "Your take" — user note from the original idea
+            if let video = linkedVideo,
+               let note = video.userNote,
+               !note.isEmpty {
+                HStack(spacing: 4) {
+                    Text("Your take:")
+                        .font(RF.caption)
+                        .foregroundStyle(Color.riffitTextTertiary)
+                    Text(note)
+                        .font(RF.caption)
+                        .foregroundStyle(Color.riffitTextSecondary)
+                        .italic()
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

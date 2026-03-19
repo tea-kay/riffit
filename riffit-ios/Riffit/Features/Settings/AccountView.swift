@@ -79,12 +79,6 @@ struct AccountView: View {
                     // ── Workspace section ──
                     accountSection("Workspace") {
                         workspaceRow(
-                            icon: "person.badge.plus",
-                            title: "New account",
-                            subtitle: "Create a creator or agency account"
-                        )
-
-                        workspaceRow(
                             icon: "arrow.left.arrow.right",
                             title: "Switch account",
                             subtitle: "Move between your accounts"
