@@ -90,14 +90,173 @@ struct InspirationDetailView: View {
 
     // MARK: - Video Player
 
+    @ViewBuilder
     private var videoPlayer: some View {
-        VideoWebView(url: video.url)
-            .frame(height: 280)
-            .cornerRadius(RR.card)
-            .overlay(
-                RoundedRectangle(cornerRadius: RR.card)
-                    .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
-            )
+        if video.platform == .youtube {
+            youtubeThumbnailPlayer
+        } else if video.platform == .x {
+            xPostPlayer
+        } else if video.platform == .tiktok {
+            // TikTok uses a vertical 9:16 embed
+            VideoWebView(url: PlatformDetector.tiktokEmbedUrl(from: video.url))
+                .aspectRatio(9/16, contentMode: .fit)
+                .cornerRadius(RR.card)
+                .overlay(
+                    RoundedRectangle(cornerRadius: RR.card)
+                        .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+                )
+        } else {
+            VideoWebView(url: video.url)
+                .frame(height: 280)
+                .cornerRadius(RR.card)
+                .overlay(
+                    RoundedRectangle(cornerRadius: RR.card)
+                        .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+                )
+        }
+    }
+
+    /// YouTube videos show a thumbnail with a play overlay.
+    /// Tapping opens the YouTube app (youtube:// scheme) or
+    /// falls back to Safari if the app isn't installed.
+    private var youtubeThumbnailPlayer: some View {
+        VStack(spacing: RS.sm) {
+            Button {
+                openYouTubeVideo()
+            } label: {
+                ZStack {
+                    // Thumbnail or teal placeholder
+                    if let thumbUrl = video.thumbnailUrl,
+                       let url = URL(string: thumbUrl) {
+                        AsyncImage(url: url) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(16/9, contentMode: .fill)
+                        } placeholder: {
+                            Color.riffitSurface
+                                .aspectRatio(16/9, contentMode: .fill)
+                        }
+                    } else {
+                        // Fallback when no thumbnail — dark surface with icon
+                        Color.riffitSurface
+                            .aspectRatio(16/9, contentMode: .fill)
+                            .overlay(
+                                Image(systemName: "play.rectangle")
+                                    .font(.system(size: 32))
+                                    .foregroundStyle(Color.riffitTextTertiary)
+                            )
+                    }
+
+                    // Play button overlay
+                    Circle()
+                        .fill(.black.opacity(0.5))
+                        .frame(width: 56, height: 56)
+                        .overlay(
+                            Image(systemName: "play.fill")
+                                .font(.title2)
+                                .foregroundStyle(.white.opacity(0.9))
+                                .offset(x: 2) // optical centering
+                        )
+                }
+                .frame(height: 200)
+                .clipShape(RoundedRectangle(cornerRadius: RR.card))
+                .overlay(
+                    RoundedRectangle(cornerRadius: RR.card)
+                        .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+                )
+            }
+            .buttonStyle(.plain)
+
+            Text("Watch on YouTube")
+                .font(RF.caption)
+                .foregroundStyle(Color.riffitTextSecondary)
+        }
+    }
+
+    /// Opens the YouTube app via deep link, falls back to Safari.
+    private func openYouTubeVideo() {
+        guard let videoId = PlatformDetector.youtubeVideoId(from: video.url) else {
+            // No video ID — open the raw URL in Safari
+            if let url = URL(string: video.url) {
+                UIApplication.shared.open(url)
+            }
+            return
+        }
+
+        // Try the YouTube app first
+        let appUrl = URL(string: "youtube://\(videoId)")
+        let webUrl = URL(string: "https://www.youtube.com/watch?v=\(videoId)")
+
+        if let appUrl, UIApplication.shared.canOpenURL(appUrl) {
+            UIApplication.shared.open(appUrl)
+        } else if let webUrl {
+            UIApplication.shared.open(webUrl)
+        }
+    }
+
+    // MARK: - X Post Player
+
+    /// X blocks webview embeds entirely. Show a thumbnail if available,
+    /// or a styled placeholder for text-only posts. Tap opens the X app
+    /// or Safari.
+    private var xPostPlayer: some View {
+        VStack(spacing: RS.sm) {
+            Button {
+                PlatformDetector.openXPost(urlString: video.url)
+            } label: {
+                if let thumbUrl = video.thumbnailUrl,
+                   let url = URL(string: thumbUrl) {
+                    // Thumbnail from og:image
+                    ZStack {
+                        AsyncImage(url: url) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Color.riffitSurface
+                        }
+
+                        // Subtle open indicator
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.title3)
+                            .foregroundStyle(.white.opacity(0.8))
+                            .padding(RS.sm)
+                            .background(.black.opacity(0.4))
+                            .clipShape(Circle())
+                    }
+                    .frame(height: 200)
+                    .clipShape(RoundedRectangle(cornerRadius: RR.card))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: RR.card)
+                            .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+                    )
+                } else {
+                    // No thumbnail — styled placeholder for text posts
+                    VStack(spacing: RS.smPlus) {
+                        Image(systemName: "at")
+                            .font(.system(size: 36))
+                            .foregroundStyle(Color.riffitTextTertiary)
+
+                        Text("Tap to view post")
+                            .font(RF.caption)
+                            .foregroundStyle(Color.riffitTextTertiary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 160)
+                    .background(Color.riffitSurface)
+                    .clipShape(RoundedRectangle(cornerRadius: RR.card))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: RR.card)
+                            .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+                    )
+                }
+            }
+            .buttonStyle(.plain)
+
+            Text("View on X")
+                .font(RF.caption)
+                .foregroundStyle(Color.riffitTextSecondary)
+        }
     }
 
     // MARK: - Tags Section

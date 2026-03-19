@@ -26,6 +26,7 @@
 		33B2A22A9DF6F87AA22A444A /* StorybankViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B41C262581B8EBD33B6C7DA /* StorybankViewModel.swift */; };
 		3630990DBB8E9773F3C77176 /* RiffitButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00798CA0356C2C648DDE4C3E /* RiffitButton.swift */; };
 		38025785851FC11D5C7D7363 /* View+Riffit.swift in Sources */ = {isa = PBXBuildFile; fileRef = B58725C9ED0FE78FCE0F9095 /* View+Riffit.swift */; };
+		38025785851FC11D5C7D7364 /* PlatformDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B58725C9ED0FE78FCE0F9096 /* PlatformDetector.swift */; };
 		50A859AC41E5825A09C91848 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3782FCAF634A66428418A55 /* AuthViewModel.swift */; };
 		6C3D2A41DDA79F34C993841A /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A7A5B5B7C509A2567B9D16 /* LibraryView.swift */; };
 		6CE9EEEBF6BE9C4ED91F26D5 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 155EA98817C649A20CD8E5F4 /* OnboardingViewModel.swift */; };
@@ -135,6 +136,7 @@
 		A86F3E7E51DB992CF83A1068 /* EdgeFunctions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeFunctions.swift; sourceTree = "<group>"; };
 		B51C570A8060A401A8F4AE96 /* InspirationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspirationCard.swift; sourceTree = "<group>"; };
 		B58725C9ED0FE78FCE0F9095 /* View+Riffit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+Riffit.swift"; sourceTree = "<group>"; };
+		B58725C9ED0FE78FCE0F9096 /* PlatformDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformDetector.swift; sourceTree = "<group>"; };
 		BA88E5355C855A2C69D50BD4 /* VideoDeconstruction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoDeconstruction.swift; sourceTree = "<group>"; };
 		C331D67A598E886C2D59CCF9 /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
 		C629D838BA4CD611A819F8B7 /* CreatorTypeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorTypeView.swift; sourceTree = "<group>"; };
@@ -403,6 +405,7 @@
 		EB92633DF792B92AC17D8E26 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				B58725C9ED0FE78FCE0F9096 /* PlatformDetector.swift */,
 				B58725C9ED0FE78FCE0F9095 /* View+Riffit.swift */,
 			);
 			path = Extensions;
@@ -559,6 +562,7 @@
 				BB1122334455667788990044 /* VoiceNotePlayerView.swift in Sources */,
 				BB1122334455667788990033 /* VoiceNoteRecordSheet.swift in Sources */,
 				38025785851FC11D5C7D7363 /* View+Riffit.swift in Sources */,
+				38025785851FC11D5C7D7364 /* PlatformDetector.swift in Sources */,
 				D5E6F7A8B9C0D1E2F3A4B5C6 /* RiffitWordmark.swift in Sources */,
 				DD2233445566778899AA0002 /* CameraPickerView.swift in Sources */,
 				DD2233445566778899AA0003 /* ImageAttachmentSheet.swift in Sources */,

@@ -17,6 +17,11 @@ struct AddInspirationView: View {
     @State private var showNewTagField: Bool = false
     @State private var newTagText: String = ""
 
+    /// Auto-detected platform from the pasted URL
+    private var detectedPlatform: InspirationVideo.Platform? {
+        PlatformDetector.detect(from: urlText)
+    }
+
     var body: some View {
         VStack(spacing: RS.lg) {
             // Drag handle
@@ -82,8 +87,8 @@ struct AddInspirationView: View {
     private var urlPreview: some View {
         VStack(spacing: RS.sm) {
             HStack(spacing: RS.smPlus) {
-                // IG icon
-                Image(systemName: "camera")
+                // Platform icon — changes based on detected URL
+                Image(systemName: PlatformDetector.icon(for: detectedPlatform ?? .instagram))
                     .font(.callout)
                     .foregroundStyle(Color.riffitTeal400)
                     .frame(width: 32, height: 32)
@@ -92,7 +97,7 @@ struct AddInspirationView: View {
 
                 if urlText.isEmpty {
                     // Empty state — prompt to paste
-                    TextField("Paste an Instagram link...", text: $urlText)
+                    TextField(PlatformDetector.urlPlaceholder(for: nil), text: $urlText)
                         .font(RF.bodyMd)
                         .foregroundStyle(Color.riffitTextPrimary)
                         .autocorrectionDisabled()
@@ -127,7 +132,7 @@ struct AddInspirationView: View {
             )
 
             if showURLError {
-                Text("Paste a valid Instagram link.")
+                Text("Paste a valid video link (Instagram or YouTube).")
                     .font(RF.caption)
                     .foregroundStyle(Color.riffitDanger)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -277,12 +282,15 @@ struct AddInspirationView: View {
 
     /// Shows a shortened version of the URL for the preview pill.
     private var displayURL: String {
-        guard let url = URL(string: urlText) else { return urlText }
+        guard let url = URL(string: urlText),
+              let host = url.host else { return urlText }
+        let cleanHost = host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
         let path = url.path
         if path.count > 1 {
-            return "instagram.com" + path
+            let truncated = path.count > 30 ? String(path.prefix(30)) + "..." : path
+            return cleanHost + truncated
         }
-        return url.host ?? urlText
+        return cleanHost
     }
 
     // MARK: - Save
@@ -290,7 +298,7 @@ struct AddInspirationView: View {
     private func save() {
         let trimmedURL = urlText.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard isInstagramURL(trimmedURL) else {
+        guard let platform = PlatformDetector.detect(from: trimmedURL) else {
             showURLError = true
             return
         }
@@ -302,7 +310,7 @@ struct AddInspirationView: View {
         Task {
             await viewModel.addVideo(
                 url: trimmedURL,
-                platform: .instagram,
+                platform: platform,
                 title: trimmedTitle.isEmpty ? nil : trimmedTitle,
                 userNote: trimmedNote.isEmpty ? nil : trimmedNote,
                 tags: tags.isEmpty ? nil : tags,
@@ -311,11 +319,6 @@ struct AddInspirationView: View {
         }
 
         dismiss()
-    }
-
-    private func isInstagramURL(_ urlString: String) -> Bool {
-        let lowered = urlString.lowercased()
-        return lowered.contains("instagram.com") || lowered.contains("instagr.am")
     }
 }
 

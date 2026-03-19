@@ -370,9 +370,14 @@ struct WaveBarrelIllustration: View {
 
 // MARK: - InspirationVideo Hashable (for NavigationLink)
 
+/// Equatable compares id + mutable fields so SwiftUI re-renders
+/// cards when title or other editable properties change.
+/// Hash still uses id only — identity doesn't change on edit.
 extension InspirationVideo: Hashable {
     static func == (lhs: InspirationVideo, rhs: InspirationVideo) -> Bool {
         lhs.id == rhs.id
+        && lhs.title == rhs.title
+        && lhs.status == rhs.status
     }
 
     func hash(into hasher: inout Hasher) {
