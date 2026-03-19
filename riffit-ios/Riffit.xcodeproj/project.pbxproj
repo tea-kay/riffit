@@ -23,7 +23,6 @@
 		1457C7442AEBE91EBD705812 /* SocialConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4C85A1CB41022805ABBEF8 /* SocialConnectView.swift */; };
 		1D8795CEF94FF6F9816E2E99 /* RiffitApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E3E18E921EEEEA4A1811D08 /* RiffitApp.swift */; };
 		287C3C14CE2B464B9A70AE9F /* LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCFFDEC95DDE5AEC083E6F70 /* LibraryViewModel.swift */; };
-		29C9C1D91AB28A226E97D479 /* AlignmentBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E53779A8DB0EA398AA19B8 /* AlignmentBadge.swift */; };
 		33B2A22A9DF6F87AA22A444A /* StorybankViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B41C262581B8EBD33B6C7DA /* StorybankViewModel.swift */; };
 		3630990DBB8E9773F3C77176 /* RiffitButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00798CA0356C2C648DDE4C3E /* RiffitButton.swift */; };
 		38025785851FC11D5C7D7363 /* View+Riffit.swift in Sources */ = {isa = PBXBuildFile; fileRef = B58725C9ED0FE78FCE0F9095 /* View+Riffit.swift */; };
@@ -110,7 +109,6 @@
 		2B41C262581B8EBD33B6C7DA /* StorybankViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorybankViewModel.swift; sourceTree = "<group>"; };
 		4027999F98DCDFF7F026A771 /* Riffit.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Riffit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4FB41979B81A76CDE5AD2DE7 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
-		56E53779A8DB0EA398AA19B8 /* AlignmentBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlignmentBadge.swift; sourceTree = "<group>"; };
 		602FE9C75CD489434CB43DCB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7A1B2C3D4E5F6A7B8C9D0E1F /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		698DD03AD3E62BF69020BE35 /* FolderDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderDetailView.swift; sourceTree = "<group>"; };
@@ -259,7 +257,6 @@
 		3DB2DD298956B95ABE7957D3 /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				56E53779A8DB0EA398AA19B8 /* AlignmentBadge.swift */,
 				7A1B2C3D4E5F6A7B8C9D0E1F /* FlowLayout.swift */,
 				B51C570A8060A401A8F4AE96 /* InspirationCard.swift */,
 				1120BC2824BE7C4619C6A84D /* LoadingOverlay.swift */,
@@ -514,7 +511,6 @@
 				BB1122334455667788990022 /* AudioPlayerService.swift in Sources */,
 				BB1122334455667788990011 /* AudioRecorderService.swift in Sources */,
 				966ADE41C3669EC80245EF74 /* AddInspirationView.swift in Sources */,
-				29C9C1D91AB28A226E97D479 /* AlignmentBadge.swift in Sources */,
 				C6D7E8F9A0B1C2D3E4F5A6B7 /* AssetSection.swift in Sources */,
 				87B9263868DA552843455709 /* AppState.swift in Sources */,
 				982C803AC22F1CE18BFBDABC /* AuthView.swift in Sources */,

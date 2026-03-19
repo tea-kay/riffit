@@ -157,11 +157,11 @@ struct LibraryView: View {
                     .font(RF.heading)
                     .foregroundStyle(Color.riffitTextPrimary)
 
-                Text("Catch a reel. Drop it here.")
+                Text("Catch your first idea.")
                     .font(RF.caption)
                     .foregroundStyle(Color.riffitTextSecondary)
 
-                RiffitButton(title: "Drop your first reel", variant: .primary) {
+                RiffitButton(title: "Drop your first find", variant: .primary) {
                     showAddSheet = true
                 }
                 .padding(.horizontal, RS.xl2)
