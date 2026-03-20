@@ -212,6 +212,18 @@ class LibraryViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Delete Video
+
+    /// Removes an idea and all its associated data (folder mapping, tags, comments).
+    /// Call StorybankViewModel.removeReferences(for:) separately to clean up
+    /// any story references pointing to this video.
+    func deleteVideo(_ videoId: UUID) {
+        videos.removeAll { $0.id == videoId }
+        videoFolderMap.removeValue(forKey: videoId)
+        videoTagsMap.removeValue(forKey: videoId)
+        videoCommentsMap.removeValue(forKey: videoId)
+    }
+
     // MARK: - Refresh
 
     func refresh() async {

@@ -7,6 +7,10 @@ import WebKit
 struct InspirationDetailView: View {
     let video: InspirationVideo
     @ObservedObject var viewModel: LibraryViewModel
+    @EnvironmentObject var storybankViewModel: StorybankViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var showDeleteConfirm: Bool = false
 
     @AppStorage("riffit_full_name") private var fullName: String = "Timothy"
     @AppStorage("riffit_username") private var username: String = ""
@@ -83,6 +87,30 @@ struct InspirationDetailView: View {
         .background(Color.riffitBackground)
         .navigationTitle(video.platform.displayLabel)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        Label("Delete Idea", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundStyle(Color.riffitPrimary)
+                }
+            }
+        }
+        .alert("Delete this idea?", isPresented: $showDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                storybankViewModel.removeReferences(for: video.id)
+                viewModel.deleteVideo(video.id)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This can't be undone.")
+        }
         .onAppear {
             titleText = video.title ?? ""
         }

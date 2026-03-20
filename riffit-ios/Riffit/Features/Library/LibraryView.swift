@@ -4,10 +4,13 @@ import SwiftUI
 /// Drag an idea onto a folder to organize it.
 struct LibraryView: View {
     @EnvironmentObject var viewModel: LibraryViewModel
+    @EnvironmentObject var storybankViewModel: StorybankViewModel
     @State private var showAddSheet: Bool = false
     @State private var showNewFolderAlert: Bool = false
     @State private var showActionSheet: Bool = false
     @State private var newFolderName: String = ""
+    @State private var videoToDelete: InspirationVideo?
+    @State private var showDeleteConfirm: Bool = false
 
     var body: some View {
         ZStack {
@@ -77,6 +80,20 @@ struct LibraryView: View {
         .task {
             await viewModel.fetchVideos()
         }
+        .alert("Delete this idea?", isPresented: $showDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                if let video = videoToDelete {
+                    storybankViewModel.removeReferences(for: video.id)
+                    viewModel.deleteVideo(video.id)
+                    videoToDelete = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                videoToDelete = nil
+            }
+        } message: {
+            Text("This can't be undone.")
+        }
     }
 
     // MARK: - Main Content
@@ -102,6 +119,14 @@ struct LibraryView: View {
                         }
                         .buttonStyle(.plain)
                         .draggable(video.id.uuidString)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                videoToDelete = video
+                                showDeleteConfirm = true
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                 }
             }

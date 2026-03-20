@@ -332,6 +332,28 @@ class StorybankViewModel: ObservableObject {
         touchStory(storyId)
     }
 
+    /// Removes all references across all stories that point to a given video.
+    /// Called when an idea is deleted from the Library to prevent orphaned refs.
+    func removeReferences(for videoId: UUID) {
+        for storyId in storyReferencesMap.keys {
+            let before = storyReferencesMap[storyId]?.count ?? 0
+            storyReferencesMap[storyId]?.removeAll { $0.inspirationVideoId == videoId }
+            let after = storyReferencesMap[storyId]?.count ?? 0
+
+            // Reindex if any were removed
+            if before != after {
+                if var refs = storyReferencesMap[storyId] {
+                    refs.sort { $0.displayOrder < $1.displayOrder }
+                    for i in refs.indices {
+                        refs[i].displayOrder = i
+                    }
+                    storyReferencesMap[storyId] = refs
+                }
+                touchStory(storyId)
+            }
+        }
+    }
+
     func deleteReference(_ reference: StoryReference) {
         storyReferencesMap[reference.storyId]?.removeAll { $0.id == reference.id }
         // Reindex display orders
