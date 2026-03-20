@@ -14,6 +14,7 @@ struct AddReferenceView: View {
     @State private var step: Step = .pickVideo
     @State private var searchText: String = ""
     @State private var selectedFolder: IdeaFolder?
+    @State private var selectedTagFilter: String?
 
     enum Step {
         case pickVideo
@@ -52,6 +53,18 @@ struct AddReferenceView: View {
             return false
         }
     }
+
+    /// Applies the tag filter on top of search results.
+    /// "All" (nil) shows everything, otherwise only ideas with the selected tag.
+    private var tagFilteredVideos: [InspirationVideo] {
+        guard let tag = selectedTagFilter else { return filteredVideos }
+        return filteredVideos.filter { video in
+            libraryViewModel.tags(for: video.id).contains(tag)
+        }
+    }
+
+    /// The tag options for the filter bar
+    private let filterTags: [String] = ["Hook", "Editing", "B-Roll", "Format", "Topic", "Inspiration"]
 
     var body: some View {
         NavigationStack {
@@ -125,6 +138,50 @@ struct AddReferenceView: View {
             .padding(.horizontal, RS.md)
             .padding(.vertical, RS.sm)
 
+            // Tag filter bar
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: RS.sm) {
+                    // "All" pill
+                    Button {
+                        selectedTagFilter = nil
+                    } label: {
+                        Text("All")
+                            .font(RF.tag)
+                            .foregroundStyle(selectedTagFilter == nil ? Color.riffitPrimary : Color.riffitTextSecondary)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, RS.smPlus)
+                            .background(selectedTagFilter == nil ? Color.riffitPrimaryTint : Color.riffitElevated)
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(selectedTagFilter == nil ? Color.riffitPrimary : Color.riffitBorderDefault, lineWidth: 0.5)
+                            )
+                    }
+                    .buttonStyle(.plain)
+
+                    ForEach(filterTags, id: \.self) { tag in
+                        Button {
+                            selectedTagFilter = tag
+                        } label: {
+                            Text(tag)
+                                .font(RF.tag)
+                                .foregroundStyle(selectedTagFilter == tag ? Color.riffitPrimary : Color.riffitTextSecondary)
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, RS.smPlus)
+                                .background(selectedTagFilter == tag ? Color.riffitPrimaryTint : Color.riffitElevated)
+                                .clipShape(Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .stroke(selectedTagFilter == tag ? Color.riffitPrimary : Color.riffitBorderDefault, lineWidth: 0.5)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, RS.md)
+            }
+            .padding(.bottom, RS.xs)
+
             // Breadcrumb when inside a folder — tap to go back
             if let folder = selectedFolder {
                 Button {
@@ -149,11 +206,11 @@ struct AddReferenceView: View {
                 .padding(.bottom, RS.sm)
             }
 
-            if filteredVideos.isEmpty && (selectedFolder != nil || !libraryViewModel.folders.isEmpty == false) {
+            if tagFilteredVideos.isEmpty && (selectedFolder != nil || !libraryViewModel.folders.isEmpty == false) {
                 Spacer()
                 emptyPickerState
                 Spacer()
-            } else if filteredVideos.isEmpty && selectedFolder == nil && libraryViewModel.folders.isEmpty {
+            } else if tagFilteredVideos.isEmpty && selectedFolder == nil && libraryViewModel.folders.isEmpty {
                 Spacer()
                 emptyPickerState
                 Spacer()
@@ -161,7 +218,7 @@ struct AddReferenceView: View {
                 ScrollView {
                     LazyVStack(spacing: RS.smPlus) {
                         // Show folders at top level when not searching and no folder selected
-                        if selectedFolder == nil && searchText.isEmpty && !libraryViewModel.folders.isEmpty {
+                        if selectedFolder == nil && searchText.isEmpty && selectedTagFilter == nil && !libraryViewModel.folders.isEmpty {
                             ForEach(libraryViewModel.folders) { folder in
                                 PickerFolderRow(
                                     folder: folder,
@@ -178,15 +235,15 @@ struct AddReferenceView: View {
                         let videosToShow: [InspirationVideo] = {
                             // At top level with no search, show only unfiled videos
                             // (filed ones are accessible through their folders)
-                            if selectedFolder == nil && searchText.isEmpty && !libraryViewModel.folders.isEmpty {
-                                return filteredVideos.filter { libraryViewModel.videoFolderMap[$0.id] == nil }
+                            if selectedFolder == nil && searchText.isEmpty && selectedTagFilter == nil && !libraryViewModel.folders.isEmpty {
+                                return tagFilteredVideos.filter { libraryViewModel.videoFolderMap[$0.id] == nil }
                             }
-                            return filteredVideos
+                            return tagFilteredVideos
                         }()
 
                         if !videosToShow.isEmpty {
                             // "Unfiled" label when folders exist and we're at top level
-                            if selectedFolder == nil && searchText.isEmpty && !libraryViewModel.folders.isEmpty {
+                            if selectedFolder == nil && searchText.isEmpty && selectedTagFilter == nil && !libraryViewModel.folders.isEmpty {
                                 Text("Unfiled")
                                     .font(RF.tag)
                                     .textCase(.uppercase)

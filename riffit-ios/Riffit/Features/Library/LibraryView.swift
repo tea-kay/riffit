@@ -11,6 +11,38 @@ struct LibraryView: View {
     @State private var newFolderName: String = ""
     @State private var videoToDelete: InspirationVideo?
     @State private var showDeleteConfirm: Bool = false
+    @State private var searchText: String = ""
+    @State private var selectedTagFilter: String?
+
+    private let filterTags: [String] = ["Hook", "Editing", "B-Roll", "Format", "Topic", "Inspiration"]
+
+    /// Videos filtered by search query and tag, respecting folder scope.
+    private var searchFilteredVideos: [InspirationVideo] {
+        var results = viewModel.videos.filter { $0.status != .archived }
+
+        // Search filter
+        if !searchText.isEmpty {
+            let query = searchText.lowercased()
+            results = results.filter { video in
+                if let title = video.title, title.lowercased().contains(query) { return true }
+                if let note = video.userNote, note.lowercased().contains(query) { return true }
+                if viewModel.tags(for: video.id).contains(where: { $0.lowercased().contains(query) }) { return true }
+                return false
+            }
+        }
+
+        // Tag filter
+        if let tag = selectedTagFilter {
+            results = results.filter { viewModel.tags(for: $0.id).contains(tag) }
+        }
+
+        return results
+    }
+
+    /// Whether search or tag filter is active — hides folder grouping
+    private var isFiltering: Bool {
+        !searchText.isEmpty || selectedTagFilter != nil
+    }
 
     var body: some View {
         ZStack {
@@ -100,31 +132,124 @@ struct LibraryView: View {
 
     private var mainContent: some View {
         ScrollView {
-            LazyVStack(spacing: RS.smPlus) {
-                // Folders section
-                if !viewModel.folders.isEmpty {
-                    foldersSection
-                }
+            VStack(spacing: RS.smPlus) {
+                // Search bar
+                HStack(spacing: RS.sm) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.callout)
+                        .foregroundStyle(Color.riffitTextTertiary)
 
-                // Unfiled ideas
-                let unfiled = viewModel.unfiledVideos
-                if !unfiled.isEmpty {
-                    if !viewModel.folders.isEmpty {
-                        sectionHeader("Unfiled")
+                    TextField("Search ideas...", text: $searchText)
+                        .font(RF.bodyMd)
+                        .foregroundStyle(Color.riffitTextPrimary)
+
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.callout)
+                                .foregroundStyle(Color.riffitTextTertiary)
+                        }
                     }
+                }
+                .padding(RS.smPlus)
+                .background(Color.riffitSurface)
+                .cornerRadius(RR.input)
 
-                    ForEach(unfiled) { video in
-                        NavigationLink(value: video) {
-                            IdeaRow(video: video, tags: viewModel.tags(for: video.id))
+                // Tag filter bar
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: RS.sm) {
+                        Button {
+                            selectedTagFilter = nil
+                        } label: {
+                            Text("All")
+                                .font(RF.tag)
+                                .foregroundStyle(selectedTagFilter == nil ? Color.riffitPrimary : Color.riffitTextSecondary)
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, RS.smPlus)
+                                .background(selectedTagFilter == nil ? Color.riffitPrimaryTint : Color.riffitElevated)
+                                .clipShape(Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .stroke(selectedTagFilter == nil ? Color.riffitPrimary : Color.riffitBorderDefault, lineWidth: 0.5)
+                                )
                         }
                         .buttonStyle(.plain)
-                        .draggable(video.id.uuidString)
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                videoToDelete = video
-                                showDeleteConfirm = true
+
+                        ForEach(filterTags, id: \.self) { tag in
+                            Button {
+                                selectedTagFilter = tag
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                Text(tag)
+                                    .font(RF.tag)
+                                    .foregroundStyle(selectedTagFilter == tag ? Color.riffitPrimary : Color.riffitTextSecondary)
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, RS.smPlus)
+                                    .background(selectedTagFilter == tag ? Color.riffitPrimaryTint : Color.riffitElevated)
+                                    .clipShape(Capsule())
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(selectedTagFilter == tag ? Color.riffitPrimary : Color.riffitBorderDefault, lineWidth: 0.5)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                // Content — flat filtered list when filtering, folder-grouped when not
+                if isFiltering {
+                    // Flat filtered results
+                    if searchFilteredVideos.isEmpty {
+                        VStack(spacing: RS.sm) {
+                            Text("No matching ideas")
+                                .font(RF.bodyMd)
+                                .foregroundStyle(Color.riffitTextTertiary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, RS.xl)
+                    } else {
+                        ForEach(searchFilteredVideos) { video in
+                            NavigationLink(value: video) {
+                                IdeaRow(video: video, tags: viewModel.tags(for: video.id))
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    videoToDelete = video
+                                    showDeleteConfirm = true
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Normal folder-grouped view
+                    if !viewModel.folders.isEmpty {
+                        foldersSection
+                    }
+
+                    let unfiled = viewModel.unfiledVideos
+                    if !unfiled.isEmpty {
+                        if !viewModel.folders.isEmpty {
+                            sectionHeader("Unfiled")
+                        }
+
+                        ForEach(unfiled) { video in
+                            NavigationLink(value: video) {
+                                IdeaRow(video: video, tags: viewModel.tags(for: video.id))
+                            }
+                            .buttonStyle(.plain)
+                            .draggable(video.id.uuidString)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    videoToDelete = video
+                                    showDeleteConfirm = true
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
                             }
                         }
                     }
