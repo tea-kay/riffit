@@ -88,3 +88,63 @@
 - CLAUDE.md
 
 **Build status:** Zero errors confirmed
+
+### 2026-03-18 — Settings avatar, display name, empty state copy, progress report
+
+**What changed:**
+- Settings account card now shows profile photo + display name from @AppStorage (was hardcoded)
+- Display name logic: @username if set, else full name — applied to SettingsView + AccountView
+- "New account" row removed from AccountView workspace section
+- Empty state copy: "Catch a reel. Drop it here." → "Catch your first idea.", "Drop your first reel" → "Drop your first find"
+- Deleted AlignmentBadge.swift (unused since AI removal) + removed from pbxproj
+- Generated RIFFIT_PROGRESS_REPORT.md — full project audit
+- Session startup prompt templates added to CLAUDE.md
+- Documentation restructured: CONTEXT.md (overwrite) + CHANGES.md (append)
+
+**Files created:**
+- RIFFIT_PROGRESS_REPORT.md, CHANGES.md, CONTEXT.md
+
+**Files modified:**
+- SettingsView.swift, AccountView.swift, LibraryView.swift, CLAUDE.md
+
+**Files deleted:**
+- AlignmentBadge.swift
+
+**Build status:** Zero errors confirmed
+
+### 2026-03-19 — Platform support, idea deletion, story toolbar, cards, search
+
+**What changed:**
+- YouTube support: URL validation, platform auto-detection, thumbnail + deep link (no WKWebView — Error 153 fix)
+- TikTok support: embed URL extraction, 9:16 vertical aspect ratio display
+- X/Twitter support: thumbnail or placeholder card, deep link to X app with Safari fallback
+- PlatformDetector helper: detect, youtubeVideoId, tiktokVideoId, xStatusId, openXPost, icon, urlPlaceholder
+- Multi-platform URL validation in CaptureSheet (was Instagram-only)
+- Platform icon + label update dynamically as URL is pasted
+- Idea title persistence fix: Equatable on InspirationVideo now compares id + title + status (was id-only, prevented SwiftUI re-render)
+- Idea deletion: long-press on card in LibraryView + toolbar menu in InspirationDetailView, with confirmation alert
+- Orphaned reference cleanup: StorybankViewModel.removeReferences(for:) strips references across all stories when an idea is deleted
+- LibraryViewModel.deleteVideo removes video + folder mapping + tags + comments
+- Reference cards in StoryDetailView: added platform dot + name, "Your take" note row
+- StoryDetail toolbar: reordered menu, added Share (ShareSheet) and Duplicate (full deep copy)
+- Compose menu item: sparkles icon, greyed out, disabled (v2 AI placeholder)
+- Story duplication: copies story + assets + references + sections + notes with new IDs
+- Author avatar on StoryCard: 28×28 circle from @AppStorage, trailing the timestamp row
+- Tag filtering on Library main page: search bar + horizontal tag filter pills
+- Tag filtering on AddReferenceView picker: same search + tag filter bar
+
+**Decisions made:**
+- YouTube/X use thumbnail + deep link, not WKWebView (both block embeds)
+- TikTok uses embed URL in WKWebView (works)
+- InspirationVideo Equatable must include mutable fields for SwiftUI diffing
+- Platform detection logic lives in PlatformDetector helper, never in View body
+
+**Files created:**
+- PlatformDetector.swift
+
+**Files modified:**
+- LibraryView.swift, LibraryViewModel.swift, InspirationDetailView.swift
+- AddInspirationView.swift, AddReferenceView.swift
+- StoryDetailView.swift, StorybankViewModel.swift, StorybankView.swift, AccountView.swift
+
+**Build status:** Zero errors confirmed
