@@ -581,6 +581,29 @@ struct StoryCard: View {
     let story: Story
     let countsLabel: String
 
+    @AppStorage("riffit_full_name") private var fullName: String = "Timothy"
+    @AppStorage("riffit_username") private var username: String = ""
+    @AppStorage("riffit_profile_image") private var profileImageBase64: String = ""
+
+    /// Profile image decoded from base64, nil if empty or invalid
+    private var profileImage: UIImage? {
+        guard !profileImageBase64.isEmpty,
+              let data = Data(base64Encoded: profileImageBase64)
+        else { return nil }
+        return UIImage(data: data)
+    }
+
+    /// First initial of display name for avatar fallback
+    private var avatarInitial: String {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedUsername.isEmpty, let first = trimmedUsername.first {
+            return String(first).uppercased()
+        }
+        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmedName.first else { return "?" }
+        return String(first).uppercased()
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: RS.sm) {
             // Title + status badge
@@ -600,10 +623,30 @@ struct StoryCard: View {
                 .font(RF.caption)
                 .foregroundStyle(Color.riffitTextSecondary)
 
-            // Last updated
-            Text(story.updatedAt.relativeTimestamp)
-                .font(RF.caption)
-                .foregroundStyle(Color.riffitTextTertiary)
+            // Timestamp + author avatar
+            HStack {
+                Text(story.updatedAt.relativeTimestamp)
+                    .font(RF.meta)
+                    .foregroundStyle(Color.riffitTextTertiary)
+
+                Spacer()
+
+                // Author avatar — 20×20 circle
+                if let image = profileImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 28, height: 28)
+                        .clipShape(Circle())
+                } else {
+                    Text(avatarInitial)
+                        .font(.custom("DMSans-Medium", size: 12))
+                        .foregroundStyle(Color.riffitTeal400)
+                        .frame(width: 28, height: 28)
+                        .background(Color.riffitTealTint)
+                        .clipShape(Circle())
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(RS.md)
