@@ -72,9 +72,17 @@ struct AuthView: View {
             // Debug-only bypass for simulator testing
             #if DEBUG
             Button {
-                appState.currentUserId = UUID()
-                appState.isAuthenticated = true
-                appState.isOnboardingComplete = true
+                // Inject a fake RiffitUser so the app routes past auth + onboarding
+                appState.currentUser = RiffitUser(
+                    id: UUID(),
+                    email: "test@riffit.com",
+                    fullName: "Test User",
+                    avatarUrl: nil,
+                    subscriptionTier: .free,
+                    onboardingComplete: true,
+                    createdAt: Date()
+                )
+                appState.isLoading = false
             } label: {
                 Text("Continue as Test User")
                     .font(RF.bodyMd)

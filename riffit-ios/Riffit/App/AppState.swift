@@ -1,13 +1,44 @@
 import SwiftUI
+import Supabase
 
 /// Global app state that tracks authentication status and
 /// whether the user has completed onboarding.
 /// Injected as an @EnvironmentObject at the app root.
+///
+/// On launch, listens to Supabase auth state changes via an async stream.
+/// When a session arrives, fetches the matching row from public.users
+/// and populates currentUser. When signed out, clears it.
 @MainActor
 class AppState: ObservableObject {
-    @Published var isAuthenticated: Bool = false
-    @Published var isOnboardingComplete: Bool = false
-    @Published var currentUserId: UUID?
+    // MARK: - Auth State
+
+    /// The authenticated Riffit user, fetched from the public.users table.
+    /// nil means the user is not signed in.
+    @Published var currentUser: RiffitUser?
+
+    /// True while we check for an existing Supabase session on launch.
+    /// Views can show a loading state until this becomes false.
+    @Published var isLoading: Bool = true
+
+    /// Convenience — true when a user is signed in.
+    /// Existing views read this to decide whether to show AuthView.
+    var isAuthenticated: Bool {
+        currentUser != nil
+    }
+
+    /// Convenience — reads the onboarding flag from the user record.
+    /// Falls back to false when there is no user.
+    var isOnboardingComplete: Bool {
+        currentUser?.onboardingComplete ?? false
+    }
+
+    /// Convenience — the signed-in user's UUID, or nil.
+    var currentUserId: UUID? {
+        currentUser?.id
+    }
+
+    /// The creator profile associated with the current user.
+    /// Set after onboarding completes or when fetched from the DB.
     @Published var creatorProfileId: UUID?
 
     /// User's chosen appearance mode, persisted across launches.
@@ -21,9 +52,87 @@ class AppState: ObservableObject {
         }
     }
 
+    /// Holds the auth listener task so it lives as long as AppState does.
+    private var authListenerTask: Task<Void, Never>?
+
+    // MARK: - Init
+
     init() {
         let stored = UserDefaults.standard.string(forKey: "appearanceMode") ?? "system"
         self.appearanceMode = AppearanceMode(rawValue: stored) ?? .system
+
+        // Start listening to Supabase auth state changes.
+        // This fires immediately with the current session (if any),
+        // then again on every sign-in / sign-out / token refresh.
+        authListenerTask = Task { [weak self] in
+            for await (event, session) in supabase.auth.authStateChanges {
+                guard let self else { return }
+
+                switch event {
+                case .initialSession, .signedIn, .tokenRefreshed:
+                    if let session {
+                        await self.fetchUser(id: session.user.id)
+                    } else {
+                        // initialSession with no session means no one is logged in
+                        self.currentUser = nil
+                    }
+
+                case .signedOut:
+                    self.currentUser = nil
+                    self.creatorProfileId = nil
+
+                default:
+                    break
+                }
+
+                // After the first event we know whether a session exists
+                if self.isLoading {
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+
+    deinit {
+        authListenerTask?.cancel()
+    }
+
+    // MARK: - Fetch User
+
+    /// Fetches the user row from public.users matching the auth UID.
+    /// If the row doesn't exist yet (first sign-in before the DB trigger
+    /// creates it), currentUser stays nil and isLoading still clears.
+    private func fetchUser(id: UUID) async {
+        do {
+            let user: RiffitUser = try await supabase
+                .from("users")
+                .select()
+                .eq("id", value: id)
+                .single()
+                .execute()
+                .value
+
+            self.currentUser = user
+            // Sync the onboarding-derived creator profile if available
+            // (will be fetched separately when creator_profiles table is wired)
+        } catch {
+            // Row may not exist yet — treat as unauthenticated for now.
+            // A future session event will retry when the row is ready.
+            print("[AppState] Failed to fetch user: \(error)")
+            self.currentUser = nil
+        }
+    }
+
+    // MARK: - Sign Out
+
+    /// Signs out of Supabase. The auth state listener will react
+    /// and clear currentUser automatically.
+    func signOut() async {
+        do {
+            try await supabase.auth.signOut()
+        } catch {
+            print("[AppState] Sign out failed: \(error)")
+        }
     }
 
     /// Called when onboarding finishes successfully.
@@ -31,7 +140,12 @@ class AppState: ObservableObject {
     /// flow to the main tab bar.
     func completeOnboarding(creatorProfileId: UUID) {
         self.creatorProfileId = creatorProfileId
-        self.isOnboardingComplete = true
+        // Re-fetch user so onboardingComplete reflects the DB update
+        if let userId = currentUser?.id {
+            Task {
+                await fetchUser(id: userId)
+            }
+        }
     }
 }
 

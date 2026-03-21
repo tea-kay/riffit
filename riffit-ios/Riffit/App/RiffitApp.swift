@@ -27,7 +27,11 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if !appState.isAuthenticated {
+            if appState.isLoading {
+                // Show a minimal loading state while checking for an existing session
+                ProgressView()
+                    .tint(Color.riffitPrimary)
+            } else if !appState.isAuthenticated {
                 AuthView()
             } else if !appState.isOnboardingComplete {
                 OnboardingView()

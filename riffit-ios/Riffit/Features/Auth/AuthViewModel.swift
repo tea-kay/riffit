@@ -93,15 +93,23 @@ class AuthViewModel: ObservableObject {
         //     .execute()
         //     .value as RiffitUser
 
-        // Placeholder: simulate successful auth
-        let userId = UUID()
+        // TODO: Uncomment when Supabase Auth is fully wired:
+        // let session = try await supabase.auth.signInWithIdToken(...)
+        // The auth state listener in AppState will handle the rest —
+        // it will detect the new session, fetch the user row, and
+        // set currentUser automatically.
 
-        // Update app state — RootView will react and navigate
-        appState.currentUserId = userId
-        appState.isAuthenticated = true
-        // When Supabase is connected, set this from the user record:
-        // appState.isOnboardingComplete = user.onboardingComplete
-        appState.isOnboardingComplete = false
+        // Placeholder: simulate successful auth with a fake user
+        appState.currentUser = RiffitUser(
+            id: UUID(),
+            email: "placeholder@riffit.com",
+            fullName: "New User",
+            avatarUrl: nil,
+            subscriptionTier: .free,
+            onboardingComplete: false,
+            createdAt: Date()
+        )
+        appState.isLoading = false
 
         isLoading = false
     }
