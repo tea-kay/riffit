@@ -61,6 +61,11 @@ class AppState: ObservableObject {
         let stored = UserDefaults.standard.string(forKey: "appearanceMode") ?? "system"
         self.appearanceMode = AppearanceMode(rawValue: stored) ?? .system
 
+        // TEMPORARY: Verify Supabase connection is live — remove after confirming
+        #if DEBUG
+        Task { await self.testConnection() }
+        #endif
+
         // Start listening to Supabase auth state changes.
         // This fires immediately with the current session (if any),
         // then again on every sign-in / sign-out / token refresh.
@@ -122,6 +127,28 @@ class AppState: ObservableObject {
             self.currentUser = nil
         }
     }
+
+    // MARK: - Debug Connection Test (TEMPORARY — remove after verifying)
+
+    #if DEBUG
+    /// Runs a simple SELECT from public.users with limit 1 to confirm
+    /// the Supabase project URL and anon key are working.
+    /// Check the Xcode console for the result.
+    private func testConnection() async {
+        do {
+            let response = try await supabase
+                .from("users")
+                .select()
+                .limit(1)
+                .execute()
+
+            let json = String(data: response.data, encoding: .utf8) ?? "(no data)"
+            print("[AppState] ✅ Supabase connection OK — response: \(json)")
+        } catch {
+            print("[AppState] ❌ Supabase connection FAILED — \(error)")
+        }
+    }
+    #endif
 
     // MARK: - Sign Out
 
