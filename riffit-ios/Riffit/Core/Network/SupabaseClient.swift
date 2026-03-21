@@ -1,20 +1,14 @@
 import Foundation
+import Supabase
 
-/// Singleton wrapper around the Supabase Swift SDK client.
-/// Configured with the project URL and anon key from the app's
-/// Info.plist (set via Xcode build settings, never hardcoded).
-///
-/// Usage: SupabaseClient.shared.client
-class SupabaseClient {
-    static let shared = SupabaseClient()
+// MARK: - Shared Supabase Client
+// This is the single shared instance of the Supabase client for the entire app.
+// Do not create additional SupabaseClient instances anywhere — always use `supabase`.
 
-    // TODO: Initialize Supabase Swift SDK client here once
-    // the Supabase project is created and the SDK is added
-    // via Swift Package Manager.
-    //
-    // let client: SupabaseClient = ...
-
-    private init() {
-        // Will read SUPABASE_URL and SUPABASE_ANON_KEY from Info.plist
-    }
-}
+// DEV ONLY: These credentials are the publishable anon key and project URL.
+// Before TestFlight / App Store builds, move both values into an xcconfig file
+// so they are not committed to source control in production.
+let supabase = SupabaseClient(
+    supabaseURL: URL(string: "https://glamdnebtzrrbhxmyzho.supabase.co")!,
+    supabaseKey: "sb_publishable_Hx6oZG5fVvfw-aHtTAVlhQ_yqmHefLA"
+)

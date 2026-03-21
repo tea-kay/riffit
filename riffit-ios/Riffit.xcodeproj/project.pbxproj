@@ -76,6 +76,7 @@
 		FF1122334455667788990001 /* StoryNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE1122334455667788990001 /* StoryNote.swift */; };
 		FF3344556677889900AA0001 /* AssetExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE3344556677889900AA0001 /* AssetExportService.swift */; };
 		FF3344556677889900AA0002 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE3344556677889900AA0002 /* ShareSheet.swift */; };
+		52B56EFE2F6E629000DF88D8 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 52B56EFD2F6E629000DF88D7 /* Supabase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -419,6 +420,7 @@
 			buildConfigurationList = F7C7E4859E78D45AD5F0303A /* Build configuration list for PBXNativeTarget "Riffit" */;
 			buildPhases = (
 				AE0E5E9FBAC88F18E0F5DD0F /* Sources */,
+				52B56EFF2F6E629000DF88D9 /* Frameworks */,
 				6F2733D2F6C05885D44571A0 /* Resources */,
 			);
 			buildRules = (
@@ -509,6 +511,17 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		52B56EFF2F6E629000DF88D9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				52B56EFE2F6E629000DF88D8 /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		AE0E5E9FBAC88F18E0F5DD0F /* Sources */ = {
