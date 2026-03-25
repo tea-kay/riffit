@@ -1,0 +1,343 @@
+import SwiftUI
+
+/// Bottom sheet for inviting collaborators to a story.
+/// Two sections: shareable invite link + search by username.
+/// Role picker only appears for Studio+ tiers (role_permissions entitlement).
+struct InviteSheet: View {
+    let story: Story
+    @ObservedObject var viewModel: StorybankViewModel
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    /// Selected role for new invites — defaults to .collaborator for Free/Pro
+    @State private var selectedRole: CollaboratorRole = .collaborator
+
+    /// Username search query
+    @State private var searchQuery: String = ""
+
+    /// Debounced search results (stubbed — in-memory user list for now)
+    @State private var searchResults: [RiffitUser] = []
+
+    /// Whether the "Copied!" feedback is showing
+    @State private var showCopiedFeedback: Bool = false
+
+    /// Controls the share sheet presentation
+    @State private var showShareSheet: Bool = false
+
+    /// Whether the current user's tier has granular role permissions (Studio+)
+    /// Hardcoded to false for now — Free/Pro only get the "Collaborator" role.
+    private var hasRolePermissions: Bool {
+        false
+    }
+
+    /// The invite link URL for this story
+    private var inviteLinkText: String {
+        let userId = appState.currentUser?.id.uuidString ?? "unknown"
+        return "riffit.app/invite/\(story.id.uuidString.prefix(8))?ref=\(userId.prefix(8))"
+    }
+
+    var body: some View {
+        VStack(spacing: RS.lg) {
+            // Drag handle
+            Capsule()
+                .fill(Color.riffitTextTertiary.opacity(0.5))
+                .frame(width: 36, height: 5)
+                .padding(.top, RS.smPlus)
+
+            Text("Invite People")
+                .font(RF.heading)
+                .foregroundStyle(Color.riffitTextPrimary)
+
+            ScrollView {
+                VStack(spacing: RS.lg) {
+                    // MARK: - Role Picker (Studio+ only)
+                    if hasRolePermissions {
+                        rolePicker
+                    }
+
+                    // MARK: - Invite Link Section
+                    inviteLinkSection
+
+                    // MARK: - Search by Username Section
+                    usernameSearchSection
+                }
+                .padding(.horizontal, RS.md)
+            }
+        }
+        .background(Color.riffitBackground)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.hidden)
+        .presentationCornerRadius(CGFloat(RR.modal))
+        .presentationBackground(Color.riffitBackground)
+        .sheet(isPresented: $showShareSheet) {
+            ShareSheet(items: [inviteLinkText])
+        }
+    }
+
+    // MARK: - Role Picker
+
+    /// Horizontal pill row: Editor · Viewer · Commenter
+    /// Only shown for Studio+ tiers.
+    private var rolePicker: some View {
+        VStack(alignment: .leading, spacing: RS.sm) {
+            Text("ROLE")
+                .font(RF.tag)
+                .textCase(.uppercase)
+                .tracking(0.08 * 12)
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            HStack(spacing: RS.sm) {
+                ForEach([CollaboratorRole.editor, .viewer, .commenter], id: \.self) { role in
+                    Button {
+                        selectedRole = role
+                    } label: {
+                        Text(role.displayName)
+                            .font(RF.tag)
+                            .foregroundStyle(
+                                selectedRole == role
+                                    ? Color.riffitTeal400
+                                    : Color.riffitTextSecondary
+                            )
+                            .padding(.vertical, RS.xs + 2)
+                            .padding(.horizontal, RS.smPlus)
+                            .background(
+                                selectedRole == role
+                                    ? Color.riffitTealTint
+                                    : Color.riffitElevated
+                            )
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(
+                                        selectedRole == role
+                                            ? Color.riffitTeal400.opacity(0.5)
+                                            : Color.riffitBorderDefault,
+                                        lineWidth: 0.5
+                                    )
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    // MARK: - Invite Link Section
+
+    private var inviteLinkSection: some View {
+        VStack(alignment: .leading, spacing: RS.smPlus) {
+            Text("SHARE INVITE LINK")
+                .font(RF.tag)
+                .textCase(.uppercase)
+                .tracking(0.08 * 12)
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            // Link display + action buttons
+            HStack(spacing: RS.sm) {
+                // Truncated link in mono style
+                Text(inviteLinkText)
+                    .font(RF.url)
+                    .foregroundStyle(Color.riffitTextSecondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(RS.smPlus)
+                    .background(Color.riffitElevated)
+                    .cornerRadius(RR.input)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: RR.input)
+                            .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+                    )
+
+                // Copy button
+                Button {
+                    UIPasteboard.general.string = inviteLinkText
+                    // Haptic feedback
+                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred()
+                    // Show "Copied!" for 2 seconds
+                    showCopiedFeedback = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        showCopiedFeedback = false
+                    }
+                } label: {
+                    Text(showCopiedFeedback ? "Copied!" : "Copy")
+                        .font(RF.tag)
+                        .foregroundStyle(Color.riffitTeal400)
+                        .padding(.vertical, RS.sm)
+                        .padding(.horizontal, RS.smPlus)
+                        .background(Color.riffitTealTint)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+
+                // Share button
+                Button {
+                    showShareSheet = true
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.caption)
+                        .foregroundStyle(Color.riffitTeal400)
+                        .padding(RS.sm)
+                        .background(Color.riffitTealTint)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Username Search Section
+
+    private var usernameSearchSection: some View {
+        VStack(alignment: .leading, spacing: RS.smPlus) {
+            Text("FIND ON RIFFIT")
+                .font(RF.tag)
+                .textCase(.uppercase)
+                .tracking(0.08 * 12)
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            // Search field
+            HStack(spacing: RS.sm) {
+                Image(systemName: "magnifyingglass")
+                    .font(.caption)
+                    .foregroundStyle(Color.riffitTextTertiary)
+
+                TextField("Search by username...", text: $searchQuery)
+                    .font(RF.bodyMd)
+                    .foregroundStyle(Color.riffitTextPrimary)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    .onChange(of: searchQuery) { _, newValue in
+                        performSearch(query: newValue)
+                    }
+            }
+            .padding(RS.smPlus)
+            .background(Color.riffitElevated)
+            .cornerRadius(RR.input)
+            .overlay(
+                RoundedRectangle(cornerRadius: RR.input)
+                    .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
+            )
+
+            // Search results
+            if !searchResults.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(searchResults) { user in
+                        Button {
+                            inviteUser(user)
+                        } label: {
+                            HStack(spacing: RS.smPlus) {
+                                // Avatar
+                                userAvatar(for: user)
+
+                                // Name + username
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(user.fullName ?? "Riffit User")
+                                        .font(RF.label)
+                                        .foregroundStyle(Color.riffitTextPrimary)
+
+                                    if let username = user.username {
+                                        Text("@\(username)")
+                                            .font(RF.caption)
+                                            .foregroundStyle(Color.riffitTextSecondary)
+                                    }
+                                }
+
+                                Spacer()
+
+                                // Invite indicator
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.body)
+                                    .foregroundStyle(Color.riffitTeal400)
+                            }
+                            .padding(RS.smPlus)
+                        }
+                        .buttonStyle(.plain)
+
+                        if user.id != searchResults.last?.id {
+                            Divider()
+                                .overlay(Color.riffitBorderSubtle)
+                        }
+                    }
+                }
+                .background(Color.riffitSurface)
+                .cornerRadius(RR.input)
+                .overlay(
+                    RoundedRectangle(cornerRadius: RR.input)
+                        .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+                )
+            } else if !searchQuery.isEmpty {
+                Text("No users found")
+                    .font(RF.caption)
+                    .foregroundStyle(Color.riffitTextTertiary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, RS.md)
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    /// 32×32 avatar circle for search result users
+    private func userAvatar(for user: RiffitUser) -> some View {
+        Group {
+            if let urlString = user.avatarUrl, let url = URL(string: urlString) {
+                AsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    initialsCircle(for: user)
+                }
+            } else {
+                initialsCircle(for: user)
+            }
+        }
+        .frame(width: 32, height: 32)
+        .clipShape(Circle())
+    }
+
+    /// Initials fallback for user avatar
+    private func initialsCircle(for user: RiffitUser) -> some View {
+        let initial: String = {
+            if let name = user.fullName, let first = name.first {
+                return String(first).uppercased()
+            }
+            return String(user.email.first ?? Character("?")).uppercased()
+        }()
+
+        return Text(initial)
+            .font(RF.caption)
+            .foregroundStyle(Color.riffitTextPrimary)
+            .frame(width: 32, height: 32)
+            .background(Color.riffitTeal600)
+            .clipShape(Circle())
+    }
+
+    /// Stub: search for users by username. In-memory for now.
+    /// Will query Supabase `users` table when persistence is wired.
+    private func performSearch(query: String) {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !trimmed.isEmpty else {
+            searchResults = []
+            return
+        }
+        // TODO: Debounced Supabase query on users.username
+        searchResults = []
+    }
+
+    /// Invite a user to this story with the selected role
+    private func inviteUser(_ user: RiffitUser) {
+        guard let ownerId = appState.currentUser?.id else { return }
+        viewModel.addCollaborator(
+            to: story.id,
+            userId: user.id,
+            role: hasRolePermissions ? selectedRole : .collaborator,
+            invitedBy: ownerId
+        )
+        // Clear search after invite
+        searchQuery = ""
+        searchResults = []
+    }
+}

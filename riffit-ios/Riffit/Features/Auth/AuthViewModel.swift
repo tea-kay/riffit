@@ -59,6 +59,8 @@ class AuthViewModel: ObservableObject {
 
     /// Extracts the identity token from Apple's authorization response
     /// and sends it to Supabase Auth for session creation.
+    /// If a pending referral exists in AppState (from an invite link),
+    /// it's set as referred_by on the new user record.
     private func processAuthorization(_ authorization: ASAuthorization, appState: AppState) async {
         guard let appleCredential = authorization.credential as? ASAuthorizationAppleIDCredential else {
             self.error = AuthError.invalidCredential
@@ -93,13 +95,26 @@ class AuthViewModel: ObservableObject {
         //     .execute()
         //     .value as RiffitUser
 
+        // TODO: If this is a new account and there's a pending referral,
+        // set referred_by on the user record (first referrer wins):
+        // if let referralId = appState.pendingReferralUserId,
+        //    user.referredBy == nil {
+        //     try await supabase
+        //         .from("users")
+        //         .update(["referred_by": referralId.uuidString])
+        //         .eq("id", value: userId)
+        //         .execute()
+        // }
+
         // TODO: Uncomment when Supabase Auth is fully wired:
         // let session = try await supabase.auth.signInWithIdToken(...)
         // The auth state listener in AppState will handle the rest —
         // it will detect the new session, fetch the user row, and
         // set currentUser automatically.
 
-        // Placeholder: simulate successful auth with a fake user
+        // Placeholder: simulate successful auth with a fake user.
+        // If a pending referral exists, simulate setting it.
+        let referredBy = appState.pendingReferralUserId
         appState.currentUser = RiffitUser(
             id: UUID(),
             email: "placeholder@riffit.com",
@@ -108,12 +123,15 @@ class AuthViewModel: ObservableObject {
             avatarUrl: nil,
             subscriptionTier: .free,
             onboardingComplete: false,
-            referredBy: nil,
+            referredBy: referredBy,
             createdAt: Date()
         )
         appState.isLoading = false
 
         isLoading = false
+
+        // Check if there's a pending invite link to resolve now that auth is done
+        appState.checkPendingInviteAfterAuth()
     }
 
     // MARK: - Nonce Generation

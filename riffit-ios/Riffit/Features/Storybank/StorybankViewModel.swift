@@ -449,6 +449,268 @@ class StorybankViewModel: ObservableObject {
         touchStory(storyId)
     }
 
+    // MARK: - Invite Links
+
+    /// In-memory store of invite links. Keyed by token for lookup.
+    /// Will be replaced by Supabase queries when persistence is wired.
+    @Published var inviteLinks: [String: StoryInviteLink] = [:]
+
+    /// Resolves an invite token to an invite link record + story details.
+    /// Returns an AppState.ResolvedInvite if valid, sets appState.inviteError if not.
+    func resolveInviteToken(_ token: String, appState: AppState) {
+        // Look up the invite link by token
+        guard let inviteLink = inviteLinks[token] else {
+            appState.inviteError = .notFound
+            return
+        }
+
+        // Check if the link is still active
+        guard inviteLink.isActive else {
+            appState.inviteError = .expired
+            return
+        }
+
+        // Check if user is already a collaborator on this story
+        if let userId = appState.currentUserId {
+            let existingCollabs = storyCollaboratorsMap[inviteLink.storyId] ?? []
+            let sharedMatch = sharedCollaborations.first(where: { $0.storyId == inviteLink.storyId && $0.userId == userId })
+            if existingCollabs.contains(where: { $0.userId == userId }) || sharedMatch != nil {
+                appState.inviteError = .alreadyMember
+                return
+            }
+        }
+
+        // Store the referral user ID from the invite link
+        appState.pendingReferralUserId = inviteLink.referralUserId
+
+        // Look up story details for the preview
+        let story = stories.first(where: { $0.id == inviteLink.storyId })
+        let storyTitle = story?.title ?? "Untitled Story"
+        let assetCount = assets(for: inviteLink.storyId).count
+        let refCount = references(for: inviteLink.storyId).count
+
+        // Set resolved invite on AppState for CollabJoinView to display
+        appState.resolvedInvite = AppState.ResolvedInvite(
+            inviteLink: inviteLink,
+            storyTitle: storyTitle,
+            ownerName: "Creator",  // TODO: Look up owner's display name from user record
+            ownerAvatarUrl: nil,   // TODO: Look up owner's avatar URL
+            assetCount: assetCount,
+            referenceCount: refCount
+        )
+        appState.inviteError = nil
+    }
+
+    /// Joins a story from a resolved invite link.
+    /// Creates the StoryCollaborator record and increments the invite link use_count.
+    func joinStoryFromInvite(inviteLink: StoryInviteLink, userId: UUID) {
+        // Create the collaborator record
+        let collaborator = StoryCollaborator(
+            storyId: inviteLink.storyId,
+            userId: userId,
+            role: inviteLink.role,
+            invitedBy: inviteLink.createdBy,
+            status: .accepted,
+            acceptedAt: Date(),
+            lastViewedAt: Date()
+        )
+
+        // Add to the shared collaborations list (collaborator side)
+        sharedCollaborations.append(collaborator)
+
+        // Also add to the story's collaborators map (so People section shows them)
+        storyCollaboratorsMap[inviteLink.storyId, default: []].append(collaborator)
+
+        // Increment use count on the invite link
+        if var link = inviteLinks[inviteLink.token] {
+            link.useCount += 1
+            inviteLinks[inviteLink.token] = link
+        }
+
+        // TODO: Persist to Supabase story_collaborators table
+    }
+
+    // MARK: - Collaborators
+
+    /// Maps story ID → collaborators on that story.
+    @Published var storyCollaboratorsMap: [UUID: [StoryCollaborator]] = [:]
+
+    /// Stories shared WITH the current user (where they are a non-owner collaborator).
+    /// Populated by fetchSharedStories() — in-memory for now.
+    @Published var sharedCollaborations: [StoryCollaborator] = []
+
+    /// Returns collaborators for a story, owner first, then by status + name.
+    func collaborators(for storyId: UUID) -> [StoryCollaborator] {
+        let all = storyCollaboratorsMap[storyId] ?? []
+        return all.sorted { a, b in
+            // Owner always first
+            if a.role == .owner && b.role != .owner { return true }
+            if b.role == .owner && a.role != .owner { return false }
+            // Accepted before pending
+            if a.status == .accepted && b.status != .accepted { return true }
+            if b.status == .accepted && a.status != .accepted { return false }
+            // Then by creation date
+            return a.createdAt < b.createdAt
+        }
+    }
+
+    /// Accepted shared stories, sorted by most recently updated.
+    var acceptedSharedStories: [StoryCollaborator] {
+        sharedCollaborations
+            .filter { $0.status == .accepted }
+            .sorted { a, b in
+                // Sort by the story's updatedAt if we have it, otherwise by acceptedAt
+                let aDate = stories.first(where: { $0.id == a.storyId })?.updatedAt ?? a.acceptedAt ?? a.createdAt
+                let bDate = stories.first(where: { $0.id == b.storyId })?.updatedAt ?? b.acceptedAt ?? b.createdAt
+                return aDate > bDate
+            }
+    }
+
+    /// Pending invitations, newest first.
+    var pendingInvites: [StoryCollaborator] {
+        sharedCollaborations
+            .filter { $0.status == .pending }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    /// Whether the "Shared with me" section should be visible.
+    /// Only shows if user has at least one shared or pending story.
+    var hasSharedContent: Bool {
+        !sharedCollaborations.isEmpty
+    }
+
+    /// Returns the current user's role for a given story, or nil if they're not a collaborator.
+    /// Checks both the collaborators map (for owner) and sharedCollaborations (for non-owners).
+    func currentUserRole(for storyId: UUID, userId: UUID?) -> CollaboratorRole? {
+        guard let userId else { return nil }
+
+        // Check collaborators map first (covers owner case)
+        if let record = (storyCollaboratorsMap[storyId] ?? []).first(where: { $0.userId == userId }) {
+            return record.role
+        }
+
+        // Check shared collaborations (covers non-owner case)
+        if let record = sharedCollaborations.first(where: { $0.storyId == storyId && $0.userId == userId }) {
+            return record.role
+        }
+
+        return nil
+    }
+
+    /// Whether there are unread notes on a shared story for the current user.
+    /// Compares the most recent note's createdAt against the collaborator's lastViewedAt.
+    func hasUnreadNotes(for storyId: UUID) -> Bool {
+        guard let collab = sharedCollaborations.first(where: { $0.storyId == storyId && $0.status == .accepted }),
+              let lastViewed = collab.lastViewedAt
+        else {
+            // If never viewed, any note means unread
+            let noteCount = (storyNotesMap[storyId] ?? []).count
+            // Only unread if we're a collaborator and there are notes
+            let isCollab = sharedCollaborations.contains(where: { $0.storyId == storyId && $0.status == .accepted })
+            return isCollab && noteCount > 0
+        }
+
+        // Check if any note was created after lastViewedAt
+        let notes = storyNotesMap[storyId] ?? []
+        return notes.contains { $0.createdAt > lastViewed }
+    }
+
+    /// Updates lastViewedAt to now for the current user's collaboration record.
+    /// Called when a collaborator opens a shared StoryDetailView.
+    func updateLastViewed(for storyId: UUID) {
+        if let index = sharedCollaborations.firstIndex(where: { $0.storyId == storyId }) {
+            sharedCollaborations[index].lastViewedAt = Date()
+        }
+        // Also update in the collaborators map if present
+        if var collabs = storyCollaboratorsMap[storyId] {
+            for i in collabs.indices {
+                if collabs[i].storyId == storyId {
+                    collabs[i].lastViewedAt = Date()
+                }
+            }
+            storyCollaboratorsMap[storyId] = collabs
+        }
+    }
+
+    /// Adds a collaborator to a story. Creates a pending invitation.
+    /// TODO: Will call Supabase when persistence is wired.
+    func addCollaborator(to storyId: UUID, userId: UUID, role: CollaboratorRole, invitedBy: UUID) {
+        // Check for duplicate
+        let existing = storyCollaboratorsMap[storyId] ?? []
+        guard !existing.contains(where: { $0.userId == userId }) else { return }
+
+        let collaborator = StoryCollaborator(
+            storyId: storyId,
+            userId: userId,
+            role: role,
+            invitedBy: invitedBy,
+            status: .pending
+        )
+        storyCollaboratorsMap[storyId, default: []].append(collaborator)
+    }
+
+    /// Removes a collaborator from a story.
+    func removeCollaborator(_ collaborator: StoryCollaborator) {
+        storyCollaboratorsMap[collaborator.storyId]?.removeAll { $0.id == collaborator.id }
+    }
+
+    /// Updates a collaborator's role (Studio+ feature).
+    func updateCollaboratorRole(_ collaborator: StoryCollaborator, to newRole: CollaboratorRole) {
+        guard var collabs = storyCollaboratorsMap[collaborator.storyId],
+              let index = collabs.firstIndex(where: { $0.id == collaborator.id })
+        else { return }
+        collabs[index].role = newRole
+        storyCollaboratorsMap[collaborator.storyId] = collabs
+    }
+
+    /// Fetches collaborators for a story from Supabase.
+    /// Stubbed for now — in-memory only.
+    func fetchCollaborators(for storyId: UUID) async {
+        // TODO: Fetch from Supabase story_collaborators table
+    }
+
+    /// Fetches stories shared with the current user.
+    /// Stubbed for now — returns in-memory data.
+    func fetchSharedStories() async {
+        // TODO: Query Supabase story_collaborators where user_id = currentUser
+        // and role != 'owner', then fetch the corresponding stories
+    }
+
+    /// Accepts a pending invite. Updates status and sets acceptedAt.
+    func acceptInvite(_ collaborator: StoryCollaborator) {
+        if let index = sharedCollaborations.firstIndex(where: { $0.id == collaborator.id }) {
+            sharedCollaborations[index].status = .accepted
+            sharedCollaborations[index].acceptedAt = Date()
+        }
+    }
+
+    /// Declines a pending invite. Removes the collaborator record.
+    func declineInvite(_ collaborator: StoryCollaborator) {
+        sharedCollaborations.removeAll { $0.id == collaborator.id }
+    }
+
+    /// Removes the current user's collaboration record — they leave the shared story.
+    func leaveStory(_ collaborator: StoryCollaborator) {
+        sharedCollaborations.removeAll { $0.id == collaborator.id }
+        storyCollaboratorsMap[collaborator.storyId]?.removeAll { $0.id == collaborator.id }
+    }
+
+    /// Ensures the owner has a collaborator record for display in the People section.
+    /// Call this when entering StoryDetailView.
+    func ensureOwnerCollaborator(for storyId: UUID, ownerId: UUID) {
+        let existing = storyCollaboratorsMap[storyId] ?? []
+        guard !existing.contains(where: { $0.role == .owner }) else { return }
+
+        let ownerRecord = StoryCollaborator(
+            storyId: storyId,
+            userId: ownerId,
+            role: .owner,
+            status: .accepted,
+            acceptedAt: Date()
+        )
+        storyCollaboratorsMap[storyId, default: []].insert(ownerRecord, at: 0)
+    }
+
     // MARK: - Story Folders
 
     func createFolder(name: String) {

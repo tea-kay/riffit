@@ -11,6 +11,8 @@ struct StorybankView: View {
     @State private var showNewFolderAlert: Bool = false
     @State private var newFolderName: String = ""
     @State private var showActionSheet: Bool = false
+    @State private var showLeaveConfirm: Bool = false
+    @State private var collaboratorToLeave: StoryCollaborator?
     @Environment(\.colorScheme) private var colorScheme
 
     /// First initial of the user's name or email for avatar fallback
@@ -33,7 +35,7 @@ struct StorybankView: View {
             if viewModel.isLoading && viewModel.isEmpty {
                 ProgressView()
                     .tint(Color.riffitPrimary)
-            } else if viewModel.isEmpty {
+            } else if viewModel.isEmpty && !viewModel.hasSharedContent {
                 emptyState
             } else {
                 storyList
@@ -113,14 +115,7 @@ struct StorybankView: View {
     private var storyList: some View {
         ScrollView {
             LazyVStack(spacing: RS.smPlus) {
-                // Folders section
-                if !viewModel.folders.isEmpty {
-                    ForEach(viewModel.folders) { folder in
-                        StoryFolderDropTarget(folder: folder, viewModel: viewModel)
-                    }
-                }
-
-                // Unfiled stories
+                // Unfiled stories (own stories first)
                 let unfiled = viewModel.unfiledStories
                 if !unfiled.isEmpty {
                     if !viewModel.folders.isEmpty {
@@ -141,18 +136,105 @@ struct StorybankView: View {
                         .draggable(story.id.uuidString)
                     }
                 }
+
+                // MARK: Shared with me
+                // Only renders if user has ≥1 shared or pending story.
+                // Completely absent when zero — no header, no empty state.
+                if viewModel.hasSharedContent {
+                    sharedWithMeSection
+                }
+
+                // Folders section
+                if !viewModel.folders.isEmpty {
+                    ForEach(viewModel.folders) { folder in
+                        StoryFolderDropTarget(folder: folder, viewModel: viewModel)
+                    }
+                }
             }
             .padding(.horizontal, RS.md)
             .padding(.vertical, RS.smPlus)
         }
         .refreshable {
             await viewModel.fetchStories()
+            await viewModel.fetchSharedStories()
         }
         .navigationDestination(for: Story.self) { story in
             StoryDetailView(story: story, viewModel: viewModel)
         }
         .navigationDestination(for: StoryFolder.self) { folder in
             StoryFolderDetailView(folder: folder, viewModel: viewModel)
+        }
+        .alert("Leave Story?", isPresented: $showLeaveConfirm) {
+            Button("Leave", role: .destructive) {
+                if let collab = collaboratorToLeave {
+                    withAnimation(.easeInOut) {
+                        viewModel.leaveStory(collab)
+                    }
+                }
+                collaboratorToLeave = nil
+            }
+            Button("Cancel", role: .cancel) {
+                collaboratorToLeave = nil
+            }
+        } message: {
+            Text("You will lose access to this story.")
+        }
+    }
+
+    // MARK: - Shared With Me Section
+
+    private var sharedWithMeSection: some View {
+        VStack(alignment: .leading, spacing: RS.smPlus) {
+            // Section header
+            Text("Shared with me")
+                .font(RF.tag)
+                .textCase(.uppercase)
+                .tracking(0.06 * 11)
+                .foregroundStyle(Color.riffitTextSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, RS.sm)
+
+            // Pending invites first (newest on top)
+            ForEach(viewModel.pendingInvites) { invite in
+                PendingInviteRow(
+                    collaborator: invite,
+                    onAccept: {
+                        withAnimation(.easeInOut) {
+                            viewModel.acceptInvite(invite)
+                        }
+                    },
+                    onDecline: {
+                        withAnimation(.easeInOut) {
+                            viewModel.declineInvite(invite)
+                        }
+                    }
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            // Accepted shared stories (most recently updated first)
+            ForEach(viewModel.acceptedSharedStories) { collab in
+                // Look up the actual story to display
+                if let story = viewModel.stories.first(where: { $0.id == collab.storyId }) {
+                    NavigationLink(value: story) {
+                        SharedStoryCard(
+                            story: story,
+                            collaborator: collab,
+                            countsLabel: viewModel.countsLabel(for: story.id),
+                            hasUnread: viewModel.hasUnreadNotes(for: story.id)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            collaboratorToLeave = collab
+                            showLeaveConfirm = true
+                        } label: {
+                            Label("Leave story", systemImage: "rectangle.portrait.and.arrow.right")
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -606,5 +688,186 @@ struct StoryFolderDetailView: View {
                 }
             )
         }
+    }
+}
+
+// MARK: - Shared Story Card
+
+/// A story card for the "Shared with me" section.
+/// Shows owner attribution, role pill, and unread gold dot.
+struct SharedStoryCard: View {
+    let story: Story
+    let collaborator: StoryCollaborator
+    let countsLabel: String
+    let hasUnread: Bool
+
+    /// Placeholder owner name — will use real user data when persistence is wired.
+    private var ownerDisplayName: String {
+        "Owner"
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // Unread gold dot on leading edge
+            if hasUnread {
+                Circle()
+                    .fill(Color.riffitPrimary)
+                    .frame(width: 6, height: 6)
+                    .padding(.trailing, RS.sm)
+            }
+
+            VStack(alignment: .leading, spacing: RS.sm) {
+                // Title + role pill
+                HStack {
+                    Text(story.title)
+                        .font(RF.heading)
+                        .foregroundStyle(Color.riffitTextPrimary)
+                        .lineLimit(2)
+
+                    Spacer()
+
+                    // Role pill
+                    Text(collaborator.role.displayName)
+                        .font(RF.tag)
+                        .foregroundStyle(rolePillTextColor)
+                        .padding(.vertical, 3)
+                        .padding(.horizontal, 8)
+                        .background(rolePillBackground)
+                        .clipShape(Capsule())
+                }
+
+                // Owner attribution: avatar + "by [name]"
+                HStack(spacing: RS.xs) {
+                    // Owner avatar placeholder (24×24)
+                    Text(String(ownerDisplayName.first ?? Character("?")))
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.riffitTextPrimary)
+                        .frame(width: 24, height: 24)
+                        .background(Color.riffitTeal600)
+                        .clipShape(Circle())
+
+                    Text("by \(ownerDisplayName)")
+                        .font(RF.caption)
+                        .foregroundStyle(Color.riffitTextTertiary)
+                }
+
+                // Counts + timestamp
+                HStack {
+                    Text(countsLabel)
+                        .font(RF.caption)
+                        .foregroundStyle(Color.riffitTextSecondary)
+
+                    Spacer()
+
+                    Text(story.updatedAt.relativeTimestamp)
+                        .font(RF.meta)
+                        .foregroundStyle(Color.riffitTextTertiary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(RS.md)
+        .background(Color.riffitSurface)
+        .cornerRadius(RR.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: RR.card)
+                .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+        )
+    }
+
+    private var rolePillTextColor: Color {
+        switch collaborator.role {
+        case .editor, .collaborator:
+            return Color.riffitTeal400
+        case .viewer, .commenter:
+            return Color.riffitTextSecondary
+        default:
+            return Color.riffitTextSecondary
+        }
+    }
+
+    private var rolePillBackground: Color {
+        switch collaborator.role {
+        case .editor, .collaborator:
+            return Color.riffitTealTint
+        case .viewer, .commenter:
+            return Color.riffitElevated
+        default:
+            return Color.riffitElevated
+        }
+    }
+}
+
+// MARK: - Pending Invite Row
+
+/// A muted card for pending collaboration invites.
+/// Shows owner info + Accept/Decline buttons inline.
+struct PendingInviteRow: View {
+    let collaborator: StoryCollaborator
+    let onAccept: () -> Void
+    let onDecline: () -> Void
+
+    /// Placeholder — will use real owner name when persistence is wired.
+    private var ownerDisplayName: String {
+        "Someone"
+    }
+
+    /// Placeholder — will use real story title when persistence is wired.
+    private var storyTitle: String {
+        "a story"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: RS.smPlus) {
+            // Invitation message
+            HStack(spacing: RS.sm) {
+                // Owner avatar placeholder (32×32)
+                Text(String(ownerDisplayName.first ?? Character("?")))
+                    .font(RF.caption)
+                    .foregroundStyle(Color.riffitTextPrimary)
+                    .frame(width: 32, height: 32)
+                    .background(Color.riffitTeal600)
+                    .clipShape(Circle())
+
+                Text("\(ownerDisplayName) invited you to *\(storyTitle)*")
+                    .font(RF.bodyMd)
+                    .foregroundStyle(Color.riffitTextSecondary)
+                    .lineLimit(2)
+            }
+
+            // Accept / Decline buttons
+            HStack(spacing: RS.sm) {
+                Button(action: onAccept) {
+                    Text("Accept")
+                        .font(RF.tag)
+                        .foregroundStyle(Color.riffitTeal400)
+                        .padding(.vertical, RS.sm)
+                        .padding(.horizontal, RS.md)
+                        .background(Color.riffitTealTint)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+
+                Button(action: onDecline) {
+                    Text("Decline")
+                        .font(RF.tag)
+                        .foregroundStyle(Color.riffitTextSecondary)
+                        .padding(.vertical, RS.sm)
+                        .padding(.horizontal, RS.md)
+                        .background(Color.riffitElevated)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(RS.md)
+        .background(Color.riffitSurface)
+        .cornerRadius(RR.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: RR.card)
+                .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+        )
+        .opacity(0.8)
     }
 }

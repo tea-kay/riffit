@@ -79,6 +79,9 @@
 		FF1122334455667788990001 /* StoryNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE1122334455667788990001 /* StoryNote.swift */; };
 		CC0011223344556677880001 /* StoryCollaborator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0011223344556677880002 /* StoryCollaborator.swift */; };
 		CC0011223344556677880003 /* StoryInviteLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0011223344556677880004 /* StoryInviteLink.swift */; };
+		CC0011223344556677880005 /* InviteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0011223344556677880006 /* InviteSheet.swift */; };
+		CC0011223344556677880007 /* ManageCollaboratorsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0011223344556677880008 /* ManageCollaboratorsView.swift */; };
+		CC0011223344556677880009 /* CollabJoinView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC001122334455667788000A /* CollabJoinView.swift */; };
 		FF3344556677889900AA0001 /* AssetExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE3344556677889900AA0001 /* AssetExportService.swift */; };
 		FF3344556677889900AA0002 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE3344556677889900AA0002 /* ShareSheet.swift */; };
 /* End PBXBuildFile section */
@@ -165,6 +168,9 @@
 		EE1122334455667788990001 /* StoryNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryNote.swift; sourceTree = "<group>"; };
 		CC0011223344556677880002 /* StoryCollaborator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryCollaborator.swift; sourceTree = "<group>"; };
 		CC0011223344556677880004 /* StoryInviteLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryInviteLink.swift; sourceTree = "<group>"; };
+		CC0011223344556677880006 /* InviteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteSheet.swift; sourceTree = "<group>"; };
+		CC0011223344556677880008 /* ManageCollaboratorsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageCollaboratorsView.swift; sourceTree = "<group>"; };
+		CC001122334455667788000A /* CollabJoinView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollabJoinView.swift; sourceTree = "<group>"; };
 		EE3344556677889900AA0001 /* AssetExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetExportService.swift; sourceTree = "<group>"; };
 		EE3344556677889900AA0002 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
 		F1E2D3C4B5A6978869504132 /* IdeaComment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdeaComment.swift; sourceTree = "<group>"; };
@@ -274,6 +280,9 @@
 				B5C6D7E8F9A0B1C2D3E4F5A6 /* AddReferenceView.swift */,
 				CC2233445566778899AA0003 /* ImageAttachmentSheet.swift */,
 				CC2233445566778899AA0004 /* ImageViewerView.swift */,
+				CC001122334455667788000A /* CollabJoinView.swift */,
+				CC0011223344556677880006 /* InviteSheet.swift */,
+				CC0011223344556677880008 /* ManageCollaboratorsView.swift */,
 				81284910A3F4946E96B3848F /* StorybankView.swift */,
 				2B41C262581B8EBD33B6C7DA /* StorybankViewModel.swift */,
 				A4B5C6D7E8F9A0B1C2D3E4F5 /* StoryDetailView.swift */,
@@ -582,6 +591,9 @@
 				C3D4E5F6A7B8C9D0E1F2A3B4 /* StoryReference.swift in Sources */,
 				CC0011223344556677880001 /* StoryCollaborator.swift in Sources */,
 				CC0011223344556677880003 /* StoryInviteLink.swift in Sources */,
+				CC0011223344556677880009 /* CollabJoinView.swift in Sources */,
+				CC0011223344556677880005 /* InviteSheet.swift in Sources */,
+				CC0011223344556677880007 /* ManageCollaboratorsView.swift in Sources */,
 				FF1122334455667788990001 /* StoryNote.swift in Sources */,
 				CDE2A83B109C665317A81E7D /* StorybankView.swift in Sources */,
 				33B2A22A9DF6F87AA22A444A /* StorybankViewModel.swift in Sources */,

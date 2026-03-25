@@ -38,8 +38,17 @@ struct StoryDetailView: View {
     @State private var newNoteText: String = ""
     @State private var editingNoteId: UUID?
     @State private var editingNoteText: String = ""
+    @State private var showInviteSheet: Bool = false
+    @State private var showManageCollaborators: Bool = false
+    @State private var showLeaveConfirm: Bool = false
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var libraryViewModel: LibraryViewModel
+
+    /// The current user's role on this story. Defaults to .owner for own stories.
+    /// Used to permission-gate all UI actions in this view.
+    private var userRole: CollaboratorRole {
+        viewModel.currentUserRole(for: story.id, userId: appState.currentUser?.id) ?? .owner
+    }
 
     /// Display name for note bubbles: username > full_name > email prefix
     private var noteDisplayName: String {
@@ -99,6 +108,7 @@ struct StoryDetailView: View {
                         case .sectionHeader(let section):
                             SectionHeaderRow(
                                 section: section,
+                                showActions: userRole.canModifySections,
                                 onRename: {
                                     renameSectionText = section.name
                                     renamingSection = section
@@ -130,16 +140,20 @@ struct StoryDetailView: View {
                                     }
                                 }
                                 .contextMenu {
-                                    Button {
-                                        exportSingleAsset(asset)
-                                    } label: {
-                                        Label("Save to Device", systemImage: "square.and.arrow.down")
+                                    if userRole.canDownloadAssets {
+                                        Button {
+                                            exportSingleAsset(asset)
+                                        } label: {
+                                            Label("Save to Device", systemImage: "square.and.arrow.down")
+                                        }
                                     }
 
-                                    Button(role: .destructive) {
-                                        viewModel.deleteAsset(asset)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
+                                    if userRole.canModifyAssets {
+                                        Button(role: .destructive) {
+                                            viewModel.deleteAsset(asset)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
                                     }
                                 }
                                 .listRowBackground(Color.riffitBackground)
@@ -151,12 +165,14 @@ struct StoryDetailView: View {
                         }
                     }
                     .onMove { from, to in
+                        guard userRole.canModifyAssets else { return }
                         // Reorder the flat array, then reassign sectionIDs
                         // based on which section header each asset falls under
                         var reordered = viewModel.flatRows(for: story.id)
                         reordered.move(fromOffsets: from, toOffset: to)
                         viewModel.applyFlatRowOrder(for: story.id, reordered: reordered)
                     }
+                    .moveDisabled(!userRole.canModifyAssets)
                     .deleteDisabled(true)
                 }
             } header: {
@@ -181,10 +197,12 @@ struct StoryDetailView: View {
                                 }
                             }
                             .contextMenu {
-                                Button(role: .destructive) {
-                                    viewModel.deleteReference(reference)
-                                } label: {
-                                    Label("Remove", systemImage: "trash")
+                                if userRole.canModifyReferences {
+                                    Button(role: .destructive) {
+                                        viewModel.deleteReference(reference)
+                                    } label: {
+                                        Label("Remove", systemImage: "trash")
+                                    }
                                 }
                             }
                             .listRowBackground(Color.riffitBackground)
@@ -195,8 +213,10 @@ struct StoryDetailView: View {
                             ))
                     }
                     .onMove { from, to in
+                        guard userRole.canModifyReferences else { return }
                         viewModel.moveReference(in: story.id, from: from, to: to)
                     }
+                    .moveDisabled(!userRole.canModifyReferences)
                     .deleteDisabled(true)
                 }
             } header: {
@@ -244,16 +264,55 @@ struct StoryDetailView: View {
                     }
                 }
 
-                // Add note input row
-                noteInputRow
+                // Add note input row — only if role allows leaving notes
+                if userRole.canLeaveNotes {
+                    noteInputRow
+                        .listRowBackground(Color.riffitBackground)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(
+                            top: RS.xs, leading: RS.md,
+                            bottom: RS.sm, trailing: RS.md
+                        ))
+                }
+            } header: {
+                notesHeader
+            }
+
+            // MARK: People Section
+            Section {
+                let collabs = viewModel.collaborators(for: story.id)
+                ForEach(collabs) { collaborator in
+                    CollaboratorRow(
+                        collaborator: collaborator,
+                        hasRolePermissions: false,
+                        isOwnerView: true,
+                        onChangeRole: { newRole in
+                            viewModel.updateCollaboratorRole(collaborator, to: newRole)
+                        },
+                        onRemove: {
+                            viewModel.removeCollaborator(collaborator)
+                        }
+                    )
                     .listRowBackground(Color.riffitBackground)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(
                         top: RS.xs, leading: RS.md,
-                        bottom: RS.sm, trailing: RS.md
+                        bottom: RS.xs, trailing: RS.md
                     ))
+                }
+
+                // "+ Invite" row — only for owners
+                if userRole.canInviteCollaborators {
+                    inviteRow
+                        .listRowBackground(Color.riffitBackground)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(
+                            top: RS.xs, leading: RS.md,
+                            bottom: RS.sm, trailing: RS.md
+                        ))
+                }
             } header: {
-                notesHeader
+                peopleHeader
             }
         }
         .listStyle(.plain)
@@ -265,18 +324,24 @@ struct StoryDetailView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    Button {
-                        renameText = currentStory.title
-                        showRenameModal = true
-                    } label: {
-                        Label("Rename", systemImage: "pencil")
+                    // Rename — owner + editor
+                    if userRole.canRenameStory {
+                        Button {
+                            renameText = currentStory.title
+                            showRenameModal = true
+                        } label: {
+                            Label("Rename", systemImage: "pencil")
+                        }
                     }
 
-                    Button {
-                        viewModel.updateStoryStatus(story, to: .archived)
-                        dismiss()
-                    } label: {
-                        Label("Archive", systemImage: "archivebox")
+                    // Archive — owner + editor
+                    if userRole.canModifyAssets {
+                        Button {
+                            viewModel.updateStoryStatus(story, to: .archived)
+                            dismiss()
+                        } label: {
+                            Label("Archive", systemImage: "archivebox")
+                        }
                     }
 
                     Button {
@@ -285,32 +350,61 @@ struct StoryDetailView: View {
                         Label("Share", systemImage: "square.and.arrow.up")
                     }
 
-                    Button {
-                        exportAllAssets()
-                    } label: {
-                        Label("Save All Assets", systemImage: "square.and.arrow.down.on.square")
+                    // Save All Assets — only if can download
+                    if userRole.canDownloadAssets {
+                        Button {
+                            exportAllAssets()
+                        } label: {
+                            Label("Save All Assets", systemImage: "square.and.arrow.down.on.square")
+                        }
                     }
 
-                    Button {
-                        viewModel.duplicateStory(story)
-                        dismiss()
-                    } label: {
-                        Label("Duplicate", systemImage: "plus.square.on.square")
+                    // Duplicate — owner + editor
+                    if userRole.canDuplicateStory {
+                        Button {
+                            viewModel.duplicateStory(story)
+                            dismiss()
+                        } label: {
+                            Label("Duplicate", systemImage: "plus.square.on.square")
+                        }
+                    }
+
+                    // Manage People — owner only
+                    if userRole.canInviteCollaborators {
+                        Button {
+                            showManageCollaborators = true
+                        } label: {
+                            Label("Manage People", systemImage: "person.2")
+                        }
                     }
 
                     // Compose — v2 AI brief generation, visually disabled
-                    Button { } label: {
-                        Label("Compose", systemImage: "sparkles")
+                    if userRole == .owner {
+                        Button { } label: {
+                            Label("Compose", systemImage: "sparkles")
+                        }
+                        .disabled(true)
                     }
-                    .disabled(true)
 
                     Divider()
 
-                    Button(role: .destructive) {
-                        viewModel.deleteStory(story)
-                        dismiss()
-                    } label: {
-                        Label("Delete Story", systemImage: "trash")
+                    // Delete Story — owner only
+                    if userRole.canDeleteStory {
+                        Button(role: .destructive) {
+                            viewModel.deleteStory(story)
+                            dismiss()
+                        } label: {
+                            Label("Delete Story", systemImage: "trash")
+                        }
+                    }
+
+                    // Leave Story — non-owners
+                    if userRole != .owner {
+                        Button(role: .destructive) {
+                            showLeaveConfirm = true
+                        } label: {
+                            Label("Leave Story", systemImage: "rectangle.portrait.and.arrow.right")
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -352,6 +446,34 @@ struct StoryDetailView: View {
         }
         .sheet(isPresented: $showStoryShareSheet) {
             ShareSheet(items: [currentStory.title])
+        }
+        .sheet(isPresented: $showInviteSheet) {
+            InviteSheet(story: story, viewModel: viewModel)
+        }
+        .sheet(isPresented: $showManageCollaborators) {
+            ManageCollaboratorsView(story: story, viewModel: viewModel)
+        }
+        .onAppear {
+            // Ensure the owner has a collaborator record for the People section
+            if let userId = appState.currentUser?.id {
+                viewModel.ensureOwnerCollaborator(for: story.id, ownerId: userId)
+            }
+            // Track last viewed time for unread dot calculation on shared stories
+            if userRole != .owner {
+                viewModel.updateLastViewed(for: story.id)
+            }
+        }
+        .alert("Leave Story?", isPresented: $showLeaveConfirm) {
+            Button("Leave", role: .destructive) {
+                // Find this user's collaboration record and leave
+                if let collab = viewModel.sharedCollaborations.first(where: { $0.storyId == story.id }) {
+                    viewModel.leaveStory(collab)
+                }
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You will lose access to this story.")
         }
         .riffitModal(isPresented: $showRenameModal) {
             RiffitInputModal(
@@ -508,7 +630,7 @@ struct StoryDetailView: View {
 
     private var assetsHeader: some View {
         HStack {
-            Text("My Assets")
+            Text(userRole == .owner ? "My Assets" : "Assets")
                 .font(RF.tag)
                 .textCase(.uppercase)
                 .tracking(0.08 * 12)
@@ -516,45 +638,48 @@ struct StoryDetailView: View {
 
             Spacer()
 
-            // Add section button
-            Button {
-                newSectionName = ""
-                showAddSectionModal = true
-            } label: {
-                Image(systemName: "folder.badge.plus")
-                    .font(.body)
-                    .foregroundStyle(Color.riffitTeal400)
-            }
-
-            // Add asset button
-            Menu {
+            // Add section + add asset buttons — only for roles that can modify
+            if userRole.canModifyAssets {
+                // Add section button
                 Button {
-                    showVoiceRecordSheet = true
+                    newSectionName = ""
+                    showAddSectionModal = true
                 } label: {
-                    Label("Voice Note", systemImage: "waveform")
+                    Image(systemName: "folder.badge.plus")
+                        .font(.body)
+                        .foregroundStyle(Color.riffitTeal400)
                 }
 
-                Button {
-                    showVideoAttachmentSheet = true
-                } label: {
-                    Label("Video", systemImage: "video")
-                }
+                // Add asset button
+                Menu {
+                    Button {
+                        showVoiceRecordSheet = true
+                    } label: {
+                        Label("Voice Note", systemImage: "waveform")
+                    }
 
-                Button {
-                    showImageAttachmentSheet = true
-                } label: {
-                    Label("Image", systemImage: "photo")
-                }
+                    Button {
+                        showVideoAttachmentSheet = true
+                    } label: {
+                        Label("Video", systemImage: "video")
+                    }
 
-                Button {
-                    showAddTextSheet = true
+                    Button {
+                        showImageAttachmentSheet = true
+                    } label: {
+                        Label("Image", systemImage: "photo")
+                    }
+
+                    Button {
+                        showAddTextSheet = true
+                    } label: {
+                        Label("Text", systemImage: "text.alignleft")
+                    }
                 } label: {
-                    Label("Text", systemImage: "text.alignleft")
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(Color.riffitPrimary)
                 }
-            } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Color.riffitPrimary)
             }
         }
         .padding(.bottom, RS.xs)
@@ -570,16 +695,18 @@ struct StoryDetailView: View {
 
             Spacer()
 
-            Button {
-                showAddReferenceSheet = true
-            } label: {
-                HStack(spacing: RS.xs) {
-                    Image(systemName: "plus.circle.fill")
-                    Text("Add from Library")
-                        .font(RF.caption)
-                        .fontWeight(.medium)
+            if userRole.canModifyReferences {
+                Button {
+                    showAddReferenceSheet = true
+                } label: {
+                    HStack(spacing: RS.xs) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Add from Library")
+                            .font(RF.caption)
+                            .fontWeight(.medium)
+                    }
+                    .foregroundStyle(Color.riffitPrimary)
                 }
-                .foregroundStyle(Color.riffitPrimary)
             }
         }
         .padding(.top, RS.md)
@@ -640,6 +767,64 @@ struct StoryDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, RS.lg)
+    }
+
+    // MARK: - People
+
+    private var peopleHeader: some View {
+        Text("People")
+            .font(RF.tag)
+            .textCase(.uppercase)
+            .tracking(0.08 * 12)
+            .foregroundStyle(Color.riffitTextTertiary)
+            .padding(.top, RS.md)
+            .padding(.bottom, RS.xs)
+    }
+
+    /// The "+ Invite" row at the bottom of the People section.
+    /// Shows a lock icon if the owner has hit their collaborator limit.
+    private var inviteRow: some View {
+        let collaboratorLimit: Int = {
+            switch appState.currentUser?.subscriptionTier {
+            case .pro: return 2
+            default: return 1
+            }
+        }()
+        let activeCount = viewModel.collaborators(for: story.id)
+            .filter { $0.role != .owner && $0.status == .accepted }
+            .count
+        let atLimit = activeCount >= collaboratorLimit
+
+        return Button {
+            if atLimit {
+                // TODO: Show paywall
+            } else {
+                showInviteSheet = true
+            }
+        } label: {
+            HStack(spacing: RS.sm) {
+                Image(systemName: atLimit ? "lock.fill" : "plus.circle.fill")
+                    .font(.body)
+                    .foregroundStyle(atLimit ? Color.riffitTextTertiary : Color.riffitTeal400)
+
+                Text(atLimit ? "Upgrade to add more" : "Invite")
+                    .font(RF.label)
+                    .foregroundStyle(atLimit ? Color.riffitTextTertiary : Color.riffitTeal400)
+
+                Spacer()
+            }
+            .padding(RS.smPlus)
+            .background(Color.riffitSurface)
+            .cornerRadius(RR.input)
+            .overlay(
+                RoundedRectangle(cornerRadius: RR.input)
+                    .stroke(
+                        atLimit ? Color.riffitBorderSubtle : Color.riffitTeal400.opacity(0.3),
+                        lineWidth: 0.5
+                    )
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private var noteInputRow: some View {
@@ -810,6 +995,7 @@ struct AssetRow: View {
 /// .moveDisabled(true) keeps it pinned while assets drag past.
 struct SectionHeaderRow: View {
     let section: AssetSection
+    var showActions: Bool = true
     let onRename: () -> Void
     let onDelete: () -> Void
 
@@ -828,25 +1014,29 @@ struct SectionHeaderRow: View {
 
             Spacer()
 
-            // Rename
-            Button {
-                onRename()
-            } label: {
-                Image(systemName: "pencil")
-                    .font(.caption)
-                    .foregroundStyle(Color.riffitTextTertiary)
+            if showActions {
+                // Rename
+                Button {
+                    onRename()
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.caption)
+                        .foregroundStyle(Color.riffitTextTertiary)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
-            // Delete section (assets fall back to unsectioned)
-            Button {
-                onDelete()
-            } label: {
-                Image(systemName: "trash")
-                    .font(.caption)
-                    .foregroundStyle(Color.riffitTextTertiary)
+            if showActions {
+                // Delete section (assets fall back to unsectioned)
+                Button {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.caption)
+                        .foregroundStyle(Color.riffitTextTertiary)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(.vertical, RS.xs)
     }

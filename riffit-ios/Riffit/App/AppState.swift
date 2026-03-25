@@ -41,6 +41,44 @@ class AppState: ObservableObject {
     /// Set after onboarding completes or when fetched from the DB.
     @Published var creatorProfileId: UUID?
 
+    // MARK: - Deep Link / Invite State
+
+    /// Token from a collaboration invite deep link (riffit.app/invite/{token}).
+    /// Stored here so it survives the auth flow — if user isn't signed in,
+    /// they sign in first, then the invite is resolved.
+    @Published var pendingInviteToken: String?
+
+    /// The story owner's user_id from the invite link record.
+    /// Set as `referred_by` on new users who sign up via this link.
+    @Published var pendingReferralUserId: UUID?
+
+    /// The resolved invite link data, ready for CollabJoinView to display.
+    /// Set after the token is looked up and validated.
+    @Published var resolvedInvite: ResolvedInvite?
+
+    /// Whether to show the CollabJoinView overlay.
+    @Published var showCollabJoinView: Bool = false
+
+    /// Data needed to display the CollabJoinView after resolving an invite token.
+    struct ResolvedInvite {
+        let inviteLink: StoryInviteLink
+        let storyTitle: String
+        let ownerName: String
+        let ownerAvatarUrl: String?
+        let assetCount: Int
+        let referenceCount: Int
+    }
+
+    /// Possible states when an invite link can't be used.
+    enum InviteError {
+        case expired
+        case notFound
+        case alreadyMember
+    }
+
+    /// Set when the invite link is invalid — CollabJoinView shows an error state.
+    @Published var inviteError: InviteError?
+
     /// User's chosen appearance mode, persisted across launches.
     /// Uses @Published + manual UserDefaults instead of @AppStorage
     /// because @AppStorage inside ObservableObject doesn't fire
@@ -264,6 +302,60 @@ class AppState: ObservableObject {
             Task {
                 await fetchUser(id: userId)
             }
+        }
+    }
+
+    // MARK: - Deep Link Handling
+
+    /// Parses a universal link URL and extracts the invite token if it matches
+    /// the pattern: riffit.app/invite/{token}
+    /// Called from .onOpenURL on the root view.
+    func handleDeepLink(_ url: URL) {
+        // Accept both riffit.app and any test scheme
+        let pathComponents = url.pathComponents.filter { $0 != "/" }
+
+        // Look for /invite/{token} pattern
+        guard pathComponents.count >= 2,
+              pathComponents[0] == "invite",
+              !pathComponents[1].isEmpty
+        else {
+            print("[AppState] Deep link ignored — not an invite URL: \(url)")
+            return
+        }
+
+        let token = pathComponents[1]
+        print("[AppState] Deep link received — invite token: \(token)")
+
+        pendingInviteToken = token
+
+        // Extract referral user ID from query params if present (?ref=xxx)
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let refParam = components.queryItems?.first(where: { $0.name == "ref" })?.value,
+           let refId = UUID(uuidString: refParam) {
+            pendingReferralUserId = refId
+        }
+
+        // If already signed in, resolve immediately
+        if isAuthenticated {
+            showCollabJoinView = true
+        }
+        // If not signed in, token stays in pendingInviteToken.
+        // After auth completes, the root view checks and shows CollabJoinView.
+    }
+
+    /// Called after an invite is successfully joined or dismissed.
+    func clearPendingInvite() {
+        pendingInviteToken = nil
+        pendingReferralUserId = nil
+        resolvedInvite = nil
+        inviteError = nil
+        showCollabJoinView = false
+    }
+
+    /// Called after auth completes to check if there's a pending invite to resolve.
+    func checkPendingInviteAfterAuth() {
+        if pendingInviteToken != nil {
+            showCollabJoinView = true
         }
     }
 }
