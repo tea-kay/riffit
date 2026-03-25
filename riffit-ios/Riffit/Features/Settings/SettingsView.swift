@@ -205,7 +205,9 @@ struct SettingsView: View {
         }
         .alert("Sign out?", isPresented: $showSignOutConfirm) {
             Button("Sign out", role: .destructive) {
-                // TODO: Wire to auth signOut
+                Task {
+                    await appState.signOut()
+                }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
