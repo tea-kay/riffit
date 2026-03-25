@@ -31,12 +31,16 @@ struct RootView: View {
                 // Show a minimal loading state while checking for an existing session
                 ProgressView()
                     .tint(Color.riffitPrimary)
+                    .onAppear { print("[RootView] 🔄 Showing: ProgressView (isLoading=true)") }
             } else if !appState.isAuthenticated {
                 AuthView()
+                    .onAppear { print("[RootView] 🔒 Showing: AuthView (isAuthenticated=false, currentUser=\(appState.currentUser?.email ?? "nil"))") }
             } else if !appState.isOnboardingComplete {
                 OnboardingView()
+                    .onAppear { print("[RootView] 📋 Showing: OnboardingView (isOnboardingComplete=false)") }
             } else {
                 MainTabView()
+                    .onAppear { print("[RootView] ✅ Showing: MainTabView") }
             }
         }
     }

@@ -73,6 +73,13 @@ class AppState: ObservableObject {
             for await (event, session) in supabase.auth.authStateChanges {
                 guard let self else { return }
 
+                print("[AppState] 🔔 authStateChanges event: \(event)")
+                print("[AppState]    session present: \(session != nil)")
+                if let session {
+                    print("[AppState]    session user.id: \(session.user.id)")
+                    print("[AppState]    session user.email: \(session.user.email ?? "nil")")
+                }
+
                 switch event {
                 case .initialSession, .signedIn, .tokenRefreshed:
                     if let session {
@@ -90,9 +97,12 @@ class AppState: ObservableObject {
                     break
                 }
 
+                print("[AppState] 📊 After event — currentUser: \(self.currentUser?.email ?? "nil"), isAuthenticated: \(self.isAuthenticated), isOnboardingComplete: \(self.isOnboardingComplete), isLoading: \(self.isLoading)")
+
                 // After the first event we know whether a session exists
                 if self.isLoading {
                     self.isLoading = false
+                    print("[AppState]    isLoading set to false")
                 }
             }
         }
@@ -108,6 +118,7 @@ class AppState: ObservableObject {
     /// If the row doesn't exist yet (first sign-in before the DB trigger
     /// creates it), currentUser stays nil and isLoading still clears.
     private func fetchUser(id: UUID) async {
+        print("[AppState] fetchUser called for id: \(id)")
         do {
             let user: RiffitUser = try await supabase
                 .from("users")
@@ -117,13 +128,14 @@ class AppState: ObservableObject {
                 .execute()
                 .value
 
+            print("[AppState] ✅ fetchUser succeeded — email: \(user.email), onboardingComplete: \(user.onboardingComplete)")
             self.currentUser = user
             // Sync the onboarding-derived creator profile if available
             // (will be fetched separately when creator_profiles table is wired)
         } catch {
             // Row may not exist yet — treat as unauthenticated for now.
             // A future session event will retry when the row is ready.
-            print("[AppState] Failed to fetch user: \(error)")
+            print("[AppState] ❌ fetchUser FAILED — \(error)")
             self.currentUser = nil
         }
     }

@@ -5,7 +5,7 @@ import Foundation
 struct RiffitUser: Codable, Identifiable {
     let id: UUID
     let email: String
-    let fullName: String
+    let fullName: String?
     let avatarUrl: String?
     let subscriptionTier: SubscriptionTier
     let onboardingComplete: Bool
