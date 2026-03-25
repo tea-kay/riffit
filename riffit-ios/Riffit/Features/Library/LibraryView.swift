@@ -3,6 +3,7 @@ import SwiftUI
 /// The main screen — folders at the top, unfiled ideas below.
 /// Drag an idea onto a folder to organize it.
 struct LibraryView: View {
+    @EnvironmentObject var appState: AppState
     @EnvironmentObject var viewModel: LibraryViewModel
     @EnvironmentObject var storybankViewModel: StorybankViewModel
     @State private var showAddSheet: Bool = false
@@ -15,6 +16,18 @@ struct LibraryView: View {
     @State private var selectedTagFilter: String?
 
     private let filterTags: [String] = ["Hook", "Editing", "B-Roll", "Format", "Topic", "Inspiration"]
+
+    /// First initial of the user's name or email for avatar fallback
+    private var userAvatarInitial: String {
+        if let name = appState.currentUser?.fullName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !name.isEmpty, let first = name.first {
+            return String(first).uppercased()
+        }
+        if let first = appState.currentUser?.email.first {
+            return String(first).uppercased()
+        }
+        return "?"
+    }
 
     /// Videos filtered by search query and tag, respecting folder scope.
     private var searchFilteredVideos: [InspirationVideo] {
@@ -212,7 +225,7 @@ struct LibraryView: View {
                     } else {
                         ForEach(searchFilteredVideos) { video in
                             NavigationLink(value: video) {
-                                IdeaRow(video: video, tags: viewModel.tags(for: video.id))
+                                IdeaRow(video: video, tags: viewModel.tags(for: video.id), avatarUrl: appState.currentUser?.avatarUrl, avatarInitial: userAvatarInitial)
                             }
                             .buttonStyle(.plain)
                             .contextMenu {
@@ -239,7 +252,7 @@ struct LibraryView: View {
 
                         ForEach(unfiled) { video in
                             NavigationLink(value: video) {
-                                IdeaRow(video: video, tags: viewModel.tags(for: video.id))
+                                IdeaRow(video: video, tags: viewModel.tags(for: video.id), avatarUrl: appState.currentUser?.avatarUrl, avatarInitial: userAvatarInitial)
                             }
                             .buttonStyle(.plain)
                             .draggable(video.id.uuidString)
@@ -437,9 +450,11 @@ struct FolderDropTarget: View {
 struct IdeaRow: View {
     let video: InspirationVideo
     let tags: [String]
+    var avatarUrl: String? = nil
+    var avatarInitial: String = "?"
 
     var body: some View {
-        InspirationCard(video: video, tags: tags)
+        InspirationCard(video: video, tags: tags, avatarUrl: avatarUrl, avatarInitial: avatarInitial)
     }
 }
 

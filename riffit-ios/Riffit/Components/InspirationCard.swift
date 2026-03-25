@@ -9,6 +9,8 @@ import SwiftUI
 struct InspirationCard: View {
     let video: InspirationVideo
     var tags: [String] = []
+    var avatarUrl: String? = nil
+    var avatarInitial: String = "?"
 
     var body: some View {
         VStack(alignment: .leading, spacing: RS.smPlus) {
@@ -35,6 +37,17 @@ struct InspirationCard: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
+            }
+
+            // Timestamp + avatar
+            HStack {
+                Text(video.savedAt.relativeTimestamp)
+                    .font(RF.meta)
+                    .foregroundStyle(Color.riffitTextTertiary)
+
+                Spacer()
+
+                cardAvatar
             }
 
             // Archived tag if applicable
@@ -118,6 +131,31 @@ struct InspirationCard: View {
         }
     }
 
+    // MARK: - Avatar
+
+    @ViewBuilder
+    private var cardAvatar: some View {
+        if let urlString = avatarUrl, let url = URL(string: urlString) {
+            AsyncImage(url: url) { image in
+                image.resizable().aspectRatio(contentMode: .fill)
+            } placeholder: {
+                avatarFallback
+            }
+            .frame(width: 28, height: 28)
+            .clipShape(Circle())
+        } else {
+            avatarFallback
+        }
+    }
+
+    private var avatarFallback: some View {
+        Text(avatarInitial)
+            .font(RF.caption)
+            .foregroundStyle(Color.riffitTextPrimary)
+            .frame(width: 28, height: 28)
+            .background(Color.riffitTeal600)
+            .clipShape(Circle())
+    }
 }
 
 // MARK: - Status Tag

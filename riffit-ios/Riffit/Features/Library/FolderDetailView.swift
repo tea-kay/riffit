@@ -5,6 +5,18 @@ import SwiftUI
 struct FolderDetailView: View {
     let folder: IdeaFolder
     @ObservedObject var viewModel: LibraryViewModel
+    @EnvironmentObject var appState: AppState
+
+    private var folderAvatarInitial: String {
+        if let name = appState.currentUser?.fullName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !name.isEmpty, let first = name.first {
+            return String(first).uppercased()
+        }
+        if let first = appState.currentUser?.email.first {
+            return String(first).uppercased()
+        }
+        return "?"
+    }
 
     @State private var showAddSheet: Bool = false
     @State private var showRenameAlert: Bool = false
@@ -26,7 +38,7 @@ struct FolderDetailView: View {
                     LazyVStack(spacing: RS.smPlus) {
                         ForEach(folderVideos) { video in
                             NavigationLink(value: video) {
-                                IdeaRow(video: video, tags: viewModel.tags(for: video.id))
+                                IdeaRow(video: video, tags: viewModel.tags(for: video.id), avatarUrl: appState.currentUser?.avatarUrl, avatarInitial: folderAvatarInitial)
                             }
                             .buttonStyle(.plain)
                             .contextMenu {

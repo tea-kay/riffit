@@ -4,6 +4,7 @@ import SwiftUI
 /// Each story collects assets (voice notes, video, images, text) and
 /// references to inspiration videos from the Library.
 struct StorybankView: View {
+    @EnvironmentObject var appState: AppState
     @EnvironmentObject var viewModel: StorybankViewModel
     @State private var showNewStoryAlert: Bool = false
     @State private var newStoryTitle: String = ""
@@ -11,6 +12,18 @@ struct StorybankView: View {
     @State private var newFolderName: String = ""
     @State private var showActionSheet: Bool = false
     @Environment(\.colorScheme) private var colorScheme
+
+    /// First initial of the user's name or email for avatar fallback
+    private var userAvatarInitial: String {
+        if let name = appState.currentUser?.fullName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !name.isEmpty, let first = name.first {
+            return String(first).uppercased()
+        }
+        if let first = appState.currentUser?.email.first {
+            return String(first).uppercased()
+        }
+        return "?"
+    }
 
     var body: some View {
         ZStack {
@@ -122,7 +135,7 @@ struct StorybankView: View {
 
                     ForEach(unfiled) { story in
                         NavigationLink(value: story) {
-                            StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id))
+                            StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id), avatarUrl: appState.currentUser?.avatarUrl, avatarInitial: userAvatarInitial)
                         }
                         .buttonStyle(.plain)
                         .draggable(story.id.uuidString)
@@ -275,7 +288,8 @@ struct GemIllustration: View {
 struct StoryCard: View {
     let story: Story
     let countsLabel: String
-
+    let avatarUrl: String?
+    let avatarInitial: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: RS.sm) {
@@ -296,10 +310,16 @@ struct StoryCard: View {
                 .font(RF.caption)
                 .foregroundStyle(Color.riffitTextSecondary)
 
-            // Timestamp
-            Text(story.updatedAt.relativeTimestamp)
-                .font(RF.meta)
-                .foregroundStyle(Color.riffitTextTertiary)
+            // Timestamp + author avatar
+            HStack {
+                Text(story.updatedAt.relativeTimestamp)
+                    .font(RF.meta)
+                    .foregroundStyle(Color.riffitTextTertiary)
+
+                Spacer()
+
+                cardAvatar
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(RS.md)
@@ -309,6 +329,30 @@ struct StoryCard: View {
             RoundedRectangle(cornerRadius: RR.card)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
+    }
+
+    @ViewBuilder
+    private var cardAvatar: some View {
+        if let urlString = avatarUrl, let url = URL(string: urlString) {
+            AsyncImage(url: url) { image in
+                image.resizable().aspectRatio(contentMode: .fill)
+            } placeholder: {
+                avatarFallback
+            }
+            .frame(width: 28, height: 28)
+            .clipShape(Circle())
+        } else {
+            avatarFallback
+        }
+    }
+
+    private var avatarFallback: some View {
+        Text(avatarInitial)
+            .font(RF.caption)
+            .foregroundStyle(Color.riffitTextPrimary)
+            .frame(width: 28, height: 28)
+            .background(Color.riffitTeal600)
+            .clipShape(Circle())
     }
 }
 
@@ -441,6 +485,18 @@ struct StoryFolderDropTarget: View {
 struct StoryFolderDetailView: View {
     let folder: StoryFolder
     @ObservedObject var viewModel: StorybankViewModel
+    @EnvironmentObject var appState: AppState
+
+    private var folderAvatarInitial: String {
+        if let name = appState.currentUser?.fullName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !name.isEmpty, let first = name.first {
+            return String(first).uppercased()
+        }
+        if let first = appState.currentUser?.email.first {
+            return String(first).uppercased()
+        }
+        return "?"
+    }
 
     @State private var showRenameAlert: Bool = false
     @State private var renameText: String = ""
@@ -471,7 +527,7 @@ struct StoryFolderDetailView: View {
                     LazyVStack(spacing: RS.smPlus) {
                         ForEach(folderStories) { story in
                             NavigationLink(value: story) {
-                                StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id))
+                                StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id), avatarUrl: appState.currentUser?.avatarUrl, avatarInitial: folderAvatarInitial)
                             }
                             .buttonStyle(.plain)
                             .contextMenu {
