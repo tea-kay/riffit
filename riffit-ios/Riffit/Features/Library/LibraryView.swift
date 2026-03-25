@@ -306,29 +306,33 @@ struct LibraryView: View {
 
     private var emptyState: some View {
         ZStack {
-            // Grid background — adaptive: beige in light, dark in dark
             gridBackground
 
-            VStack(spacing: RS.md) {
+            VStack(spacing: 0) {
                 Spacer()
 
-                // Wave barrel illustration
+                // Illustration — fixed 140pt frame so both tabs align
                 WaveBarrelIllustration()
-                    .frame(width: 180, height: 180)
+                    .frame(width: 180, height: 140)
+
+                Spacer().frame(height: RS.lg)  // 24pt
 
                 Text("Nothing here yet")
                     .font(RF.heading)
                     .foregroundStyle(Color.riffitTextPrimary)
 
+                Spacer().frame(height: RS.sm)  // 8pt
+
                 Text("Catch your first idea.")
                     .font(RF.caption)
                     .foregroundStyle(Color.riffitTextSecondary)
+
+                Spacer().frame(height: RS.lg)  // 24pt
 
                 RiffitButton(title: "Drop your first find", variant: .primary) {
                     showAddSheet = true
                 }
                 .padding(.horizontal, RS.xl2)
-                .padding(.top, RS.sm)
 
                 Spacer()
             }

@@ -160,14 +160,16 @@ struct StorybankView: View {
 
     private var emptyState: some View {
         ZStack {
-            // Grid background — matches Library empty state exactly
             storybankGridBackground
 
-            VStack(spacing: RS.md) {
+            VStack(spacing: 0) {
                 Spacer()
 
+                // Illustration — fixed 140pt frame so both tabs align
                 GemIllustration()
-                    .frame(width: 100, height: 108)
+                    .frame(width: 100, height: 140)
+
+                Spacer().frame(height: RS.lg)  // 24pt
 
                 Text(colorScheme == .dark
                      ? "Every story needs a spark."
@@ -175,16 +177,19 @@ struct StorybankView: View {
                     .font(RF.heading)
                     .foregroundStyle(Color.riffitTextPrimary)
 
+                Spacer().frame(height: RS.sm)  // 8pt
+
                 Text("Start building your first story.")
                     .font(RF.caption)
                     .foregroundStyle(Color.riffitTextSecondary)
+
+                Spacer().frame(height: RS.lg)  // 24pt
 
                 RiffitButton(title: "Start a new story", variant: .primary) {
                     newStoryTitle = ""
                     showNewStoryAlert = true
                 }
                 .padding(.horizontal, RS.xl2)
-                .padding(.top, RS.sm)
 
                 Spacer()
             }

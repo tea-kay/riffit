@@ -28,16 +28,22 @@ class LibraryViewModel: ObservableObject {
     var isEmpty: Bool { videos.isEmpty && folders.isEmpty }
 
     var unfiledVideos: [InspirationVideo] {
-        videos.filter { videoFolderMap[$0.id] == nil }
+        videos
+            .filter { videoFolderMap[$0.id] == nil }
+            .sorted { $0.savedAt > $1.savedAt }
     }
 
     /// Returns non-archived videos for use in pickers.
     var activeVideos: [InspirationVideo] {
-        videos.filter { $0.status != .archived }
+        videos
+            .filter { $0.status != .archived }
+            .sorted { $0.savedAt > $1.savedAt }
     }
 
     func videos(in folder: IdeaFolder) -> [InspirationVideo] {
-        videos.filter { videoFolderMap[$0.id] == folder.id }
+        videos
+            .filter { videoFolderMap[$0.id] == folder.id }
+            .sorted { $0.savedAt > $1.savedAt }
     }
 
     func tags(for videoId: UUID) -> [String] {

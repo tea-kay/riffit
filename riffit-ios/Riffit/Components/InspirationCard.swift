@@ -2,10 +2,11 @@ import SwiftUI
 
 /// Reusable card component for displaying an inspiration video.
 /// Layout (top to bottom):
-///   1. Platform label with teal dot
+///   1. Platform label (left) + relative timestamp (right)
 ///   2. Title (from metadata, user note, or platform fallback)
-///   3. Tag pills
-///   4. "Your take:" + user note (1 line)
+///   3. Tag pills (gold, capsule)
+///   4. "Your take:" + user note (italic, 1 line)
+///   5. Avatar footer (right-aligned)
 struct InspirationCard: View {
     let video: InspirationVideo
     var tags: [String] = []
@@ -13,19 +14,25 @@ struct InspirationCard: View {
     var avatarInitial: String = "?"
 
     var body: some View {
-        VStack(alignment: .leading, spacing: RS.smPlus) {
-            // Platform label
-            platformLabel
+        VStack(alignment: .leading, spacing: RS.sm) {
+            // Platform label (left) + timestamp (right)
+            HStack {
+                platformLabel
+                Spacer()
+                Text(video.savedAt.relativeTimestamp)
+                    .font(RF.caption)
+                    .foregroundStyle(Color.riffitTextTertiary)
+            }
 
             // Title
             titleSection
 
-            // Tag pills
+            // Tag pills — gold capsules matching the filter bar style
             if !tags.isEmpty {
                 tagsRow
             }
 
-            // User note
+            // User note — italic, with "Your take:" prefix
             if let note = video.userNote, !note.isEmpty {
                 HStack(spacing: 4) {
                     Text("Your take:")
@@ -33,20 +40,16 @@ struct InspirationCard: View {
                         .foregroundStyle(Color.riffitTextTertiary)
                     Text(note)
                         .font(RF.caption)
+                        .italic()
                         .foregroundStyle(Color.riffitTextSecondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
             }
 
-            // Timestamp + avatar
+            // Avatar footer — right-aligned
             HStack {
-                Text(video.savedAt.relativeTimestamp)
-                    .font(RF.meta)
-                    .foregroundStyle(Color.riffitTextTertiary)
-
                 Spacer()
-
                 cardAvatar
             }
 
@@ -97,12 +100,9 @@ struct InspirationCard: View {
     /// 2. First 8 words of video.userNote
     /// 3. Platform name + "reel" as last resort
     private var cardTitle: String {
-        // 1. Explicit title from metadata or manual entry
         if let title = video.title, !title.isEmpty {
             return title
         }
-
-        // 2. First 8 words of the user note
         if let note = video.userNote, !note.isEmpty {
             let words = note.split(separator: " ", omittingEmptySubsequences: true)
             if words.count <= 8 {
@@ -110,8 +110,6 @@ struct InspirationCard: View {
             }
             return words.prefix(8).joined(separator: " ") + "..."
         }
-
-        // 3. Platform + "reel" fallback
         return video.platform.displayLabel + " reel"
     }
 
@@ -126,12 +124,16 @@ struct InspirationCard: View {
                     .padding(.vertical, 3)
                     .padding(.horizontal, 8)
                     .background(Color.riffitPrimaryTint)
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.riffitPrimary, lineWidth: 0.5)
+                    )
                     .clipShape(Capsule())
             }
         }
     }
 
-    // MARK: - Avatar
+    // MARK: - Avatar (24pt)
 
     @ViewBuilder
     private var cardAvatar: some View {
@@ -141,7 +143,7 @@ struct InspirationCard: View {
             } placeholder: {
                 avatarFallback
             }
-            .frame(width: 28, height: 28)
+            .frame(width: 24, height: 24)
             .clipShape(Circle())
         } else {
             avatarFallback
@@ -150,9 +152,9 @@ struct InspirationCard: View {
 
     private var avatarFallback: some View {
         Text(avatarInitial)
-            .font(RF.caption)
+            .font(RF.meta)
             .foregroundStyle(Color.riffitTextPrimary)
-            .frame(width: 28, height: 28)
+            .frame(width: 24, height: 24)
             .background(Color.riffitTeal600)
             .clipShape(Circle())
     }
