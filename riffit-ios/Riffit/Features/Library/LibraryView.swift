@@ -329,7 +329,7 @@ struct LibraryView: View {
 
                 Spacer().frame(height: RS.lg)  // 24pt
 
-                RiffitButton(title: "Drop your first find", variant: .primary) {
+                RiffitButton(title: "Drop your first find", variant: .ghostGold) {
                     showAddSheet = true
                 }
                 .padding(.horizontal, RS.xl2)

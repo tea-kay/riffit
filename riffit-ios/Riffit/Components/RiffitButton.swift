@@ -12,19 +12,30 @@ struct RiffitButton: View {
         case primary
         case secondary
         case ghost
+        case ghostGold
         case danger
     }
 
     var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(RF.button)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .foregroundStyle(foregroundColor)
-                .background(backgroundColor)
-                .cornerRadius(RR.button)
-                .overlay(borderOverlay)
+        if variant == .ghostGold {
+            Button(action: action) {
+                Text(title)
+                    .font(RF.button)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+            }
+            .buttonStyle(RiffitGhostGoldButtonStyle())
+        } else {
+            Button(action: action) {
+                Text(title)
+                    .font(RF.button)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .foregroundStyle(foregroundColor)
+                    .background(backgroundColor)
+                    .cornerRadius(RR.button)
+                    .overlay(borderOverlay)
+            }
         }
     }
 
@@ -34,7 +45,7 @@ struct RiffitButton: View {
             return Color.riffitOnPrimary
         case .secondary:
             return Color.riffitPrimary
-        case .ghost:
+        case .ghost, .ghostGold:
             return Color.riffitTeal600
         case .danger:
             return Color.riffitDanger
@@ -47,7 +58,7 @@ struct RiffitButton: View {
             return Color.riffitPrimary
         case .secondary:
             return Color.riffitElevated
-        case .ghost:
+        case .ghost, .ghostGold:
             return Color.riffitTealTint
         case .danger:
             return Color.riffitDangerTint
@@ -63,5 +74,29 @@ struct RiffitButton: View {
         default:
             EmptyView()
         }
+    }
+}
+
+// MARK: - Ghost Gold Button Style
+
+/// Dark-mode empty state CTA style.
+/// Default: #111111 fill, gold text, gold 1pt border.
+/// Pressed: gold fill, #111111 text, no border.
+/// Animates fill + text color with .easeInOut 0.15s.
+struct RiffitGhostGoldButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        let isPressed = configuration.isPressed
+        configuration.label
+            .foregroundStyle(isPressed ? Color(hex: 0x111111) : Color.riffitPrimary)
+            .background(
+                RoundedRectangle(cornerRadius: RR.button)
+                    .fill(isPressed ? Color.riffitPrimary : Color(hex: 0x111111))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: RR.button)
+                    .stroke(isPressed ? Color.clear : Color.riffitPrimary, lineWidth: 1)
+            )
+            .cornerRadius(RR.button)
+            .animation(.easeInOut(duration: 0.15), value: isPressed)
     }
 }

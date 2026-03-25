@@ -185,7 +185,7 @@ struct StorybankView: View {
 
                 Spacer().frame(height: RS.lg)  // 24pt
 
-                RiffitButton(title: "Start a new story", variant: .primary) {
+                RiffitButton(title: "Start a new story", variant: .ghostGold) {
                     newStoryTitle = ""
                     showNewStoryAlert = true
                 }
