@@ -179,6 +179,7 @@ private struct DevEmailSignInSection: View {
                     avatarUrl: nil,
                     subscriptionTier: .free,
                     onboardingComplete: true,
+                    referredBy: nil,
                     createdAt: Date()
                 )
                 appState.isLoading = false

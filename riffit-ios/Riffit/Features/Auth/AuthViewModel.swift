@@ -108,6 +108,7 @@ class AuthViewModel: ObservableObject {
             avatarUrl: nil,
             subscriptionTier: .free,
             onboardingComplete: false,
+            referredBy: nil,
             createdAt: Date()
         )
         appState.isLoading = false

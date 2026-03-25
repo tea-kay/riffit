@@ -10,6 +10,9 @@ struct RiffitUser: Codable, Identifiable {
     let avatarUrl: String?
     let subscriptionTier: SubscriptionTier
     let onboardingComplete: Bool
+    /// The user ID of whoever referred this user (via invite link or referral link).
+    /// First referrer wins — once set, this is never overwritten.
+    let referredBy: UUID?
     let createdAt: Date
 
     enum SubscriptionTier: String, Codable {
@@ -25,6 +28,7 @@ struct RiffitUser: Codable, Identifiable {
         case avatarUrl = "avatar_url"
         case subscriptionTier = "subscription_tier"
         case onboardingComplete = "onboarding_complete"
+        case referredBy = "referred_by"
         case createdAt = "created_at"
     }
 }

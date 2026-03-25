@@ -1053,5 +1053,6 @@ CLAUDE.md              — Architecture, rules, design tokens, prompt templates
 CONTEXT.md             — Current state only (overwrite each session)
 CHANGES.md             — Append-only changelog with dates
 DESIGN_SYSTEM_UPDATE.md — Visual design spec (stable, rarely changes)
+specs:/                — Feature specs (Earn referral program, Story collaboration, template)
 docs/history/          — Archived old context files
 ```
