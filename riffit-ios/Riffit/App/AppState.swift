@@ -155,13 +155,23 @@ class AppState: ObservableObject {
 
     /// Updates the user's username in the database and refreshes currentUser.
     func updateUsername(_ username: String) async throws {
-        guard let userId = currentUser?.id else { return }
-        try await supabase
-            .from("users")
-            .update(["username": username])
-            .eq("id", value: userId)
-            .execute()
-        await fetchUser(id: userId)
+        guard let userId = currentUser?.id else {
+            print("[AppState] updateUsername — no currentUser, aborting")
+            return
+        }
+        print("[AppState] updateUsername — saving '\(username)' for user \(userId)")
+        do {
+            try await supabase
+                .from("users")
+                .update(["username": username])
+                .eq("id", value: userId)
+                .execute()
+            print("[AppState] updateUsername — saved OK")
+            await fetchUser(id: userId)
+        } catch {
+            print("[AppState] ❌ updateUsername FAILED — \(error)")
+            throw error
+        }
     }
 
     /// Uploads an image to Supabase Storage and updates avatar_url on the user row.

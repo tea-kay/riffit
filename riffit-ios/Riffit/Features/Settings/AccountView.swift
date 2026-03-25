@@ -2,7 +2,7 @@ import CoreTransferable
 import PhotosUI
 import SwiftUI
 
-/// Account management screen — editable profile name and photo,
+/// Account management screen — editable profile (name, handle, photo),
 /// read-only email, and account deletion (coming soon).
 struct AccountView: View {
     @EnvironmentObject var appState: AppState
@@ -13,10 +13,11 @@ struct AccountView: View {
     @State private var isSavingName: Bool = false
     @State private var nameSaveError: String?
 
-    // Editable username field — seeded from currentUser on appear
+    // Editable username — inline in the profile card
     @State private var usernameText: String = ""
+    @State private var isEditingHandle: Bool = false
     @State private var isSavingUsername: Bool = false
-    @State private var usernameSaveError: String?
+    @State private var usernameError: String?
 
     // Photo picker
     @State private var selectedPhotoItem: PhotosPickerItem?
@@ -35,13 +36,12 @@ struct AccountView: View {
     private var displayHandle: String {
         if let username = appState.currentUser?.username?.trimmingCharacters(in: .whitespacesAndNewlines),
            !username.isEmpty {
-            return "@\(username)"
+            return username
         }
         if let email = appState.currentUser?.email {
-            let prefix = email.components(separatedBy: "@").first ?? ""
-            if !prefix.isEmpty { return "@\(prefix)" }
+            return email.components(separatedBy: "@").first ?? "you"
         }
-        return "@you"
+        return "you"
     }
 
     /// Initials from full_name (first + last initial) or email (first letter)
@@ -79,18 +79,13 @@ struct AccountView: View {
 
             ScrollView {
                 VStack(spacing: RS.lg) {
-                    // ── Identity card with tappable avatar ──
+                    // ── Identity card with inline-editable @handle ──
                     identityCard
 
                     // ── Profile section ──
                     accountSection("Profile") {
-                        // Editable full name
                         nameField
 
-                        // Editable username
-                        usernameField
-
-                        // Read-only email
                         readOnlyField(
                             label: "Email",
                             value: appState.currentUser?.email,
@@ -146,9 +141,8 @@ struct AccountView: View {
             }
         }
         .onAppear {
-            // Seed editable fields from the current user
             nameText = appState.currentUser?.fullName ?? ""
-            usernameText = appState.currentUser?.username ?? ""
+            usernameText = displayHandle
         }
         .onChange(of: selectedPhotoItem) { newItem in
             guard let item = newItem else { return }
@@ -175,7 +169,6 @@ struct AccountView: View {
                         .frame(width: 56, height: 56)
                         .clipShape(Circle())
 
-                    // Upload spinner overlay
                     if isUploadingPhoto {
                         Circle()
                             .fill(Color.riffitBackground.opacity(0.6))
@@ -189,15 +182,61 @@ struct AccountView: View {
             .disabled(isUploadingPhoto)
 
             VStack(alignment: .leading, spacing: RS.xs) {
-                // Tapping the @handle focuses the username field below
-                Button {
-                    focusedField = .username
-                } label: {
-                    Text(displayHandle)
+                // Inline-editable @handle
+                if isEditingHandle {
+                    HStack(spacing: 0) {
+                        Text("@")
+                            .font(RF.heading)
+                            .foregroundStyle(Color.riffitTextTertiary)
+
+                        TextField("handle", text: $usernameText)
+                            .font(RF.heading)
+                            .foregroundStyle(Color.riffitTextPrimary)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .focused($focusedField, equals: .username)
+                            .onSubmit { Task { await saveUsername() } }
+                            // Focus the TextField after it appears in the view tree
+                            .onAppear {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    focusedField = .username
+                                }
+                            }
+
+                        if isSavingUsername {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(Color.riffitPrimary)
+                        } else {
+                            Button {
+                                Task { await saveUsername() }
+                            } label: {
+                                Text("Save")
+                                    .font(RF.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(Color.riffitPrimary)
+                            }
+                        }
+                    }
+                } else {
+                    // Display mode — entire row is tappable to enter edit mode
+                    Text("@\(displayHandle)")
                         .font(RF.heading)
                         .foregroundStyle(Color.riffitTextPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            print("[AccountView] @name tapped, entering edit mode")
+                            usernameText = displayHandle
+                            isEditingHandle = true
+                        }
                 }
-                .buttonStyle(.plain)
+
+                if let error = usernameError {
+                    Text(error)
+                        .font(RF.meta)
+                        .foregroundStyle(Color.riffitDanger)
+                }
 
                 Text("\(tierLabel) plan")
                     .font(RF.caption)
@@ -211,7 +250,8 @@ struct AccountView: View {
         .cornerRadius(RR.card)
         .overlay(
             RoundedRectangle(cornerRadius: RR.card)
-                .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+                .stroke(isEditingHandle ? Color.riffitPrimary.opacity(0.5) : Color.riffitBorderSubtle,
+                        lineWidth: isEditingHandle ? 1 : 0.5)
         )
     }
 
@@ -261,6 +301,7 @@ struct AccountView: View {
                     .textInputAutocapitalization(.words)
                     .autocorrectionDisabled()
                     .focused($focusedField, equals: .name)
+                    .onSubmit { Task { await saveName() } }
 
                 if isSavingName {
                     ProgressView()
@@ -302,70 +343,6 @@ struct AccountView: View {
         .onTapGesture { focusedField = .name }
     }
 
-    // MARK: - Username Field
-
-    private var usernameField: some View {
-        let isFocused = focusedField == .username
-        return VStack(alignment: .leading, spacing: RS.xs) {
-            Text("Username")
-                .font(RF.caption)
-                .foregroundStyle(Color.riffitTextTertiary)
-
-            HStack(spacing: 0) {
-                // The @ prefix — always visible, not part of the editable text
-                Text("@")
-                    .font(RF.bodyMd)
-                    .foregroundStyle(Color.riffitTextTertiary)
-
-                TextField("yourhandle", text: $usernameText)
-                    .font(RF.bodyMd)
-                    .foregroundStyle(Color.riffitTextPrimary)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .focused($focusedField, equals: .username)
-
-                Spacer()
-
-                if isSavingUsername {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(Color.riffitPrimary)
-                } else if isFocused {
-                    Button {
-                        Task { await saveUsername() }
-                    } label: {
-                        Text("Save")
-                            .font(RF.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(Color.riffitPrimary)
-                    }
-                } else {
-                    Button { focusedField = .username } label: {
-                        Image(systemName: "pencil")
-                            .font(.caption)
-                            .foregroundStyle(Color.riffitTextTertiary)
-                    }
-                }
-            }
-
-            if let error = usernameSaveError {
-                Text(error)
-                    .font(RF.meta)
-                    .foregroundStyle(Color.riffitDanger)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(RS.md)
-        .background(Color.riffitSurface)
-        .cornerRadius(RR.input)
-        .overlay(
-            RoundedRectangle(cornerRadius: RR.input)
-                .stroke(isFocused ? Color.riffitPrimary.opacity(0.5) : Color.riffitBorderSubtle,
-                        lineWidth: isFocused ? 1 : 0.5)
-        )
-        .onTapGesture { focusedField = .username }
-    }
-
     // MARK: - Save Name
 
     private func saveName() async {
@@ -389,7 +366,6 @@ struct AccountView: View {
     // MARK: - Save Username
 
     private func saveUsername() async {
-        // Strip @ if user accidentally typed it, then trim whitespace
         let trimmed = usernameText
             .replacingOccurrences(of: "@", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -397,17 +373,24 @@ struct AccountView: View {
         usernameText = trimmed
 
         if trimmed == (appState.currentUser?.username ?? "") {
+            print("[AccountView] Username unchanged, dismissing editor")
             focusedField = nil
+            isEditingHandle = false
             return
         }
+
+        let previousValue = displayHandle
         isSavingUsername = true
-        usernameSaveError = nil
+        usernameError = nil
         do {
             try await appState.updateUsername(trimmed)
+            print("[AccountView] ✅ Username saved: \(trimmed)")
             focusedField = nil
+            isEditingHandle = false
         } catch {
-            usernameSaveError = "Could not save username. Try again."
-            print("[AccountView] Username save failed: \(error)")
+            usernameText = previousValue
+            usernameError = "Could not save. Try again."
+            print("[AccountView] ❌ Username save failed: \(error)")
         }
         isSavingUsername = false
     }
@@ -420,12 +403,8 @@ struct AccountView: View {
         photoError = nil
         defer { isUploadingPhoto = false }
 
-        // Load raw image data from the picker item.
-        // loadTransferable(type: Data.self) fails for most photo types,
-        // so we load as UIImage via a Transferable wrapper instead.
         let data: Data?
         do {
-            // Try loading as Data first (works for PNG/JPEG screenshots)
             data = try await item.loadTransferable(type: Data.self)
             print("[AccountView]    loadTransferable(Data) returned \(data?.count ?? 0) bytes")
         } catch {
@@ -433,13 +412,11 @@ struct AccountView: View {
             data = nil
         }
 
-        // Build a UIImage from the raw data, or fall back to loading via
-        // the PickerImage Transferable wrapper (handles HEIF, Live Photos, etc.)
         let uiImage: UIImage?
         if let data, let img = UIImage(data: data) {
             uiImage = img
         } else {
-            print("[AccountView]    Data didn't produce a UIImage, trying PickerImage transferable")
+            print("[AccountView]    Trying PickerImage transferable")
             do {
                 if let pickerImage = try await item.loadTransferable(type: PickerImage.self) {
                     uiImage = pickerImage.uiImage
@@ -449,7 +426,7 @@ struct AccountView: View {
                     print("[AccountView]    PickerImage returned nil")
                 }
             } catch {
-                print("[AccountView]    PickerImage loadTransferable threw: \(error)")
+                print("[AccountView]    PickerImage threw: \(error)")
                 uiImage = nil
             }
         }
@@ -475,7 +452,6 @@ struct AccountView: View {
             print("[AccountView] ❌ Avatar upload failed: \(error)")
         }
     }
-
 
     // MARK: - Read-Only Field
 
@@ -527,9 +503,6 @@ struct AccountView: View {
 
 // MARK: - PickerImage Transferable
 
-/// A Transferable wrapper that lets PhotosPickerItem decode images
-/// in any format the system supports (JPEG, HEIF, PNG, etc.)
-/// by going through UIImage's broad format support.
 private struct PickerImage: Transferable {
     let uiImage: UIImage
 
