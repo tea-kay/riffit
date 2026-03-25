@@ -140,6 +140,76 @@ class AppState: ObservableObject {
         }
     }
 
+    // MARK: - Profile Updates
+
+    /// Updates the user's full_name in the database and refreshes currentUser.
+    func updateFullName(_ name: String) async throws {
+        guard let userId = currentUser?.id else { return }
+        try await supabase
+            .from("users")
+            .update(["full_name": name])
+            .eq("id", value: userId)
+            .execute()
+        await fetchUser(id: userId)
+    }
+
+    /// Updates the user's username in the database and refreshes currentUser.
+    func updateUsername(_ username: String) async throws {
+        guard let userId = currentUser?.id else { return }
+        try await supabase
+            .from("users")
+            .update(["username": username])
+            .eq("id", value: userId)
+            .execute()
+        await fetchUser(id: userId)
+    }
+
+    /// Uploads an image to Supabase Storage and updates avatar_url on the user row.
+    func uploadAvatar(imageData: Data) async throws {
+        guard let userId = currentUser?.id else {
+            print("[AppState] uploadAvatar — no currentUser, aborting")
+            return
+        }
+
+        let filePath = "\(userId.uuidString)/avatar.jpg"
+        print("[AppState] uploadAvatar — uploading \(imageData.count) bytes to thumbnails/\(filePath)")
+
+        // Upload to the "thumbnails" bucket (public, per CLAUDE.md)
+        // Use upsert so re-uploads overwrite the previous avatar
+        let uploadResponse = try await supabase.storage
+            .from("thumbnails")
+            .upload(
+                filePath,
+                data: imageData,
+                options: FileOptions(
+                    contentType: "image/jpeg",
+                    upsert: true
+                )
+            )
+        print("[AppState] uploadAvatar — storage upload succeeded: \(uploadResponse)")
+
+        // Build the public URL for the uploaded file.
+        // Append a cache-busting timestamp so AsyncImage treats re-uploads
+        // as a new URL — otherwise it serves the stale cached version.
+        let baseUrl = try supabase.storage
+            .from("thumbnails")
+            .getPublicURL(path: filePath)
+        let cacheBustedUrl = "\(baseUrl.absoluteString)?t=\(Int(Date().timeIntervalSince1970))"
+        print("[AppState] uploadAvatar — public URL: \(cacheBustedUrl)")
+
+        // Save the URL to the user row
+        try await supabase
+            .from("users")
+            .update(["avatar_url": cacheBustedUrl])
+            .eq("id", value: userId)
+            .execute()
+        print("[AppState] uploadAvatar — users table updated with avatar_url")
+
+        // Re-fetch so currentUser.avatarUrl updates everywhere
+        await fetchUser(id: userId)
+        print("[AppState] uploadAvatar — currentUser refreshed, avatarUrl: \(currentUser?.avatarUrl ?? "nil")")
+    }
+
     // MARK: - Debug Connection Test (TEMPORARY — remove after verifying)
 
     #if DEBUG

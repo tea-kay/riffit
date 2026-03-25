@@ -104,6 +104,7 @@ class AuthViewModel: ObservableObject {
             id: UUID(),
             email: "placeholder@riffit.com",
             fullName: "New User",
+            username: nil,
             avatarUrl: nil,
             subscriptionTier: .free,
             onboardingComplete: false,

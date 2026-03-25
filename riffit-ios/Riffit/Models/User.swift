@@ -6,6 +6,7 @@ struct RiffitUser: Codable, Identifiable {
     let id: UUID
     let email: String
     let fullName: String?
+    let username: String?
     let avatarUrl: String?
     let subscriptionTier: SubscriptionTier
     let onboardingComplete: Bool
@@ -20,6 +21,7 @@ struct RiffitUser: Codable, Identifiable {
         case id
         case email
         case fullName = "full_name"
+        case username
         case avatarUrl = "avatar_url"
         case subscriptionTier = "subscription_tier"
         case onboardingComplete = "onboarding_complete"

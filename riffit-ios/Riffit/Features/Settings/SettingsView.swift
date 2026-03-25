@@ -9,17 +9,26 @@ struct SettingsView: View {
 
     @State private var showComingSoon: Bool = false
     @State private var showSignOutConfirm: Bool = false
-    @AppStorage("riffit_full_name") private var fullName: String = "Timothy"
-    @AppStorage("riffit_username") private var username: String = ""
-    @AppStorage("riffit_profile_image") private var profileImageBase64: String = ""
 
-    /// Display name: @username if set, otherwise full name
+    /// Display name: @username if set, else @email_prefix.
     private var displayName: String {
-        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedUsername.isEmpty { return "@\(trimmedUsername)" }
-        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedName.isEmpty { return trimmedName }
-        return "Your name"
+        if let username = appState.currentUser?.username?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !username.isEmpty {
+            return "@\(username)"
+        }
+        if let email = appState.currentUser?.email {
+            let prefix = email.components(separatedBy: "@").first ?? ""
+            if !prefix.isEmpty { return "@\(prefix)" }
+        }
+        return "@you"
+    }
+
+    /// Subscription tier label from the authenticated user, capitalized.
+    private var tierLabel: String {
+        switch appState.currentUser?.subscriptionTier {
+        case .pro: return "Pro"
+        default: return "Free"
+        }
     }
 
     /// Dynamic subtitle for the "Your influences" row
@@ -217,49 +226,45 @@ struct SettingsView: View {
 
     // MARK: - Account Card
 
-    /// Loads profile image from base64 storage
-    private var profileImage: UIImage? {
-        guard !profileImageBase64.isEmpty,
-              let data = Data(base64Encoded: profileImageBase64)
-        else { return nil }
-        return UIImage(data: data)
-    }
-
-    /// First letter of display name for the avatar fallback (skips @ prefix)
-    private var avatarInitial: String {
-        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedUsername.isEmpty, let first = trimmedUsername.first {
+    /// Initials derived from full_name (first letter of first + last name)
+    /// or email (first letter). Used as avatar fallback.
+    private var avatarInitials: String {
+        if let name = appState.currentUser?.fullName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !name.isEmpty {
+            let parts = name.split(separator: " ")
+            if parts.count >= 2,
+               let first = parts.first?.first,
+               let last = parts.last?.first {
+                return "\(first)\(last)".uppercased()
+            }
+            // Single-word name — just the first letter
+            if let first = parts.first?.first {
+                return String(first).uppercased()
+            }
+        }
+        // Fall back to first letter of email
+        if let first = appState.currentUser?.email.first {
             return String(first).uppercased()
         }
-        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let first = trimmedName.first else { return "?" }
-        return String(first).uppercased()
+        return "?"
     }
 
     private var accountCard: some View {
         HStack(spacing: RS.smPlus) {
-            // Avatar — profile image or initial letter fallback
-            if let image = profileImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 48, height: 48)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color.riffitTeal400, lineWidth: 1.5)
-                    )
+            // Avatar — remote image or initials fallback
+            if let avatarUrlString = appState.currentUser?.avatarUrl,
+               let avatarUrl = URL(string: avatarUrlString) {
+                AsyncImage(url: avatarUrl) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    initialsAvatar
+                }
+                .frame(width: 48, height: 48)
+                .clipShape(Circle())
             } else {
-                Text(avatarInitial)
-                    .font(RF.heading)
-                    .foregroundStyle(Color.riffitTeal400)
-                    .frame(width: 48, height: 48)
-                    .background(Color.riffitTealTint)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color.riffitTeal400, lineWidth: 1.5)
-                    )
+                initialsAvatar
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -267,25 +272,12 @@ struct SettingsView: View {
                     .font(RF.heading)
                     .foregroundStyle(Color.riffitTextPrimary)
 
-                Text("Creator · Free plan")
+                Text("\(tierLabel) plan")
                     .font(RF.caption)
                     .foregroundStyle(Color.riffitTextSecondary)
             }
 
             Spacer()
-
-            // Free badge + chevron
-            Text("Free")
-                .font(RF.tag)
-                .foregroundStyle(Color.riffitPrimary)
-                .padding(.vertical, 3)
-                .padding(.horizontal, 8)
-                .background(Color.riffitPrimaryTint)
-                .clipShape(Capsule())
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(Color.riffitTextTertiary)
         }
         .contentShape(Rectangle())
         .padding(RS.md)
@@ -295,6 +287,16 @@ struct SettingsView: View {
             RoundedRectangle(cornerRadius: RR.card)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
+    }
+
+    /// Initials circle used when no avatar image is available
+    private var initialsAvatar: some View {
+        Text(avatarInitials)
+            .font(RF.heading)
+            .foregroundStyle(Color.riffitTextPrimary)
+            .frame(width: 48, height: 48)
+            .background(Color.riffitTeal600)
+            .clipShape(Circle())
     }
 
     // MARK: - Section Builder

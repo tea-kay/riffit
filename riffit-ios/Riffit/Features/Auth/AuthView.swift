@@ -175,6 +175,7 @@ private struct DevEmailSignInSection: View {
                     id: UUID(),
                     email: "test@riffit.com",
                     fullName: "Test User",
+                    username: nil,
                     avatarUrl: nil,
                     subscriptionTier: .free,
                     onboardingComplete: true,

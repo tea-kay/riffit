@@ -1,51 +1,75 @@
+import CoreTransferable
 import PhotosUI
 import SwiftUI
 
-/// Account management screen — profile image, editable name/username,
-/// workspace actions, and account deletion.
+/// Account management screen — editable profile name and photo,
+/// read-only email, and account deletion (coming soon).
 struct AccountView: View {
-    @State private var showComingSoon: Bool = false
+    @EnvironmentObject var appState: AppState
     @State private var showDeleteConfirm: Bool = false
+
+    // Editable name field — seeded from currentUser on appear
+    @State private var nameText: String = ""
+    @State private var isSavingName: Bool = false
+    @State private var nameSaveError: String?
+
+    // Editable username field — seeded from currentUser on appear
+    @State private var usernameText: String = ""
+    @State private var isSavingUsername: Bool = false
+    @State private var usernameSaveError: String?
+
+    // Photo picker
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var isUploadingPhoto: Bool = false
+    @State private var photoError: String?
 
-    // Persisted profile data — will be replaced with Supabase auth later
-    @AppStorage("riffit_full_name") private var fullName: String = "Timothy"
-    @AppStorage("riffit_username") private var username: String = ""
-    @AppStorage("riffit_profile_image") private var profileImageBase64: String = ""
-
-    @FocusState private var focusedField: ProfileField?
-
-    private enum ProfileField {
-        case fullName
+    private enum FocusedField {
+        case name
         case username
     }
+    @FocusState private var focusedField: FocusedField?
 
-    /// Display name: @username if set, otherwise full name
-    private var displayName: String {
-        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedUsername.isEmpty { return "@\(trimmedUsername)" }
-        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedName.isEmpty { return trimmedName }
-        return "Your name"
+    // MARK: - Computed Properties
+
+    /// Handle: username if set, else email prefix
+    private var displayHandle: String {
+        if let username = appState.currentUser?.username?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !username.isEmpty {
+            return "@\(username)"
+        }
+        if let email = appState.currentUser?.email {
+            let prefix = email.components(separatedBy: "@").first ?? ""
+            if !prefix.isEmpty { return "@\(prefix)" }
+        }
+        return "@you"
     }
 
-    /// First letter of display name for avatar fallback (skips @ prefix)
-    private var avatarInitial: String {
-        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedUsername.isEmpty, let first = trimmedUsername.first {
+    /// Initials from full_name (first + last initial) or email (first letter)
+    private var avatarInitials: String {
+        if let name = appState.currentUser?.fullName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !name.isEmpty {
+            let parts = name.split(separator: " ")
+            if parts.count >= 2,
+               let first = parts.first?.first,
+               let last = parts.last?.first {
+                return "\(first)\(last)".uppercased()
+            }
+            if let first = parts.first?.first {
+                return String(first).uppercased()
+            }
+        }
+        if let first = appState.currentUser?.email.first {
             return String(first).uppercased()
         }
-        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let first = trimmedName.first else { return "?" }
-        return String(first).uppercased()
+        return "?"
     }
 
-    /// Loads the profile image from base64 storage
-    private var profileImage: UIImage? {
-        guard !profileImageBase64.isEmpty,
-              let data = Data(base64Encoded: profileImageBase64)
-        else { return nil }
-        return UIImage(data: data)
+    /// Subscription tier label, capitalized
+    private var tierLabel: String {
+        switch appState.currentUser?.subscriptionTier {
+        case .pro: return "Pro"
+        default: return "Free"
+        }
     }
 
     var body: some View {
@@ -55,39 +79,22 @@ struct AccountView: View {
 
             ScrollView {
                 VStack(spacing: RS.lg) {
-                    // ── Identity card with interactive avatar ──
+                    // ── Identity card with tappable avatar ──
                     identityCard
 
-                    // ── Profile section (editable fields) ──
+                    // ── Profile section ──
                     accountSection("Profile") {
-                        profileField(
-                            label: "Full name",
-                            placeholder: "Your full name",
-                            text: $fullName,
-                            field: .fullName
-                        )
+                        // Editable full name
+                        nameField
 
-                        profileField(
-                            label: "Username",
-                            placeholder: "yourhandle",
-                            text: $username,
-                            field: .username,
-                            prefix: "@"
-                        )
-                    }
+                        // Editable username
+                        usernameField
 
-                    // ── Workspace section ──
-                    accountSection("Workspace") {
-                        workspaceRow(
-                            icon: "arrow.left.arrow.right",
-                            title: "Switch account",
-                            subtitle: "Move between your accounts"
-                        )
-
-                        workspaceRow(
-                            icon: "person.2.fill",
-                            title: "Join workspace",
-                            subtitle: "Enter an invite code to join a team"
+                        // Read-only email
+                        readOnlyField(
+                            label: "Email",
+                            value: appState.currentUser?.email,
+                            placeholder: "No email"
                         )
                     }
 
@@ -138,100 +145,63 @@ struct AccountView: View {
                     .foregroundStyle(Color.riffitTextPrimary)
             }
         }
+        .onAppear {
+            // Seed editable fields from the current user
+            nameText = appState.currentUser?.fullName ?? ""
+            usernameText = appState.currentUser?.username ?? ""
+        }
         .onChange(of: selectedPhotoItem) { newItem in
             guard let item = newItem else { return }
             Task {
-                await loadPhoto(from: item)
+                await uploadPhoto(from: item)
                 selectedPhotoItem = nil
             }
         }
-        .sheet(isPresented: $showComingSoon) {
-            comingSoonSheet
-        }
         .alert("Delete your account?", isPresented: $showDeleteConfirm) {
-            Button("Delete account", role: .destructive) {
-                // TODO: Wire to account deletion
-            }
-            Button("Cancel", role: .cancel) {}
+            Button("OK", role: .cancel) {}
         } message: {
-            Text("This will permanently delete your library, stories, and all your data. This cannot be undone.")
+            Text("This feature is coming soon. Account deletion is not yet available.")
         }
-    }
-
-    // MARK: - Photo Loading
-
-    private func loadPhoto(from item: PhotosPickerItem) async {
-        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
-        // Compress to JPEG for reasonable base64 size
-        guard let uiImage = UIImage(data: data),
-              let compressed = uiImage.jpegData(compressionQuality: 0.5)
-        else { return }
-        profileImageBase64 = compressed.base64EncodedString()
     }
 
     // MARK: - Identity Card
 
     private var identityCard: some View {
         HStack(spacing: RS.smPlus) {
-            // Interactive avatar — tap to open photo library directly
+            // Avatar — tap to pick a new photo
             PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                ZStack(alignment: .bottomTrailing) {
-                    // Avatar circle
-                    if let image = profileImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 56, height: 56)
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.riffitTeal400, lineWidth: 2)
-                            )
-                    } else {
-                        Text(avatarInitial)
-                            .font(.custom("DMSans-Medium", size: 22))
-                            .foregroundStyle(Color.riffitTeal400)
-                            .frame(width: 56, height: 56)
-                            .background(Color.riffitTealTint)
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.riffitTeal400, lineWidth: 2)
-                            )
-                    }
-
-                    // Camera badge
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 9))
-                        .foregroundStyle(Color.riffitOnPrimary)
-                        .frame(width: 18, height: 18)
-                        .background(Color.riffitPrimary)
+                ZStack {
+                    avatarImage
+                        .frame(width: 56, height: 56)
                         .clipShape(Circle())
-                        .offset(x: 2, y: 2)
+
+                    // Upload spinner overlay
+                    if isUploadingPhoto {
+                        Circle()
+                            .fill(Color.riffitBackground.opacity(0.6))
+                            .frame(width: 56, height: 56)
+                        ProgressView()
+                            .tint(Color.riffitPrimary)
+                    }
                 }
             }
             .buttonStyle(.plain)
+            .disabled(isUploadingPhoto)
 
             VStack(alignment: .leading, spacing: RS.xs) {
-                // Display name — @username if set, otherwise full name
-                Text(displayName)
-                    .font(.custom("Lora-Bold", size: 17))
-                    .foregroundStyle(Color.riffitTextPrimary)
-
-                // Account type + plan tier
-                HStack(spacing: RS.sm) {
-                    Text("Creator")
-                        .font(RF.tag)
-                        .foregroundStyle(Color.riffitTeal400)
-                        .padding(.vertical, 3)
-                        .padding(.horizontal, 8)
-                        .background(Color.riffitTealTint)
-                        .clipShape(Capsule())
-
-                    Text("Free plan")
-                        .font(RF.caption)
-                        .foregroundStyle(Color.riffitTextTertiary)
+                // Tapping the @handle focuses the username field below
+                Button {
+                    focusedField = .username
+                } label: {
+                    Text(displayHandle)
+                        .font(RF.heading)
+                        .foregroundStyle(Color.riffitTextPrimary)
                 }
+                .buttonStyle(.plain)
+
+                Text("\(tierLabel) plan")
+                    .font(RF.caption)
+                    .foregroundStyle(Color.riffitTextSecondary)
             }
 
             Spacer()
@@ -245,51 +215,292 @@ struct AccountView: View {
         )
     }
 
-    // MARK: - Profile Field
+    /// Resolves the avatar image: remote URL, or initials fallback
+    @ViewBuilder
+    private var avatarImage: some View {
+        if let avatarUrlString = appState.currentUser?.avatarUrl,
+           let avatarUrl = URL(string: avatarUrlString) {
+            AsyncImage(url: avatarUrl) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                default:
+                    initialsAvatar
+                }
+            }
+        } else {
+            initialsAvatar
+        }
+    }
 
-    private func profileField(
+    /// Initials circle used when no avatar image is available
+    private var initialsAvatar: some View {
+        Text(avatarInitials)
+            .font(RF.heading)
+            .foregroundStyle(Color.riffitTextPrimary)
+            .frame(width: 56, height: 56)
+            .background(Color.riffitTeal600)
+            .clipShape(Circle())
+    }
+
+    // MARK: - Name Field
+
+    private var nameField: some View {
+        let isFocused = focusedField == .name
+        return VStack(alignment: .leading, spacing: RS.xs) {
+            Text("Full name")
+                .font(RF.caption)
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            HStack(spacing: RS.xs) {
+                TextField("Add your name", text: $nameText)
+                    .font(RF.bodyMd)
+                    .foregroundStyle(Color.riffitTextPrimary)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+                    .focused($focusedField, equals: .name)
+
+                if isSavingName {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(Color.riffitPrimary)
+                } else if isFocused {
+                    Button {
+                        Task { await saveName() }
+                    } label: {
+                        Text("Save")
+                            .font(RF.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(Color.riffitPrimary)
+                    }
+                } else {
+                    Button { focusedField = .name } label: {
+                        Image(systemName: "pencil")
+                            .font(.caption)
+                            .foregroundStyle(Color.riffitTextTertiary)
+                    }
+                }
+            }
+
+            if let error = nameSaveError {
+                Text(error)
+                    .font(RF.meta)
+                    .foregroundStyle(Color.riffitDanger)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(RS.md)
+        .background(Color.riffitSurface)
+        .cornerRadius(RR.input)
+        .overlay(
+            RoundedRectangle(cornerRadius: RR.input)
+                .stroke(isFocused ? Color.riffitPrimary.opacity(0.5) : Color.riffitBorderSubtle,
+                        lineWidth: isFocused ? 1 : 0.5)
+        )
+        .onTapGesture { focusedField = .name }
+    }
+
+    // MARK: - Username Field
+
+    private var usernameField: some View {
+        let isFocused = focusedField == .username
+        return VStack(alignment: .leading, spacing: RS.xs) {
+            Text("Username")
+                .font(RF.caption)
+                .foregroundStyle(Color.riffitTextTertiary)
+
+            HStack(spacing: 0) {
+                // The @ prefix — always visible, not part of the editable text
+                Text("@")
+                    .font(RF.bodyMd)
+                    .foregroundStyle(Color.riffitTextTertiary)
+
+                TextField("yourhandle", text: $usernameText)
+                    .font(RF.bodyMd)
+                    .foregroundStyle(Color.riffitTextPrimary)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .focused($focusedField, equals: .username)
+
+                Spacer()
+
+                if isSavingUsername {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(Color.riffitPrimary)
+                } else if isFocused {
+                    Button {
+                        Task { await saveUsername() }
+                    } label: {
+                        Text("Save")
+                            .font(RF.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(Color.riffitPrimary)
+                    }
+                } else {
+                    Button { focusedField = .username } label: {
+                        Image(systemName: "pencil")
+                            .font(.caption)
+                            .foregroundStyle(Color.riffitTextTertiary)
+                    }
+                }
+            }
+
+            if let error = usernameSaveError {
+                Text(error)
+                    .font(RF.meta)
+                    .foregroundStyle(Color.riffitDanger)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(RS.md)
+        .background(Color.riffitSurface)
+        .cornerRadius(RR.input)
+        .overlay(
+            RoundedRectangle(cornerRadius: RR.input)
+                .stroke(isFocused ? Color.riffitPrimary.opacity(0.5) : Color.riffitBorderSubtle,
+                        lineWidth: isFocused ? 1 : 0.5)
+        )
+        .onTapGesture { focusedField = .username }
+    }
+
+    // MARK: - Save Name
+
+    private func saveName() async {
+        let trimmed = nameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed == (appState.currentUser?.fullName ?? "") {
+            focusedField = nil
+            return
+        }
+        isSavingName = true
+        nameSaveError = nil
+        do {
+            try await appState.updateFullName(trimmed)
+            focusedField = nil
+        } catch {
+            nameSaveError = "Could not save name. Try again."
+            print("[AccountView] Name save failed: \(error)")
+        }
+        isSavingName = false
+    }
+
+    // MARK: - Save Username
+
+    private func saveUsername() async {
+        // Strip @ if user accidentally typed it, then trim whitespace
+        let trimmed = usernameText
+            .replacingOccurrences(of: "@", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        usernameText = trimmed
+
+        if trimmed == (appState.currentUser?.username ?? "") {
+            focusedField = nil
+            return
+        }
+        isSavingUsername = true
+        usernameSaveError = nil
+        do {
+            try await appState.updateUsername(trimmed)
+            focusedField = nil
+        } catch {
+            usernameSaveError = "Could not save username. Try again."
+            print("[AccountView] Username save failed: \(error)")
+        }
+        isSavingUsername = false
+    }
+
+    // MARK: - Upload Photo
+
+    private func uploadPhoto(from item: PhotosPickerItem) async {
+        print("[AccountView] 📸 PhotosPicker onChange fired, item: \(item)")
+        isUploadingPhoto = true
+        photoError = nil
+        defer { isUploadingPhoto = false }
+
+        // Load raw image data from the picker item.
+        // loadTransferable(type: Data.self) fails for most photo types,
+        // so we load as UIImage via a Transferable wrapper instead.
+        let data: Data?
+        do {
+            // Try loading as Data first (works for PNG/JPEG screenshots)
+            data = try await item.loadTransferable(type: Data.self)
+            print("[AccountView]    loadTransferable(Data) returned \(data?.count ?? 0) bytes")
+        } catch {
+            print("[AccountView]    loadTransferable(Data) threw: \(error)")
+            data = nil
+        }
+
+        // Build a UIImage from the raw data, or fall back to loading via
+        // the PickerImage Transferable wrapper (handles HEIF, Live Photos, etc.)
+        let uiImage: UIImage?
+        if let data, let img = UIImage(data: data) {
+            uiImage = img
+        } else {
+            print("[AccountView]    Data didn't produce a UIImage, trying PickerImage transferable")
+            do {
+                if let pickerImage = try await item.loadTransferable(type: PickerImage.self) {
+                    uiImage = pickerImage.uiImage
+                    print("[AccountView]    PickerImage loaded OK")
+                } else {
+                    uiImage = nil
+                    print("[AccountView]    PickerImage returned nil")
+                }
+            } catch {
+                print("[AccountView]    PickerImage loadTransferable threw: \(error)")
+                uiImage = nil
+            }
+        }
+
+        guard let image = uiImage else {
+            print("[AccountView] ❌ Could not create UIImage from picker item")
+            photoError = "Could not load image."
+            return
+        }
+
+        guard let jpegData = image.jpegData(compressionQuality: 0.7) else {
+            print("[AccountView] ❌ Could not compress to JPEG")
+            photoError = "Could not process image."
+            return
+        }
+        print("[AccountView]    JPEG data ready: \(jpegData.count) bytes")
+
+        do {
+            try await appState.uploadAvatar(imageData: jpegData)
+            print("[AccountView] ✅ Avatar upload + save complete")
+        } catch {
+            photoError = "Upload failed. Try again."
+            print("[AccountView] ❌ Avatar upload failed: \(error)")
+        }
+    }
+
+
+    // MARK: - Read-Only Field
+
+    private func readOnlyField(
         label: String,
-        placeholder: String,
-        text: Binding<String>,
-        field: ProfileField,
-        prefix: String? = nil
+        value: String?,
+        placeholder: String
     ) -> some View {
         VStack(alignment: .leading, spacing: RS.xs) {
             Text(label)
                 .font(RF.caption)
                 .foregroundStyle(Color.riffitTextTertiary)
 
-            HStack(spacing: RS.xs) {
-                if let prefix {
-                    Text(prefix)
-                        .font(RF.bodyMd)
-                        .foregroundStyle(Color.riffitTextTertiary)
-                }
-
-                TextField(placeholder, text: text)
+            let displayValue = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if displayValue.isEmpty {
+                Text(placeholder)
+                    .font(RF.bodyMd)
+                    .foregroundStyle(Color.riffitTextTertiary)
+            } else {
+                Text(displayValue)
                     .font(RF.bodyMd)
                     .foregroundStyle(Color.riffitTextPrimary)
-                    .autocorrectionDisabled(field == .username)
-                    .textInputAutocapitalization(field == .username ? .never : .words)
-                    .focused($focusedField, equals: field)
-
-                // Pencil when not focused, Done button when focused
-                if focusedField == field {
-                    Button {
-                        focusedField = nil
-                    } label: {
-                        Text("Done")
-                            .font(RF.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(Color.riffitPrimary)
-                    }
-                } else {
-                    Image(systemName: "pencil")
-                        .font(.caption)
-                        .foregroundStyle(Color.riffitTextTertiary)
-                }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(RS.md)
         .background(Color.riffitSurface)
         .cornerRadius(RR.input)
@@ -312,80 +523,26 @@ struct AccountView: View {
             content()
         }
     }
+}
 
-    // MARK: - Workspace Row
+// MARK: - PickerImage Transferable
 
-    private func workspaceRow(icon: String, title: String, subtitle: String) -> some View {
-        Button {
-            showComingSoon = true
-        } label: {
-            HStack(spacing: RS.smPlus) {
-                Image(systemName: icon)
-                    .font(.caption)
-                    .foregroundStyle(Color.riffitTeal400)
-                    .frame(width: 28, height: 28)
-                    .background(Color.riffitTealTint)
-                    .cornerRadius(RR.tag)
+/// A Transferable wrapper that lets PhotosPickerItem decode images
+/// in any format the system supports (JPEG, HEIF, PNG, etc.)
+/// by going through UIImage's broad format support.
+private struct PickerImage: Transferable {
+    let uiImage: UIImage
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(RF.bodyMd)
-                        .foregroundStyle(Color.riffitTextPrimary)
-
-                    Text(subtitle)
-                        .font(RF.meta)
-                        .foregroundStyle(Color.riffitTextTertiary)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(Color.riffitTextTertiary)
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(importedContentType: .image) { data in
+            guard let image = UIImage(data: data) else {
+                throw TransferError.importFailed
             }
-            .padding(RS.md)
-            .background(Color.riffitSurface)
-            .cornerRadius(RR.input)
-            .overlay(
-                RoundedRectangle(cornerRadius: RR.input)
-                    .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
-            )
+            return PickerImage(uiImage: image)
         }
-        .buttonStyle(.plain)
     }
 
-    // MARK: - Coming Soon Sheet
-
-    private var comingSoonSheet: some View {
-        VStack(spacing: RS.lg) {
-            Capsule()
-                .fill(Color.riffitTextTertiary.opacity(0.5))
-                .frame(width: 36, height: 5)
-                .padding(.top, RS.smPlus)
-
-            Spacer()
-
-            Text("Riffit")
-                .font(.custom("Lora-Bold", size: 20))
-                .foregroundStyle(Color.riffitPrimary)
-
-            Text("Coming in a future update")
-                .font(RF.bodyMd)
-                .foregroundStyle(Color.riffitTextSecondary)
-
-            Spacer()
-
-            RiffitButton(title: "Got it", variant: .secondary) {
-                showComingSoon = false
-            }
-            .padding(.bottom, RS.lg)
-        }
-        .padding(.horizontal, RS.md)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.riffitBackground)
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.hidden)
-        .presentationCornerRadius(RR.modal)
-        .presentationBackground(Color.riffitBackground)
+    enum TransferError: Error {
+        case importFailed
     }
 }

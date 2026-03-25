@@ -38,24 +38,43 @@ struct StoryDetailView: View {
     @State private var newNoteText: String = ""
     @State private var editingNoteId: UUID?
     @State private var editingNoteText: String = ""
-    @AppStorage("riffit_full_name") private var fullName: String = "Timothy"
-    @AppStorage("riffit_username") private var username: String = ""
-    @AppStorage("riffit_profile_image") private var profileImageData: String = ""
+    @EnvironmentObject var appState: AppState
     @EnvironmentObject var libraryViewModel: LibraryViewModel
 
-    /// The name shown on note bubbles — username if set, else full name, else "You"
+    /// Display name for note bubbles: username > full_name > email prefix
     private var noteDisplayName: String {
-        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedUsername.isEmpty { return trimmedUsername }
-        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedName.isEmpty { return trimmedName }
+        if let username = appState.currentUser?.username?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !username.isEmpty {
+            return username
+        }
+        if let name = appState.currentUser?.fullName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !name.isEmpty {
+            return name
+        }
+        if let email = appState.currentUser?.email {
+            return email.components(separatedBy: "@").first ?? "You"
+        }
         return "You"
     }
 
-    /// First character of noteDisplayName for the avatar fallback
+    /// Initials from the authenticated user for note avatar fallback
     private var noteAvatarInitial: String {
-        guard let first = noteDisplayName.first else { return "?" }
-        return String(first).uppercased()
+        if let name = appState.currentUser?.fullName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !name.isEmpty {
+            let parts = name.split(separator: " ")
+            if parts.count >= 2,
+               let first = parts.first?.first,
+               let last = parts.last?.first {
+                return "\(first)\(last)".uppercased()
+            }
+            if let first = parts.first?.first {
+                return String(first).uppercased()
+            }
+        }
+        if let first = appState.currentUser?.email.first {
+            return String(first).uppercased()
+        }
+        return "?"
     }
 
     /// Looks up the latest version of this story from the viewModel
@@ -198,7 +217,7 @@ struct StoryDetailView: View {
                             note: note,
                             displayName: noteDisplayName,
                             initial: noteAvatarInitial,
-                            profileImageData: profileImageData,
+                            avatarUrl: appState.currentUser?.avatarUrl,
                             isEditing: editingNoteId == note.id,
                             editText: editingNoteId == note.id ? $editingNoteText : .constant(""),
                             onTap: {
@@ -841,37 +860,28 @@ struct StoryNoteBubble: View {
     let note: StoryNote
     let displayName: String
     let initial: String
-    let profileImageData: String
+    let avatarUrl: String?
     let isEditing: Bool
     @Binding var editText: String
     let onTap: () -> Void
     let onSave: () -> Void
     let onCancel: () -> Void
 
-    /// Decodes the profile image from base64 — nil if empty or invalid
-    private var profileImage: UIImage? {
-        guard !profileImageData.isEmpty,
-              let data = Data(base64Encoded: profileImageData)
-        else { return nil }
-        return UIImage(data: data)
-    }
-
     var body: some View {
         HStack(alignment: .top, spacing: RS.sm) {
             // Avatar — 28×28 circle, leading, top-aligned
-            if let image = profileImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 28, height: 28)
-                    .clipShape(Circle())
+            if let urlString = avatarUrl, let url = URL(string: urlString) {
+                AsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    noteInitialsCircle
+                }
+                .frame(width: 28, height: 28)
+                .clipShape(Circle())
             } else {
-                Text(initial)
-                    .font(.custom("DMSans-Medium", size: 11))
-                    .foregroundStyle(Color.riffitTeal400)
-                    .frame(width: 28, height: 28)
-                    .background(Color.riffitTealTint)
-                    .clipShape(Circle())
+                noteInitialsCircle
             }
 
             // Content
@@ -940,6 +950,16 @@ struct StoryNoteBubble: View {
                 onTap()
             }
         }
+    }
+
+    /// Initials circle fallback for when no avatar URL is available
+    private var noteInitialsCircle: some View {
+        Text(initial)
+            .font(RF.caption)
+            .foregroundStyle(Color.riffitTextPrimary)
+            .frame(width: 28, height: 28)
+            .background(Color.riffitTeal600)
+            .clipShape(Circle())
     }
 }
 
