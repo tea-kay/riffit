@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		0C0C3D99022F0B87CD5FCF50 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8195FF2AC4D4715DE367914 /* SettingsView.swift */; };
+		E1A1B2C3D4E5F60718293A01 /* EarnView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1B2C3D4E5F60718293A02 /* EarnView.swift */; };
+		E1A1B2C3D4E5F60718293A03 /* EarnViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A1B2C3D4E5F60718293A04 /* EarnViewModel.swift */; };
 		0C0C3D99022F0B87CD5FCF51 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8195FF2AC4D4715DE367915 /* AccountView.swift */; };
 		0C0C3D99022F0B87CD5FCF52 /* InfluencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8195FF2AC4D4715DE367916 /* InfluencesView.swift */; };
 		0F988D44FF442B5538405218 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 883FDE84D7B7AFF219379886 /* ShareViewController.swift */; };
@@ -117,6 +119,8 @@
 		A4B5C6D7E8F9A0B1C2D3E4F5 /* StoryDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryDetailView.swift; sourceTree = "<group>"; };
 		A5B6C7D8E9F0A1B2C3D4E5F6 /* AssetSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetSection.swift; sourceTree = "<group>"; };
 		A8195FF2AC4D4715DE367914 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		E1A1B2C3D4E5F60718293A02 /* EarnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarnView.swift; sourceTree = "<group>"; };
+		E1A1B2C3D4E5F60718293A04 /* EarnViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarnViewModel.swift; sourceTree = "<group>"; };
 		A8195FF2AC4D4715DE367915 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		A8195FF2AC4D4715DE367916 /* InfluencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfluencesView.swift; sourceTree = "<group>"; };
 		A86F3E7E51DB992CF83A1068 /* EdgeFunctions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeFunctions.swift; sourceTree = "<group>"; };
@@ -387,6 +391,8 @@
 			isa = PBXGroup;
 			children = (
 				A8195FF2AC4D4715DE367915 /* AccountView.swift */,
+				E1A1B2C3D4E5F60718293A02 /* EarnView.swift */,
+				E1A1B2C3D4E5F60718293A04 /* EarnViewModel.swift */,
 				A8195FF2AC4D4715DE367916 /* InfluencesView.swift */,
 				A8195FF2AC4D4715DE367914 /* SettingsView.swift */,
 			);
@@ -557,6 +563,8 @@
 				D3749D5D3757E22BA0FAD5D2 /* RiffitColors.swift in Sources */,
 				CC11DD22EE33FF44AA55BB66 /* RiffitTheme.swift in Sources */,
 				0C0C3D99022F0B87CD5FCF50 /* SettingsView.swift in Sources */,
+				E1A1B2C3D4E5F60718293A01 /* EarnView.swift in Sources */,
+				E1A1B2C3D4E5F60718293A03 /* EarnViewModel.swift in Sources */,
 				0C0C3D99022F0B87CD5FCF51 /* AccountView.swift in Sources */,
 				0C0C3D99022F0B87CD5FCF52 /* InfluencesView.swift in Sources */,
 				1457C7442AEBE91EBD705812 /* SocialConnectView.swift in Sources */,

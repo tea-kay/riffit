@@ -5,16 +5,20 @@
 > For the changelog, see CHANGES.md.
 > For architecture and rules, see CLAUDE.md.
 >
-> Last updated: 2026-03-20
+> Last updated: 2026-03-25
 
 ---
 
 ## Product State
 
-MVP v1 — solo creator tool, no AI, no persistence, no Supabase.
-All data is in-memory (resets on relaunch). Profile data persists via @AppStorage.
+MVP v1 — solo creator tool, no AI. Supabase connected with Apple Sign In auth working.
+User data persists in Supabase (auth session, user record). Library/Storybank data is still in-memory (resets on relaunch — persistence migration pending).
 
 ### What Works
+- Supabase connected: 7 tables with RLS, auth via Apple Sign In, session persists to Keychain
+- Sign in with Apple → auto-creates user row → routes to main app
+- Sign out works → clears session → routes back to AuthView
+- Settings shows real user data from Supabase (name, email, avatar, subscription tier)
 - Save ideas from Instagram, YouTube, TikTok, X/Twitter, LinkedIn (URL + title + note + tags + folder)
 - Platform auto-detection from URL with dynamic icon/label
 - Browse, search, filter by tag, edit, and organize ideas in folders
@@ -36,18 +40,38 @@ All data is in-memory (resets on relaunch). Profile data persists via @AppStorag
 - Settings with account management, appearance, influences analytics
 - Profile photo upload, editable name/username with display name logic
 - Author avatar on story cards
+- InspirationCard: platform label top-left, timestamp top-right, avatar trailing in footer
+- Empty states aligned across tabs (same vertical positions)
+- RiffitGhostButtonStyle on empty state CTAs (black/gold, inverts on press)
 - Compose menu item (greyed out, v2 AI placeholder)
 - Idea title changes persist back to list (Equatable fix)
 
 ### What Doesn't Work Yet
-- No Supabase connection — all data in-memory
-- No persistence — app data resets on relaunch
+- Library and Storybank data is in-memory — not yet persisted to Supabase
 - No onboarding flow
 - No RevenueCat / subscription logic
 - No share extension (file exists but is scaffolding)
 - No AI features (all dormant in EdgeFunctions.swift)
 - No tests, no CI
-- CreatorProfile, User, VideoDeconstruction models exist but aren't used
+- CreatorProfile, VideoDeconstruction models exist but aren't used
+- Earn feature (referral program) specced but not built
+
+---
+
+## Referral Program (Earn) — Specced, Not Yet Built
+
+3-level deep referral commission system. To be added to Settings between Creative and App sections.
+
+**Commission rates (locked):**
+- Level 1 (direct referral): 50% first month, then 10% recurring
+- Level 2 (referral's referral): 3% recurring, starts month 2
+- Level 3 (three levels deep): 1% recurring, starts month 2
+- $100/mo cap per referred account at all levels
+- Lifetime commissions as long as referred user stays subscribed
+- Everyone can refer; commissions only on paid subscriptions
+
+**Files to create:** EarnView.swift, EarnViewModel.swift
+**File to modify:** SettingsView.swift (add Earn section row)
 
 ---
 
@@ -63,6 +87,10 @@ All data is in-memory (resets on relaunch). Profile data persists via @AppStorag
 - Briefs tab
 
 ### Architecture Decisions
+- Supabase keys live in Config.xcconfig (gitignored), never hardcoded in Swift
+- Auth: ASAuthorization → signInWithIdToken (not Supabase OAuth redirect)
+- AppState owns auth state via supabase.auth.authStateChanges async stream
+- Settings pulls user data from AppState.currentUser — no separate network calls
 - YouTube and X use thumbnail + deep link (both block WKWebView embeds)
 - TikTok uses embed URL in WKWebView with 9:16 aspect ratio
 - Platform detection lives in PlatformDetector helper, never in View body
@@ -80,12 +108,11 @@ All data is in-memory (resets on relaunch). Profile data persists via @AppStorag
 - Sheet backgrounds: always use `.presentationBackground(Color.riffitBackground)`
 - Modals: centered overlay with dim background (never UIAlertController or .actionSheet)
 - Deleting an idea cleans up all orphaned story references via StorybankViewModel.removeReferences(for:)
+- RiffitGhostButtonStyle for empty state CTAs (black fill/gold text, inverts on press)
 
 ---
 
 ## Models
-
-```
 InspirationVideo    — id, creatorProfileId, url, platform, title?, userNote?,
                       thumbnailUrl?, transcript?, alignmentScore?, alignmentVerdict?,
                       alignmentReasoning?, status (saved/archived), savedAt
@@ -103,13 +130,10 @@ StoryReference      — id, storyId, inspirationVideoId, referenceTag,
 StoryNote           — id, storyId, authorName, text (var), createdAt
 StoryFolder         — id, name, createdAt
 AssetSection        — id, storyId, name, displayOrder, createdAt
-```
 
 ---
 
 ## File Structure
-
-```
 Riffit/
 ├── App/
 │   ├── RiffitApp.swift
@@ -147,6 +171,7 @@ Riffit/
 │   ├── StoryReference.swift
 │   ├── User.swift
 │   └── VideoDeconstruction.swift
+├── Config.xcconfig
 ├── Components/
 │   ├── FlowLayout.swift
 │   ├── InspirationCard.swift
@@ -188,7 +213,19 @@ Riffit/
 │       └── VoiceNoteRecordSheet.swift
 └── ShareExtension/
     └── ShareViewController.swift
-```
+
+---
+
+## Supabase Schema (live in dev project)
+
+7 tables, all with RLS enabled:
+- `users` — mirrors auth.users, auto-created via trigger
+- `creator_profiles` — brand brain (niche, tone, pillars)
+- `inspiration_videos` — saved ideas from any platform
+- `inspiration_folders` — folder organization
+- `stories` — creative workspace entries
+- `story_assets` — media/text attached to stories
+- `story_references` — links stories to inspiration videos
 
 ---
 

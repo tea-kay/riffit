@@ -118,6 +118,9 @@ struct SettingsView: View {
                         .buttonStyle(.plain)
                     }
 
+                    // ── Earn section ──
+                    earnSection
+
                     // ── App section ──
                     settingsSection("App") {
                         NavigationLink {
@@ -297,6 +300,56 @@ struct SettingsView: View {
             .frame(width: 48, height: 48)
             .background(Color.riffitTeal600)
             .clipShape(Circle())
+    }
+
+    // MARK: - Earn Section
+
+    private var earnSection: some View {
+        VStack(alignment: .leading, spacing: RS.sm) {
+            Text("Earn")
+                .font(RF.tag)
+                .textCase(.uppercase)
+                .tracking(0.06 * 11)
+                .foregroundStyle(Color.riffitPrimary)
+
+            NavigationLink {
+                EarnView()
+            } label: {
+                HStack(spacing: RS.smPlus) {
+                    Image(systemName: "dollarsign.circle")
+                        .font(.body)
+                        .foregroundStyle(Color.riffitPrimary)
+                        .frame(width: 36, height: 36)
+                        .background(Color.riffitPrimaryTint)
+                        .cornerRadius(RR.button)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Referrals")
+                            .font(RF.bodyMd)
+                            .foregroundStyle(Color.riffitTextPrimary)
+
+                        Text("Earn commissions on every invite")
+                            .font(RF.caption)
+                            .foregroundStyle(Color.riffitTextSecondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(Color.riffitTextTertiary)
+                }
+                .contentShape(Rectangle())
+                .padding(RS.md)
+                .background(Color.riffitSurface)
+                .cornerRadius(RR.card)
+                .overlay(
+                    RoundedRectangle(cornerRadius: RR.card)
+                        .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
+                )
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     // MARK: - Section Builder

@@ -856,11 +856,11 @@ When writing Claude API prompts inside Edge Functions:
 ## Supabase Setup Checklist
 
 Before writing any Swift code, complete:
-- [ ] Create Supabase project at supabase.com
+- [x] Create Supabase project at supabase.com
 - [ ] Enable pgvector extension: `create extension vector`
-- [ ] Run schema SQL for all tables
-- [ ] Enable RLS on all tables and add policies
-- [ ] Enable Apple OAuth provider in Supabase Auth settings
+- [x] Run schema SQL for all tables (7 tables)
+- [x] Enable RLS on all tables and add policies
+- [x] Enable Apple OAuth provider in Supabase Auth settings
 - [ ] Create storage bucket: `voice-notes` (private)
 - [ ] Create storage bucket: `thumbnails` (public)
 - [ ] Deploy all 5 Edge Functions with environment variables:
@@ -897,15 +897,18 @@ Before writing any Swift code, complete:
 - [x] Settings tab: account, appearance, influences analytics
 - [x] Asset export to Camera Roll
 - [x] Notes threads on ideas and stories
-- [ ] Supabase project created
-- [ ] Persistence (Supabase integration)
+- [x] Supabase project created + schema deployed
+- [x] Apple Sign In auth working (sign in, sign out, session persistence)
+- [x] Settings wired to real user data from Supabase
+- [ ] Persistence — Library/Storybank data to Supabase (in-memory currently)
+- [ ] Earn feature (referral program) — specced, needs build
 - [ ] Onboarding flow
 - [ ] RevenueCat subscription logic
 - [ ] Share extension functionality
 - [ ] Test target + tests
 - [ ] CI configuration
 
-Next action: Create Supabase project → run schema → connect iOS to Supabase.
+Next action: Persist Library and Storybank data to Supabase → Build Earn feature UI.
 
 ---
 

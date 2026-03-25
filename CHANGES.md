@@ -148,3 +148,80 @@
 - StoryDetailView.swift, StorybankViewModel.swift, StorybankView.swift, AccountView.swift
 
 **Build status:** Zero errors confirmed
+
+### 2026-03-24 — Supabase project setup, schema, Apple Sign In auth
+
+**What changed:**
+- Supabase project created and connected to iOS app
+- Full schema SQL run: 7 tables (users, creator_profiles, inspiration_videos, inspiration_folders, stories, story_assets, story_references) with RLS enabled on all
+- Auto-create user trigger: `handle_new_user()` fires on `auth.users` insert, creates `public.users` row
+- Supabase Swift SDK added via SPM (`https://github.com/supabase/supabase-swift`)
+- `SupabaseClient.swift` singleton wired with URL + anon key from `Config.xcconfig`
+- `Config.xcconfig` created for Supabase keys (added to `.gitignore`)
+- Apple Sign In capability added to Xcode project
+- `AuthViewModel` handles `ASAuthorization` → extracts `identityToken` → calls `supabase.auth.signInWithIdToken(credentials: .apple(idToken:, nonce:))`
+- `AppState` listens to `supabase.auth.authStateChanges` async stream, sets `currentUser` on session, nils on sign out
+- `RiffitApp.swift` routes between AuthView and MainTabView based on `AppState.currentUser`
+- Session persists to Keychain — app skips auth on relaunch if session exists
+- Sign out button in SettingsView wired to `AppState.signOut()` → `supabase.auth.signOut()`
+- SettingsView profile card wired to real Supabase user data (email, full_name, avatar_url, subscription_tier) via `@EnvironmentObject AppState`
+- Display name: `full_name` if set, else email prefix, prefixed with `@`
+- Avatar: `AsyncImage` from `avatar_url`, falls back to initials on teal circle
+- Removed hardcoded user data from Settings ("@TK", "Creator", "Free plan")
+- Debug test user bypass in AuthView (`#if DEBUG` only)
+
+**Decisions made:**
+- Supabase keys live in Config.xcconfig (gitignored), not hardcoded in Swift
+- Auth uses ASAuthorization → signInWithIdToken (not Supabase's built-in OAuth redirect)
+- AppState owns auth state via authStateChanges async stream
+- Settings pulls user data from AppState.currentUser, no separate network calls
+- Dev Supabase project uses personal Gmail; prod will use dedicated email
+
+**Files created:**
+- Config.xcconfig
+
+**Files modified:**
+- SupabaseClient.swift, AppState.swift, RiffitApp.swift
+- AuthView.swift, AuthViewModel.swift, SettingsView.swift
+- .gitignore
+
+**Build status:** Zero errors confirmed
+
+### 2026-03-25 — UI polish: card layout, empty state alignment, ghost buttons
+
+**What changed:**
+- InspirationCard: timestamp moved from footer to top-right, aligned with platform row
+- InspirationCard: sort confirmed newest-first
+- InspirationCard: avatar stays trailing in footer row
+- Library and Storybank empty states: aligned to identical vertical positions (illustration, headline, subtext, button all at same Y when switching tabs)
+- New `RiffitGhostButtonStyle` created: black fill, gold text, gold border; inverts to gold fill, black text on press with .easeInOut 0.15s
+- Ghost button style applied to both Library and Storybank empty state CTA buttons
+- Ghost button added to RiffitButton.swift as reusable app-wide component
+
+**Files created:**
+- None (RiffitGhostButtonStyle added inside existing RiffitButton.swift)
+
+**Files modified:**
+- InspirationCard.swift, LibraryView.swift, StorybankView.swift, RiffitButton.swift
+
+**Build status:** Zero errors confirmed
+
+### 2026-03-25 — Referral program ("Earn") — spec only, not yet built
+
+**What was specced:**
+- 3-level deep referral commission system designed and locked
+- Commission rates: L1 50% first month + 10% recurring, L2 3% recurring (starts month 2), L3 1% recurring (starts month 2)
+- $100/mo cap per referred account at all levels
+- Lifetime commissions as long as referred user stays subscribed
+- Everyone can share a referral link; commissions only on paid subscriptions
+- Settings UI: new "Earn" section between Creative and App sections
+- EarnView detail screen: referral link + copy, stats grid, commission tiers visual, network empty state
+
+**Files to create (next session):**
+- Features/Settings/EarnView.swift
+- Features/Settings/EarnViewModel.swift
+
+**Files to modify (next session):**
+- Features/Settings/SettingsView.swift (add Earn section row)
+
+**Build status:** Spec only — no code changes this entry
