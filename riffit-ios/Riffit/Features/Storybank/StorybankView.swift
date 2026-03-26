@@ -85,7 +85,7 @@ struct StorybankView: View {
                     showNewStoryAlert = false
                 },
                 onAction: { title in
-                    viewModel.createStory(title: title)
+                    viewModel.createStory(title: title, userId: appState.currentUser?.id)
                     showNewStoryAlert = false
                 }
             )
@@ -100,13 +100,13 @@ struct StorybankView: View {
                     showNewFolderAlert = false
                 },
                 onAction: { name in
-                    viewModel.createFolder(name: name)
+                    viewModel.createFolder(name: name, userId: appState.currentUser?.id)
                     showNewFolderAlert = false
                 }
             )
         }
         .task {
-            await viewModel.fetchStories()
+            await viewModel.fetchStories(userId: appState.currentUser?.id)
         }
     }
 
@@ -155,7 +155,7 @@ struct StorybankView: View {
             .padding(.vertical, RS.smPlus)
         }
         .refreshable {
-            await viewModel.fetchStories()
+            await viewModel.fetchStories(userId: appState.currentUser?.id)
             await viewModel.fetchSharedStories()
         }
         .navigationDestination(for: Story.self) { story in

@@ -49,6 +49,6 @@ struct InspirationVideo: Codable, Identifiable {
         case alignmentVerdict = "alignment_verdict"
         case alignmentReasoning = "alignment_reasoning"
         case status
-        case savedAt = "saved_at"
+        case savedAt = "created_at"
     }
 }

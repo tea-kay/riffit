@@ -31,4 +31,43 @@ struct RiffitUser: Codable, Identifiable {
         case referredBy = "referred_by"
         case createdAt = "created_at"
     }
+
+    /// Custom decoder that provides sensible defaults for nullable Supabase columns.
+    /// email → "" if null, subscriptionTier → .free if null/unknown,
+    /// onboardingComplete → false if null, createdAt → Date() if null.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        email = try container.decodeIfPresent(String.self, forKey: .email) ?? ""
+        fullName = try container.decodeIfPresent(String.self, forKey: .fullName)
+        username = try container.decodeIfPresent(String.self, forKey: .username)
+        avatarUrl = try container.decodeIfPresent(String.self, forKey: .avatarUrl)
+        subscriptionTier = try container.decodeIfPresent(SubscriptionTier.self, forKey: .subscriptionTier) ?? .free
+        onboardingComplete = try container.decodeIfPresent(Bool.self, forKey: .onboardingComplete) ?? false
+        referredBy = try container.decodeIfPresent(UUID.self, forKey: .referredBy)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+    }
+
+    /// Memberwise init for constructing RiffitUser in Swift code (test users, placeholders).
+    init(
+        id: UUID,
+        email: String,
+        fullName: String? = nil,
+        username: String? = nil,
+        avatarUrl: String? = nil,
+        subscriptionTier: SubscriptionTier = .free,
+        onboardingComplete: Bool = false,
+        referredBy: UUID? = nil,
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.email = email
+        self.fullName = fullName
+        self.username = username
+        self.avatarUrl = avatarUrl
+        self.subscriptionTier = subscriptionTier
+        self.onboardingComplete = onboardingComplete
+        self.referredBy = referredBy
+        self.createdAt = createdAt
+    }
 }

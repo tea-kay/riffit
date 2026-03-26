@@ -7,6 +7,7 @@ struct AddReferenceView: View {
     let story: Story
     @ObservedObject var viewModel: StorybankViewModel
     @EnvironmentObject var libraryViewModel: LibraryViewModel
+    @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedVideo: InspirationVideo?
@@ -104,7 +105,7 @@ struct AddReferenceView: View {
         .presentationDetents([.large])
         .presentationCornerRadius(RR.modal)
         .task {
-            await libraryViewModel.fetchVideos()
+            await libraryViewModel.fetchVideos(userId: appState.currentUser?.id)
         }
     }
 

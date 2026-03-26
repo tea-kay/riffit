@@ -152,29 +152,112 @@ class AppState: ObservableObject {
 
     // MARK: - Fetch User
 
+    /// JSON decoder for user records. Uses ISO 8601 date parsing with
+    /// fractional seconds support (Supabase returns timestamps like
+    /// "2026-03-25T12:34:56.789Z"). Does NOT use convertFromSnakeCase
+    /// because RiffitUser has explicit CodingKeys.
+    private static let userDecoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let str = try container.decode(String.self)
+            let f1 = ISO8601DateFormatter()
+            f1.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            let f2 = ISO8601DateFormatter()
+            f2.formatOptions = [.withInternetDateTime]
+            if let date = f1.date(from: str) { return date }
+            if let date = f2.date(from: str) { return date }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date: \(str)")
+        }
+        return d
+    }()
+
     /// Fetches the user row from public.users matching the auth UID.
     /// If the row doesn't exist yet (first sign-in before the DB trigger
     /// creates it), currentUser stays nil and isLoading still clears.
     private func fetchUser(id: UUID) async {
         print("[AppState] fetchUser called for id: \(id)")
         do {
-            let user: RiffitUser = try await supabase
+            let response = try await supabase
                 .from("users")
                 .select()
                 .eq("id", value: id)
                 .single()
                 .execute()
-                .value
+
+            let user = try Self.userDecoder.decode(RiffitUser.self, from: response.data)
 
             print("[AppState] ✅ fetchUser succeeded — email: \(user.email), onboardingComplete: \(user.onboardingComplete)")
             self.currentUser = user
-            // Sync the onboarding-derived creator profile if available
-            // (will be fetched separately when creator_profiles table is wired)
+
+            // Ensure a creator_profiles row exists so stories and ideas
+            // can reference creator_profile_id = user.id.
+            await ensureCreatorProfile(userId: user.id)
         } catch {
             // Row may not exist yet — treat as unauthenticated for now.
             // A future session event will retry when the row is ready.
             print("[AppState] ❌ fetchUser FAILED — \(error)")
             self.currentUser = nil
+        }
+    }
+
+    // MARK: - Ensure Creator Profile
+
+    /// Makes sure a creator_profiles row exists for this user so that
+    /// stories and ideas can use creator_profile_id = user.id.
+    /// Uses upsert with ON CONFLICT DO NOTHING — safe to call on every sign-in.
+    private func ensureCreatorProfile(userId: UUID) async {
+        struct MinimalProfile: Encodable {
+            let id: UUID
+            let userId: UUID
+            let creatorType: String
+            let niche: String
+            let missionStatement: String
+            let targetAudience: String
+            let contentPillars: [String]
+            let toneMarkers: [String]
+            let neverDo: [String]
+            let hotTakes: [String]
+
+            enum CodingKeys: String, CodingKey {
+                case id
+                case userId = "user_id"
+                case creatorType = "creator_type"
+                case niche
+                case missionStatement = "mission_statement"
+                case targetAudience = "target_audience"
+                case contentPillars = "content_pillars"
+                case toneMarkers = "tone_markers"
+                case neverDo = "never_do"
+                case hotTakes = "hot_takes"
+            }
+        }
+
+        let profile = MinimalProfile(
+            id: userId,
+            userId: userId,
+            creatorType: "personal_brand",
+            niche: "general",
+            missionStatement: "",
+            targetAudience: "",
+            contentPillars: [],
+            toneMarkers: [],
+            neverDo: [],
+            hotTakes: []
+        )
+
+        do {
+            try await supabase
+                .from("creator_profiles")
+                .upsert(profile, onConflict: "id", ignoreDuplicates: true)
+                .execute()
+            self.creatorProfileId = userId
+            print("[AppState] ✅ ensureCreatorProfile — profile exists for \(userId)")
+        } catch {
+            print("[AppState] ⚠️ ensureCreatorProfile FAILED — \(error)")
+            // Non-fatal: the profile may already exist via a different path.
+            // Set creatorProfileId anyway so the app can proceed.
+            self.creatorProfileId = userId
         }
     }
 

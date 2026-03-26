@@ -230,6 +230,9 @@ private struct DevEmailSignInSection: View {
             // and fetch the user row automatically
             try await supabase.auth.signIn(email: email, password: password)
         } catch {
+            print("[Auth] signIn FAILED: \(error)")
+            print("[Auth] signIn error type: \(type(of: error))")
+            print("[Auth] signIn localizedDescription: \(error.localizedDescription)")
             errorMessage = error.localizedDescription
         }
     }
@@ -249,6 +252,9 @@ private struct DevEmailSignInSection: View {
             // the auth state listener in AppState navigates the user in
             try await supabase.auth.signIn(email: email, password: password)
         } catch {
+            print("[Auth] signUp FAILED: \(error)")
+            print("[Auth] signUp error type: \(type(of: error))")
+            print("[Auth] signUp localizedDescription: \(error.localizedDescription)")
             errorMessage = error.localizedDescription
         }
     }

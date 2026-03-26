@@ -5,6 +5,7 @@ import SwiftUI
 /// in under 10 seconds. Nothing is required except the URL.
 struct AddInspirationView: View {
     @ObservedObject var viewModel: LibraryViewModel
+    @EnvironmentObject var appState: AppState
     var preselectedFolderId: UUID? = nil
     @Environment(\.dismiss) private var dismiss
 
@@ -160,7 +161,7 @@ struct AddInspirationView: View {
                     .contextMenu {
                         Button(role: .destructive) {
                             selectedTags.remove(tag)
-                            viewModel.removeAvailableTag(tag)
+                            viewModel.removeAvailableTag(tag, userId: appState.currentUser?.id)
                         } label: {
                             Label("Delete Tag", systemImage: "trash")
                         }
@@ -216,7 +217,7 @@ struct AddInspirationView: View {
     private func submitCaptureTag() {
         let trimmed = newTagText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
-            viewModel.addCustomTag(trimmed)
+            viewModel.addCustomTag(trimmed, userId: appState.currentUser?.id)
             selectedTags.insert(trimmed)
         }
         newTagText = ""
@@ -314,7 +315,8 @@ struct AddInspirationView: View {
                 title: trimmedTitle.isEmpty ? nil : trimmedTitle,
                 userNote: trimmedNote.isEmpty ? nil : trimmedNote,
                 tags: tags.isEmpty ? nil : tags,
-                folderId: selectedFolderId
+                folderId: selectedFolderId,
+                userId: appState.currentUser?.id
             )
         }
 

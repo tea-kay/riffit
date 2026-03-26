@@ -13,6 +13,7 @@
 
 MVP v1 — solo creator tool, no AI. Supabase connected with Apple Sign In auth working.
 User data persists in Supabase (auth session, user record). Library/Storybank data is still in-memory (resets on relaunch — persistence migration pending).
+Story Collaboration feature fully built at the UI layer (in-memory) — models, owner controls, collaborator experience, deep linking, and referral attribution all wired up.
 
 ### What Works
 - Supabase connected: 7 tables with RLS, auth via Apple Sign In, session persists to Keychain
@@ -45,9 +46,21 @@ User data persists in Supabase (auth session, user record). Library/Storybank da
 - RiffitGhostButtonStyle on empty state CTAs (black/gold, inverts on press)
 - Compose menu item (greyed out, v2 AI placeholder)
 - Idea title changes persist back to list (Equatable fix)
+- **Story Collaboration (in-memory):**
+  - Owner can see People section in StoryDetailView with role pills
+  - Owner can invite via link (copy/share) or username search (InviteSheet)
+  - Owner can manage collaborators: change role (Studio+), remove, see count vs limit (ManageCollaboratorsView)
+  - "Shared with me" section in StorybankView: pending invites with Accept/Decline, accepted stories with owner attribution + role pill + unread gold dot
+  - CollabJoinView: full-screen invite landing with owner info, story preview, Join/Join with Apple buttons, error states (expired/not found/already member)
+  - Permission-gated StoryDetailView: all UI elements hidden/shown based on CollaboratorRole (owner/editor/viewer/commenter/collaborator)
+  - Deep link handling: .onOpenURL parses riffit.app/invite/{token}, resolves invite, shows CollabJoinView overlay
+  - Referral attribution: invite links carry referral_user_id, set as referred_by on new user creation
+  - Unread tracking: lastViewedAt updated on story open, gold dot when new notes exist
 
 ### What Doesn't Work Yet
 - Library and Storybank data is in-memory — not yet persisted to Supabase
+- Story Collaboration is in-memory — invite links, collaborator records, and shared stories reset on relaunch
+- SQL migration 003_story_collaboration.sql written but not yet run on Supabase
 - No onboarding flow
 - No RevenueCat / subscription logic
 - No share extension (file exists but is scaffolding)
@@ -55,6 +68,7 @@ User data persists in Supabase (auth session, user record). Library/Storybank da
 - No tests, no CI
 - CreatorProfile, VideoDeconstruction models exist but aren't used
 - Earn feature (referral program) specced but not built
+- Apple App Site Association file not yet deployed (needed for universal links in production)
 
 ---
 
@@ -110,6 +124,17 @@ User data persists in Supabase (auth session, user record). Library/Storybank da
 - Deleting an idea cleans up all orphaned story references via StorybankViewModel.removeReferences(for:)
 - RiffitGhostButtonStyle for empty state CTAs (black fill/gold text, inverts on press)
 
+### Collaboration Architecture Decisions
+- All collaboration data is in-memory — same pattern as Library/Storybank. Persistence is the next P0.
+- Permission checks use CollaboratorRole computed properties (canModifyAssets, canLeaveNotes, etc.) — never duplicated in Views
+- Deep link parsing lives in AppState.handleDeepLink, invite resolution in StorybankViewModel.resolveInviteToken
+- pendingInviteToken survives auth flow — stored in AppState before sign-in, resolved after
+- CollabJoinView is a ZStack overlay on RootView, not a sheet — ensures it appears over both AuthView and MainTabView
+- Referral attribution: first referrer wins (referred_by only set if nil on user record)
+- SectionHeaderRow accepts showActions parameter to hide rename/delete for non-editors
+- Collaborator limit is UI-side only for now (hardcoded per tier: Free=1, Pro=2)
+- Free/Pro tiers only get the simplified "Collaborator" role. Studio+ unlocks Editor/Viewer/Commenter (hasRolePermissions flag, currently hardcoded false).
+
 ---
 
 ## Models
@@ -127,9 +152,15 @@ StoryAsset          — id, storyId, assetType (voiceNote/video/image/text), nam
                       displayOrder, createdAt
 StoryReference      — id, storyId, inspirationVideoId, referenceTag,
                       aiRelevanceNote?, displayOrder, createdAt
-StoryNote           — id, storyId, authorName, text (var), createdAt
+StoryNote           — id, storyId, userId?, authorName, text (var), createdAt
 StoryFolder         — id, name, createdAt
 AssetSection        — id, storyId, name, displayOrder, createdAt
+
+StoryCollaborator   — id, storyId, userId, role (owner/editor/viewer/commenter/collaborator),
+                      invitedBy?, status (pending/accepted/declined), createdAt,
+                      acceptedAt?, lastViewedAt?
+StoryInviteLink     — id, storyId, createdBy, role, referralUserId?, token (unique),
+                      expiresAt?, maxUses?, useCount, createdAt
 
 ---
 
@@ -166,11 +197,15 @@ Riffit/
 │   ├── InspirationVideo.swift
 │   ├── Story.swift
 │   ├── StoryAsset.swift
+│   ├── StoryCollaborator.swift
 │   ├── StoryFolder.swift
+│   ├── StoryInviteLink.swift
 │   ├── StoryNote.swift
 │   ├── StoryReference.swift
 │   ├── User.swift
 │   └── VideoDeconstruction.swift
+├── Migrations/
+│   └── 003_story_collaboration.sql
 ├── Config.xcconfig
 ├── Components/
 │   ├── FlowLayout.swift
@@ -198,12 +233,17 @@ Riffit/
 │   │       └── SocialConnectView.swift
 │   ├── Settings/
 │   │   ├── AccountView.swift
+│   │   ├── EarnView.swift
+│   │   ├── EarnViewModel.swift
 │   │   ├── InfluencesView.swift
 │   │   └── SettingsView.swift
 │   └── Storybank/
 │       ├── AddReferenceView.swift
+│       ├── CollabJoinView.swift
 │       ├── ImageAttachmentSheet.swift
 │       ├── ImageViewerView.swift
+│       ├── InviteSheet.swift
+│       ├── ManageCollaboratorsView.swift
 │       ├── StorybankView.swift
 │       ├── StorybankViewModel.swift
 │       ├── StoryDetailView.swift
@@ -219,13 +259,20 @@ Riffit/
 ## Supabase Schema (live in dev project)
 
 7 tables, all with RLS enabled:
-- `users` — mirrors auth.users, auto-created via trigger
+- `users` — mirrors auth.users, auto-created via trigger (has `referred_by` column)
 - `creator_profiles` — brand brain (niche, tone, pillars)
 - `inspiration_videos` — saved ideas from any platform
 - `inspiration_folders` — folder organization
 - `stories` — creative workspace entries
 - `story_assets` — media/text attached to stories
 - `story_references` — links stories to inspiration videos
+
+**Pending migration (003_story_collaboration.sql):**
+- `story_collaborators` — collaboration records with role + status + lastViewedAt
+- `story_invite_links` — shareable invite tokens with referral attribution
+- `users.referred_by` column
+- `story_notes.user_id` column
+- Updated RLS policies for collaborator access on story_assets, story_references, story_notes
 
 ---
 
@@ -239,6 +286,10 @@ Riffit/
 
 ---
 
-## StoryDetail Toolbar Menu Order
+## StoryDetail Toolbar Menu Order (Owner)
 
-Rename → Archive → Share → Save All Assets → Duplicate → Compose (greyed) → Divider → Delete Story (destructive)
+Rename → Archive → Share → Save All Assets → Duplicate → Manage People → Compose (greyed) → Divider → Delete Story (destructive)
+
+## StoryDetail Toolbar Menu Order (Non-Owner)
+
+Share → Save All Assets (if canDownload) → Divider → Leave Story (destructive)

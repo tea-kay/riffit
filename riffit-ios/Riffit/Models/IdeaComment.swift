@@ -7,13 +7,24 @@ import Foundation
 struct IdeaComment: Identifiable, Codable, Hashable {
     let id: UUID
     let inspirationVideoId: UUID
-    let authorName: String   // "You" for now, real names when shared folders land
+    let userId: UUID?
+    let authorName: String
     var text: String
     let createdAt: Date
 
-    init(inspirationVideoId: UUID, authorName: String = "You", text: String) {
+    enum CodingKeys: String, CodingKey {
+        case id
+        case inspirationVideoId = "inspiration_video_id"
+        case userId = "user_id"
+        case authorName = "author_name"
+        case text
+        case createdAt = "created_at"
+    }
+
+    init(inspirationVideoId: UUID, userId: UUID? = nil, authorName: String = "You", text: String) {
         self.id = UUID()
         self.inspirationVideoId = inspirationVideoId
+        self.userId = userId
         self.authorName = authorName
         self.text = text
         self.createdAt = Date()

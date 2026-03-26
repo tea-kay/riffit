@@ -286,6 +286,8 @@ struct StoryDetailView: View {
                         collaborator: collaborator,
                         hasRolePermissions: false,
                         isOwnerView: true,
+                        userDisplayName: collaborator.role == .owner ? ownerCollabDisplayName : nil,
+                        userAvatarUrl: collaborator.role == .owner ? appState.currentUser?.avatarUrl : nil,
                         onChangeRole: { newRole in
                             viewModel.updateCollaboratorRole(collaborator, to: newRole)
                         },
@@ -771,8 +773,29 @@ struct StoryDetailView: View {
 
     // MARK: - People
 
+    /// Owner display name for the People section: @username > fullName > @email_prefix, with "(You)" suffix.
+    /// Same logic as SettingsView.displayName.
+    private var ownerCollabDisplayName: String {
+        let baseName: String = {
+            if let username = appState.currentUser?.username?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !username.isEmpty {
+                return "@\(username)"
+            }
+            if let fullName = appState.currentUser?.fullName?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !fullName.isEmpty {
+                return fullName
+            }
+            if let email = appState.currentUser?.email {
+                let prefix = email.components(separatedBy: "@").first ?? ""
+                if !prefix.isEmpty { return "@\(prefix)" }
+            }
+            return "You"
+        }()
+        return "\(baseName) (You)"
+    }
+
     private var peopleHeader: some View {
-        Text("People")
+        Text("Creators")
             .font(RF.tag)
             .textCase(.uppercase)
             .tracking(0.08 * 12)
@@ -837,7 +860,7 @@ struct StoryDetailView: View {
             Button {
                 let trimmed = newNoteText.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else { return }
-                viewModel.addNote(to: story.id, text: trimmed, authorName: noteDisplayName)
+                viewModel.addNote(to: story.id, text: trimmed, authorName: noteDisplayName, userId: appState.currentUser?.id)
                 newNoteText = ""
             } label: {
                 Image(systemName: "arrow.up.circle.fill")

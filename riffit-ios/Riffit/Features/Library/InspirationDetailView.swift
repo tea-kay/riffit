@@ -392,7 +392,7 @@ struct InspirationDetailView: View {
     private func submitNewTag() {
         let trimmed = newTagText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
-            viewModel.addCustomTag(trimmed)
+            viewModel.addCustomTag(trimmed, userId: appState.currentUser?.id)
             // Auto-select the new tag on this video
             viewModel.toggleTag(for: video.id, tag: trimmed)
         }
@@ -527,7 +527,7 @@ struct InspirationDetailView: View {
         let trimmed = newCommentText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        viewModel.addComment(to: video.id, text: trimmed, authorName: displayName)
+        viewModel.addComment(to: video.id, text: trimmed, authorName: displayName, userId: appState.currentUser?.id)
         newCommentText = ""
     }
 }

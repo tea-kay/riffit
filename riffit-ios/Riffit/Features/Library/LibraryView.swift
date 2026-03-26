@@ -117,13 +117,13 @@ struct LibraryView: View {
                     showNewFolderAlert = false
                 },
                 onAction: { name in
-                    viewModel.createFolder(name: name)
+                    viewModel.createFolder(name: name, userId: appState.currentUser?.id)
                     showNewFolderAlert = false
                 }
             )
         }
         .task {
-            await viewModel.fetchVideos()
+            await viewModel.fetchVideos(userId: appState.currentUser?.id)
         }
         .alert("Delete this idea?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
@@ -272,7 +272,7 @@ struct LibraryView: View {
             .padding(.vertical, RS.smPlus)
         }
         .refreshable {
-            await viewModel.refresh()
+            await viewModel.refresh(userId: appState.currentUser?.id)
         }
         .navigationDestination(for: InspirationVideo.self) { video in
             InspirationDetailView(video: video, viewModel: viewModel)

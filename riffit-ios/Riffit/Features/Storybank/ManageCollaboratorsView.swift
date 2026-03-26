@@ -33,6 +33,27 @@ struct ManageCollaboratorsView: View {
         viewModel.collaborators(for: story.id)
     }
 
+    /// Owner display name: @username > fullName > @email_prefix, with "(You)" suffix.
+    /// Same logic as SettingsView.displayName.
+    private var ownerDisplayName: String {
+        let baseName: String = {
+            if let username = appState.currentUser?.username?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !username.isEmpty {
+                return "@\(username)"
+            }
+            if let fullName = appState.currentUser?.fullName?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !fullName.isEmpty {
+                return fullName
+            }
+            if let email = appState.currentUser?.email {
+                let prefix = email.components(separatedBy: "@").first ?? ""
+                if !prefix.isEmpty { return "@\(prefix)" }
+            }
+            return "You"
+        }()
+        return "\(baseName) (You)"
+    }
+
     /// Non-owner collaborator count (owners don't count toward the limit)
     private var activeCollaboratorCount: Int {
         collaborators.filter { $0.role != .owner && $0.status == .accepted }.count
@@ -71,6 +92,8 @@ struct ManageCollaboratorsView: View {
                             collaborator: collaborator,
                             hasRolePermissions: hasRolePermissions,
                             isOwnerView: true,
+                            userDisplayName: collaborator.role == .owner ? ownerDisplayName : nil,
+                            userAvatarUrl: collaborator.role == .owner ? appState.currentUser?.avatarUrl : nil,
                             onChangeRole: { newRole in
                                 viewModel.updateCollaboratorRole(collaborator, to: newRole)
                             },
@@ -140,36 +163,51 @@ struct ManageCollaboratorsView: View {
 
 /// A single collaborator row: avatar + name + role pill + actions menu.
 /// Reused in both ManageCollaboratorsView and the People section of StoryDetailView.
+/// Pass userDisplayName and userAvatarUrl to show real profile data (e.g. for the owner row).
 struct CollaboratorRow: View {
     let collaborator: StoryCollaborator
     let hasRolePermissions: Bool
     let isOwnerView: Bool
+    /// The display name to show — e.g. "@sarah (You)" for owner, "Collaborator" for others.
+    var userDisplayName: String?
+    /// Avatar URL from the user record — shows AsyncImage when available.
+    var userAvatarUrl: String?
     var onChangeRole: ((CollaboratorRole) -> Void)?
     var onRemove: (() -> Void)?
 
-    /// Placeholder display name — will use real user data when persistence is wired.
-    /// For now, derives from the collaborator's userId.
+    /// Resolved display name: uses provided name, falls back to role-based placeholder.
     private var displayName: String {
+        if let name = userDisplayName, !name.isEmpty {
+            return name
+        }
         if collaborator.role == .owner {
             return "You"
         }
         return "Collaborator"
     }
 
-    /// Initials for avatar fallback
+    /// Initials for avatar fallback — uses the first non-@ character
     private var avatarInitial: String {
-        String(displayName.first ?? Character("?")).uppercased()
+        let name = displayName.replacingOccurrences(of: "@", with: "")
+        return String(name.first ?? Character("?")).uppercased()
     }
 
     var body: some View {
         HStack(spacing: RS.smPlus) {
-            // Avatar — 32×32 circle
-            Text(avatarInitial)
-                .font(RF.caption)
-                .foregroundStyle(Color.riffitTextPrimary)
+            // Avatar — 32×32 circle, AsyncImage from URL or initials fallback
+            if let urlString = userAvatarUrl, let url = URL(string: urlString) {
+                AsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    initialsCircle
+                }
                 .frame(width: 32, height: 32)
-                .background(collaborator.role == .owner ? Color.riffitPrimary : Color.riffitTeal600)
                 .clipShape(Circle())
+            } else {
+                initialsCircle
+            }
 
             // Name + status
             VStack(alignment: .leading, spacing: 2) {
@@ -227,6 +265,16 @@ struct CollaboratorRow: View {
             RoundedRectangle(cornerRadius: RR.input)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
+    }
+
+    /// Initials fallback circle — always teal600 background, matching Settings pattern
+    private var initialsCircle: some View {
+        Text(avatarInitial)
+            .font(RF.caption)
+            .foregroundStyle(Color.riffitTextPrimary)
+            .frame(width: 32, height: 32)
+            .background(Color.riffitTeal600)
+            .clipShape(Circle())
     }
 
     // MARK: - Role Pill
