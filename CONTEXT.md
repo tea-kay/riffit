@@ -11,64 +11,39 @@
 
 ## Product State
 
-MVP v1 — solo creator tool, no AI. Supabase connected with Apple Sign In auth working.
-User data persists in Supabase (auth session, user record). Library/Storybank data is still in-memory (resets on relaunch — persistence migration pending).
-Story Collaboration feature fully built at the UI layer (in-memory) — models, owner controls, collaborator experience, deep linking, and referral attribution all wired up.
+MVP v1 — solo creator tool with multi-user collaboration. Supabase fully connected: auth, stories, ideas, and collaboration all persist across app restarts. No AI features yet.
 
 ### What Works
-- Supabase connected: 7 tables with RLS, auth via Apple Sign In, session persists to Keychain
-- Sign in with Apple → auto-creates user row → routes to main app
-- Sign out works → clears session → routes back to AuthView
-- Settings shows real user data from Supabase (name, email, avatar, subscription tier)
-- Save ideas from Instagram, YouTube, TikTok, X/Twitter, LinkedIn (URL + title + note + tags + folder)
-- Platform auto-detection from URL with dynamic icon/label
-- Browse, search, filter by tag, edit, and organize ideas in folders
-- Delete ideas with confirmation (cleans up orphaned story references)
-- YouTube: thumbnail + deep link to YouTube app/Safari (WKWebView blocked)
-- TikTok: vertical 9:16 embed via WKWebView
-- X/Twitter: thumbnail or placeholder card + deep link to X app/Safari
-- Instagram/LinkedIn: standard WKWebView embed
-- Create stories with text, voice, image, and video assets
-- Organize assets into named sections with drag reorder
-- Add idea references to stories (linked to sections)
-- Record voice notes (press-and-hold), take/pick photos, record/pick videos
-- Play back voice notes, view images, play videos from asset rows
-- Export assets to Camera Roll or share as files
-- Duplicate stories (full deep copy: assets, sections, references, notes)
-- Share story title via ShareSheet
-- Notes threads on both ideas and stories (with avatar + inline editing)
-- Folder organization in both Library and Storybank
-- Settings with account management, appearance, influences analytics
-- Profile photo upload, editable name/username with display name logic
-- Author avatar on story cards
-- InspirationCard: platform label top-left, timestamp top-right, avatar trailing in footer
-- Empty states aligned across tabs (same vertical positions)
-- RiffitGhostButtonStyle on empty state CTAs (black/gold, inverts on press)
-- Compose menu item (greyed out, v2 AI placeholder)
-- Idea title changes persist back to list (Equatable fix)
-- **Story Collaboration (in-memory):**
-  - Owner can see People section in StoryDetailView with role pills
-  - Owner can invite via link (copy/share) or username search (InviteSheet)
-  - Owner can manage collaborators: change role (Studio+), remove, see count vs limit (ManageCollaboratorsView)
-  - "Shared with me" section in StorybankView: pending invites with Accept/Decline, accepted stories with owner attribution + role pill + unread gold dot
-  - CollabJoinView: full-screen invite landing with owner info, story preview, Join/Join with Apple buttons, error states (expired/not found/already member)
-  - Permission-gated StoryDetailView: all UI elements hidden/shown based on CollaboratorRole (owner/editor/viewer/commenter/collaborator)
+- **Auth:** Sign in with Apple → auto-creates user row → routes to main app. Session persists to Keychain. Sign out clears everything. New users get full_name auto-populated from email prefix.
+- **Supabase persistence:** All data survives app relaunch — stories, assets, sections, references, notes, folders, ideas, comments, tags, folder mappings. Optimistic UI + background Supabase calls.
+- **Library (Ideas):** Save ideas from Instagram, YouTube, TikTok, X/Twitter, LinkedIn. Platform auto-detection, browse/search/filter by tag, edit, organize in folders. Delete with orphaned reference cleanup. All persisted.
+- **Storybank:** Create stories with text, voice, image, video assets. Organize into named sections with drag reorder. Add idea references linked to sections. Duplicate stories (full deep copy). All persisted.
+- **Media:** Record voice notes (press-and-hold), take/pick photos, record/pick videos. Playback and export to Camera Roll or share as files. Media files stored locally (metadata only in Supabase).
+- **Story Collaboration:**
+  - Owner: CREATORS section in StoryDetailView with role pills, InviteSheet (link copy/share + username/email search), ManageCollaboratorsView (role change, remove, count vs limit)
+  - Collaborator: "Shared with me" section in StorybankView (pending invites with Accept/Decline, accepted stories with owner attribution + role pill + unread gold dot)
+  - CollabJoinView: full-screen invite landing with error states (expired/not found/already member)
+  - Permission-gated StoryDetailView: all UI gated by CollaboratorRole (owner/editor/viewer/commenter/collaborator)
   - Deep link handling: .onOpenURL parses riffit.app/invite/{token}, resolves invite, shows CollabJoinView overlay
   - Referral attribution: invite links carry referral_user_id, set as referred_by on new user creation
   - Unread tracking: lastViewedAt updated on story open, gold dot when new notes exist
+  - Collaborator rows show real avatar + display name from Supabase (CollaboratorUserInfo cache)
+- **Notes threads** on both ideas and stories (with avatar + inline editing)
+- **Settings:** Account management, appearance, influences analytics. Profile photo upload, editable name/username.
+- **Wave splash screen:** Animated teal sine waves + gold Riffit wordmark on launch, fades out when loaded
+- **Design system:** All colors via RiffitColors tokens, fonts via RiffitTheme, spacing from RS constants
 
 ### What Doesn't Work Yet
-- Library and Storybank data is in-memory — not yet persisted to Supabase
-- Story Collaboration is in-memory — invite links, collaborator records, and shared stories reset on relaunch
-- SQL migration 003_story_collaboration.sql written but not yet run on Supabase
-- No onboarding flow
+- No onboarding flow (creator type selection, AI interview)
 - No RevenueCat / subscription logic
 - No share extension (file exists but is scaffolding)
 - No AI features (all dormant in EdgeFunctions.swift)
 - No tests, no CI
-- CreatorProfile, VideoDeconstruction models exist but aren't used
+- CreatorProfile, VideoDeconstruction models exist but aren't fully used
 - Earn feature (referral program) specced but not built
-- Apple App Site Association file not yet deployed (needed for universal links in production)
+- Apple App Site Association file not deployed (needed for universal links in production)
+- Media files stored locally only — not uploaded to Supabase Storage
+- Collaborator limit enforcement is UI-side only (server enforcement not wired)
 
 ---
 
@@ -92,58 +67,46 @@ Story Collaboration feature fully built at the UI layer (in-memory) — models, 
 ## Decisions That Stick (Do Not Re-Add Without Being Asked)
 
 ### Removed Features
-- AI alignment scoring (score, verdict, badge, shimmer states)
-- AI brief generation, onboarding interview, relevance notes
-- Auto-generated video summaries
+- AI alignment scoring, brief generation, onboarding interview, relevance notes, auto-generated summaries
 - Auto-fetch video metadata on URL paste
-- Video stats (views/likes/comments) — fields in Supabase, not in Swift
-- AlignmentBadge component (deleted), ShimmerBlock component, StatField component
+- Video stats (views/likes/comments)
+- AlignmentBadge, ShimmerBlock, StatField components
 - Briefs tab
+- handle_new_creator_profile database trigger (caused sign-up 500 errors)
 
 ### Architecture Decisions
+- All RLS policies use direct `auth.uid() = creator_profile_id` pattern, never recursive joins through `creator_profiles`
+- Creator profiles created on-demand at login (AppState.ensureCreatorProfile), not via database trigger
+- RiffitUser uses custom `init(from:)` decoder with sensible defaults for all nullable Supabase columns
+- AppState.fetchUser uses custom ISO 8601 date decoder (not SDK default)
+- New users get full_name auto-populated from email prefix (AppState.ensureDisplayName)
 - Supabase keys live in Config.xcconfig (gitignored), never hardcoded in Swift
 - Auth: ASAuthorization → signInWithIdToken (not Supabase OAuth redirect)
 - AppState owns auth state via supabase.auth.authStateChanges async stream
-- Settings pulls user data from AppState.currentUser — no separate network calls
+- StorybankViewModel and LibraryViewModel use optimistic UI + background Supabase Tasks
+- Permission checks use CollaboratorRole computed properties — never duplicated in Views
+- Deep link parsing in AppState.handleDeepLink, invite resolution in StorybankViewModel.resolveInviteToken
+- CollabJoinView is a ZStack overlay on RootView (not a sheet)
+- Referral attribution: first referrer wins (referred_by only set if nil)
+- Username search in InviteSheet includes email as fallback
+- Feature specs live in specs/ folder, read by Claude Code before building
 - YouTube and X use thumbnail + deep link (both block WKWebView embeds)
 - TikTok uses embed URL in WKWebView with 9:16 aspect ratio
-- Platform detection lives in PlatformDetector helper, never in View body
-- InspirationVideo Equatable compares id + title + status (not id-only — SwiftUI needs mutable field changes to re-render)
-- References use the story's actual sections, not a hardcoded 6-tag picker
-- Folder picker uses Menu with .contentShape(Rectangle()) — never invisible overlay hacks
 - Tags are user-manageable (create/delete any tag, including defaults)
-- `availableTags` on LibraryViewModel replaces static `IdeaTag.defaults`
-- StorybankViewModel is shared via @EnvironmentObject from MainTabView
-- Asset sections use flat list approach (interleaved ForEach, not multiple SwiftUI Sections)
-- Section headers are draggable (`.moveDisabled(true)` creates barriers — don't use it)
-- Media files stored in Documents/{voice_notes,images,videos}/ with UUID names
-- Profile data uses @AppStorage with "riffit_" prefix keys
-- Display name: @username if set, else fullName, else "You"
-- Sheet backgrounds: always use `.presentationBackground(Color.riffitBackground)`
-- Modals: centered overlay with dim background (never UIAlertController or .actionSheet)
-- Deleting an idea cleans up all orphaned story references via StorybankViewModel.removeReferences(for:)
-- RiffitGhostButtonStyle for empty state CTAs (black fill/gold text, inverts on press)
-
-### Collaboration Architecture Decisions
-- All collaboration data is in-memory — same pattern as Library/Storybank. Persistence is the next P0.
-- Permission checks use CollaboratorRole computed properties (canModifyAssets, canLeaveNotes, etc.) — never duplicated in Views
-- Deep link parsing lives in AppState.handleDeepLink, invite resolution in StorybankViewModel.resolveInviteToken
-- pendingInviteToken survives auth flow — stored in AppState before sign-in, resolved after
-- CollabJoinView is a ZStack overlay on RootView, not a sheet — ensures it appears over both AuthView and MainTabView
-- Referral attribution: first referrer wins (referred_by only set if nil on user record)
-- SectionHeaderRow accepts showActions parameter to hide rename/delete for non-editors
-- Collaborator limit is UI-side only for now (hardcoded per tier: Free=1, Pro=2)
-- Free/Pro tiers only get the simplified "Collaborator" role. Studio+ unlocks Editor/Viewer/Commenter (hasRolePermissions flag, currently hardcoded false).
+- Asset sections use flat list approach with cross-section drag reorder
+- Media files stored locally in Documents/{voice_notes,images,videos}/
+- Default initials avatar: teal600 background everywhere
+- Migration SQL files deleted after running — not kept on disk
 
 ---
 
 ## Models
 InspirationVideo    — id, creatorProfileId, url, platform, title?, userNote?,
                       thumbnailUrl?, transcript?, alignmentScore?, alignmentVerdict?,
-                      alignmentReasoning?, status (saved/archived), savedAt
+                      alignmentReasoning?, status (saved/archived), savedAt (maps to created_at)
 
-IdeaComment         — id, inspirationVideoId, authorName, text (var), createdAt
-IdeaFolder          — id, name, createdAt
+IdeaComment         — id, inspirationVideoId, userId?, authorName, text (var), createdAt
+IdeaFolder          — id, userId?, name, createdAt
 
 Story               — id, creatorProfileId, title, status (draft/ready/archived),
                       createdAt, updatedAt
@@ -153,7 +116,7 @@ StoryAsset          — id, storyId, assetType (voiceNote/video/image/text), nam
 StoryReference      — id, storyId, inspirationVideoId, referenceTag,
                       aiRelevanceNote?, displayOrder, createdAt
 StoryNote           — id, storyId, userId?, authorName, text (var), createdAt
-StoryFolder         — id, name, createdAt
+StoryFolder         — id, userId?, name, createdAt
 AssetSection        — id, storyId, name, displayOrder, createdAt
 
 StoryCollaborator   — id, storyId, userId, role (owner/editor/viewer/commenter/collaborator),
@@ -161,6 +124,8 @@ StoryCollaborator   — id, storyId, userId, role (owner/editor/viewer/commenter
                       acceptedAt?, lastViewedAt?
 StoryInviteLink     — id, storyId, createdBy, role, referralUserId?, token (unique),
                       expiresAt?, maxUses?, useCount, createdAt
+
+CollaboratorUserInfo — displayName, avatarUrl? (in-memory cache on StorybankViewModel)
 
 ---
 
@@ -204,8 +169,6 @@ Riffit/
 │   ├── StoryReference.swift
 │   ├── User.swift
 │   └── VideoDeconstruction.swift
-├── Migrations/
-│   └── 003_story_collaboration.sql
 ├── Config.xcconfig
 ├── Components/
 │   ├── FlowLayout.swift
@@ -213,7 +176,8 @@ Riffit/
 │   ├── LoadingOverlay.swift
 │   ├── RiffitButton.swift
 │   ├── RiffitWordmark.swift
-│   └── ShareSheet.swift
+│   ├── ShareSheet.swift
+│   └── WaveSplashView.swift
 ├── Features/
 │   ├── Auth/
 │   │   ├── AuthView.swift
@@ -256,23 +220,36 @@ Riffit/
 
 ---
 
-## Supabase Schema (live in dev project)
+## Supabase Schema (all tables live, all migrations applied)
 
-7 tables, all with RLS enabled:
-- `users` — mirrors auth.users, auto-created via trigger (has `referred_by` column)
-- `creator_profiles` — brand brain (niche, tone, pillars)
+**Original 7 tables:**
+- `users` — mirrors auth.users, auto-created via trigger, has referred_by + username columns
+- `creator_profiles` — brand brain (created on-demand by AppState.ensureCreatorProfile)
 - `inspiration_videos` — saved ideas from any platform
-- `inspiration_folders` — folder organization
+- `inspiration_folders` — folder organization for ideas (has user_id column)
 - `stories` — creative workspace entries
 - `story_assets` — media/text attached to stories
 - `story_references` — links stories to inspiration videos
 
-**Pending migration (003_story_collaboration.sql):**
+**Migration 003 — Story Collaboration:**
 - `story_collaborators` — collaboration records with role + status + lastViewedAt
 - `story_invite_links` — shareable invite tokens with referral attribution
-- `users.referred_by` column
-- `story_notes.user_id` column
-- Updated RLS policies for collaborator access on story_assets, story_references, story_notes
+- `users.referred_by` column, `story_notes.user_id` column
+- RLS policies for collaborator access on story_assets, story_references, story_notes
+
+**Migration 004 — Storybank supporting tables:**
+- `story_notes` — notes thread on stories
+- `asset_sections` — named groupings within stories
+- `story_folders` — folder organization for stories (has user_id)
+- `story_folder_map` — maps stories to folders
+
+**Migration 005 — Library supporting tables:**
+- `idea_comments` — comment threads on ideas
+- `idea_tags` — per-video tag assignments
+- `idea_folder_map` — maps ideas to folders
+- `user_tags` — user's custom tag list
+
+**Master RLS fix applied:** All policies use `auth.uid() = creator_profile_id` directly, not recursive joins.
 
 ---
 

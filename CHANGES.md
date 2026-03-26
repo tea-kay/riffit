@@ -226,77 +226,92 @@
 
 **Build status:** Spec only — no code changes this entry
 
-### 2026-03-25 — Story Collaboration (full feature, 4 sessions, in-memory)
+### 2026-03-25 — Story Collaboration, Supabase persistence, auth fixes, wave splash
 
 **What changed:**
 
-*Session 1 — Data layer:*
-- `StoryCollaborator` model with `CollaboratorRole` (owner/editor/viewer/commenter/collaborator) and `CollaboratorStatus` (pending/accepted/declined) enums
-- `StoryInviteLink` model with token, expiry, max_uses, use_count, referral_user_id, `isActive` computed property
-- CollaboratorRole has full permission matrix as computed properties: canViewAssets, canModifyAssets, canLeaveNotes, canDownloadAssets, canInviteCollaborators, canDeleteStory, etc.
-- SQL migration `Migrations/003_story_collaboration.sql` (not run — for manual review): story_collaborators table, story_invite_links table, users.referred_by column, story_notes.user_id column, RLS policies for collaborator access on story_assets/story_references/story_notes
-- `StoryNote` updated with `userId: UUID?` field + CodingKeys for Supabase mapping
-- `RiffitUser` updated with `referredBy: UUID?` field
+*Story Collaboration — full 4-session build:*
+- Session 1: StoryCollaborator + StoryInviteLink models, CollaboratorRole/CollaboratorStatus enums, SQL migration 003 (story_collaborators + story_invite_links tables, users.referred_by, story_notes.user_id, collaborator RLS)
+- Session 2: Owner-side UI — CREATORS section in StoryDetailView, InviteSheet (invite link + username search + role picker), ManageCollaboratorsView
+- Session 3: Collaborator-side UI — "Shared with me" section in StorybankView (pending/accepted rows, unread gold dot, accept/decline), CollabJoinView, permission-gated StoryDetailView, lastViewedAt tracking
+- Session 4: Deep linking (onOpenURL, invite token resolution, referral attribution wiring in AppState + AuthViewModel)
 
-*Session 2 — Owner-side UI:*
-- PEOPLE section in StoryDetailView between Notes and List end: CollaboratorRow per member, role pills (gold for Owner, teal for Editor/Collaborator, surface for Viewer/Commenter)
-- `InviteSheet.swift` — bottom sheet with invite link (copy + haptic + "Copied!" feedback + ShareSheet), username search with debounced query, role picker (hidden for Free/Pro, visible for Studio+)
-- `ManageCollaboratorsView.swift` — full-screen collaborator management, swipe-to-remove, collaborator count display ("2 of 4"), upgrade prompt at limit
-- `CollaboratorRow` component reused in both People section and ManageCollaboratorsView
-- Invite row at bottom of People section with lock icon when at collaborator limit
-- "Manage People" added to StoryDetailView toolbar menu
-- StorybankViewModel: addCollaborator, removeCollaborator, updateCollaboratorRole, ensureOwnerCollaborator, fetchCollaborators (stubbed)
+*Supabase persistence — Storybank:*
+- StorybankViewModel fully wired: stories, assets, sections, references, notes, folders all CRUD via optimistic UI + background Supabase calls
+- SQL migration 004 (story_notes, asset_sections, story_folders, story_folder_map tables with RLS)
+- Custom ISO 8601 date decoder (no .convertFromSnakeCase — models have explicit CodingKeys)
 
-*Session 3 — Collaborator-side UI:*
-- "Shared with me" section in StorybankView: only renders if ≥1 shared/pending story, completely absent otherwise
-- `SharedStoryCard` — owner avatar (24×24) + "by [name]" attribution + role pill + gold unread dot (6pt)
-- `PendingInviteRow` — muted card (opacity 0.8) with Accept (teal pill) / Decline (surface pill), animated transitions
-- `CollabJoinView.swift` — full-screen invite landing: owner avatar (64×64), story title, "invited you to collaborate", asset count preview, Join/Join with Apple button, "No thanks" dismiss
-- Permission-gated StoryDetailView: all UI elements conditionally shown/hidden based on CollaboratorRole computed properties
-- "Leave Story" in toolbar menu for non-owners (replaces Delete Story)
-- Unread tracking: lastViewedAt updated on story open, hasUnreadNotes() compares note timestamps
-- StorybankViewModel: sharedCollaborations, pendingInvites, acceptedSharedStories, acceptInvite, declineInvite, leaveStory, updateLastViewed, hasUnreadNotes, currentUserRole, fetchSharedStories (stubbed)
+*Supabase persistence — Library (Ideas):*
+- LibraryViewModel fully wired: inspiration_videos, comments, folders, tags, folder mappings all CRUD
+- SQL migration 005 (idea_comments, idea_tags, idea_folder_map, user_tags tables with RLS)
 
-*Session 4 — Deep linking + referral wiring:*
-- `.onOpenURL` on RiffitApp root WindowGroup — handles `riffit.app/invite/{token}` URLs
-- AppState deep link state: pendingInviteToken, pendingReferralUserId, resolvedInvite, showCollabJoinView, inviteError
-- `handleDeepLink(_:)` parses URL path + query params, stores token, shows CollabJoinView if signed in
-- `clearPendingInvite()` cleans up all invite state after join/dismiss
-- `checkPendingInviteAfterAuth()` re-shows CollabJoinView after auth completes
-- CollabJoinView rewritten to be state-driven: reads from AppState, three states (loading/resolved/error)
-- Error states: expired, not found, already member — each with icon, message, and dismiss button
-- StorybankViewModel: inviteLinks store (keyed by token), resolveInviteToken (validates isActive, checks duplicate membership, hydrates preview), joinStoryFromInvite (creates collaborator + increments use_count)
-- AuthViewModel: reads pendingReferralUserId from AppState, passes as referred_by on new user creation, calls checkPendingInviteAfterAuth after auth completes
-- RootView: CollabJoinView as ZStack overlay above main content, animated with .easeInOut
+*Auth & user fixes:*
+- RiffitUser custom init(from:) with defaults for nullable columns (email→"", subscriptionTier→.free, onboardingComplete→false, createdAt→Date())
+- AppState.fetchUser now uses custom ISO 8601 decoder instead of SDK default .value
+- AppState.ensureCreatorProfile: auto-creates creator_profiles row on login (replaced broken database trigger)
+- AppState.ensureDisplayName: auto-populates full_name from email prefix for new users
+- handle_new_user trigger updated with subscription_tier and onboarding_complete defaults
+- handle_new_creator_profile trigger removed (caused 500 on sign-up due to transaction timing)
+- Master RLS fix: replaced all recursive creator_profiles join policies with direct auth.uid() = creator_profile_id
+- RLS policy added: authenticated users can search other users (SELECT on public.users)
+- InspirationVideo.savedAt CodingKey fixed: maps to "created_at" (actual Supabase column name)
+- Debug email sign-up error logging added (full error type + description)
+
+*Collaboration refinements:*
+- Username search in InviteSheet now also matches on email (most users have null username/full_name)
+- Collaborator rows show real user avatar/name from Supabase (CollaboratorUserInfo cache in StorybankViewModel)
+- Role picker available on collaborator rows for all tiers (temporarily enabled for testing)
+- CREATORS section label (was PEOPLE)
+- Default initials avatar color standardized to teal600 across all views
+
+*UI:*
+- WaveSplashView loading screen: animated teal sine waves (4 layers, parallax) + gold shimmer on crests + Riffit wordmark + tagline. Fades out 0.4s when loading completes.
+- specs/ folder created with TEMPLATE.md, EARN_REFERRAL_PROGRAM.md, STORY_COLLABORATION.md, README.md
 
 **Decisions made:**
-- All collaboration data is in-memory — same pattern as Library/Storybank. Persistence is the next P0.
-- Permission checks use CollaboratorRole computed properties (canModifyAssets, canLeaveNotes, etc.) — never duplicated in Views
-- Deep link parsing lives in AppState.handleDeepLink, invite resolution in StorybankViewModel
-- pendingInviteToken survives auth flow — stored in AppState before sign-in, resolved after
-- CollabJoinView is a ZStack overlay on RootView, not a sheet — ensures it appears over both AuthView and MainTabView
-- Referral attribution: first referrer wins (referred_by only set if nil on user record)
-- SectionHeaderRow accepts showActions parameter to hide rename/delete for non-editors
-- Collaborator limit is UI-side only for now (hardcoded per tier: Free=1, Pro=2)
+- All RLS policies use direct auth.uid() = creator_profile_id, never recursive joins through creator_profiles
+- Creator profiles created on-demand at login (AppState.ensureCreatorProfile), not via database trigger
+- handle_new_creator_profile trigger removed permanently — caused sign-up failures
+- Collaborator username search includes email as fallback
+- New users get full_name auto-populated from email prefix
+- RiffitUser uses custom decoder with sensible defaults for all nullable Supabase columns
+- Permission checks use CollaboratorRole computed properties — never duplicated in Views
+- Deep link parsing in AppState.handleDeepLink, invite resolution in StorybankViewModel
+- CollabJoinView is a ZStack overlay on RootView, not a sheet
+- Referral attribution: first referrer wins
+- Feature specs live in specs/ folder, read by Claude Code before building
+- Migration SQL files deleted after running — no longer needed on disk
 
 **Files created:**
-- Models/StoryCollaborator.swift
-- Models/StoryInviteLink.swift
-- Migrations/003_story_collaboration.sql
-- Features/Storybank/InviteSheet.swift
-- Features/Storybank/ManageCollaboratorsView.swift
-- Features/Storybank/CollabJoinView.swift
+- Models/StoryCollaborator.swift, Models/StoryInviteLink.swift
+- Features/Storybank/InviteSheet.swift, ManageCollaboratorsView.swift, CollabJoinView.swift
+- Components/WaveSplashView.swift
+- specs/TEMPLATE.md, EARN_REFERRAL_PROGRAM.md, STORY_COLLABORATION.md, README.md
 
 **Files modified:**
-- Models/StoryNote.swift (added userId, CodingKeys)
-- Models/User.swift (added referredBy)
-- Features/Storybank/StorybankViewModel.swift (collaborators, invite links, shared stories, permissions, unread tracking)
-- Features/Storybank/StoryDetailView.swift (People section, permission gating, leave story, lastViewedAt)
-- Features/Storybank/StorybankView.swift (Shared with me section, SharedStoryCard, PendingInviteRow)
-- Features/Auth/AuthView.swift (referredBy on test user)
-- Features/Auth/AuthViewModel.swift (referral attribution, checkPendingInviteAfterAuth)
-- App/AppState.swift (deep link state, handleDeepLink, clearPendingInvite, checkPendingInviteAfterAuth)
-- App/RiffitApp.swift (onOpenURL, CollabJoinView overlay)
-- Riffit.xcodeproj/project.pbxproj (registered all new files)
+- Models/User.swift (referredBy, custom init(from:), memberwise init)
+- Models/StoryNote.swift (userId, CodingKeys)
+- Models/StoryFolder.swift (userId, CodingKeys)
+- Models/InspirationVideo.swift (savedAt CodingKey → created_at)
+- Models/IdeaComment.swift (userId, CodingKeys)
+- Models/IdeaFolder.swift (userId, CodingKeys)
+- App/AppState.swift (deep link handling, invite state, custom decoder, ensureCreatorProfile, ensureDisplayName)
+- App/RiffitApp.swift (onOpenURL, CollabJoinView overlay, WaveSplashView)
+- Features/Auth/AuthView.swift (error logging, referredBy)
+- Features/Auth/AuthViewModel.swift (referral attribution)
+- Features/Storybank/StorybankViewModel.swift (full Supabase persistence, collaboration, CollaboratorUserInfo cache)
+- Features/Storybank/StorybankView.swift (Shared with me, userId params)
+- Features/Storybank/StoryDetailView.swift (CREATORS section, permission gating, role picker, collaborator display)
+- Features/Library/LibraryViewModel.swift (full Supabase persistence)
+- Features/Library/LibraryView.swift, AddInspirationView.swift, InspirationDetailView.swift (userId params)
+- Features/Storybank/AddReferenceView.swift (userId params)
+- Features/Storybank/ManageCollaboratorsView.swift (collaborator display, role picker enabled)
+- Components/RiffitButton.swift (ghost button style)
+
+**Files deleted:**
+- Migrations/003_story_collaboration.sql (run, no longer needed)
+- Migrations/004_storybank_tables.sql (run, no longer needed)
+- Migrations/005_library_tables.sql (run, no longer needed)
+- Migrations/ directory removed
 
 **Build status:** Zero errors confirmed

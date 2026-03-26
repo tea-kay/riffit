@@ -90,10 +90,14 @@ struct ManageCollaboratorsView: View {
                     ForEach(collaborators) { collaborator in
                         CollaboratorRow(
                             collaborator: collaborator,
-                            hasRolePermissions: hasRolePermissions,
+                            hasRolePermissions: true,
                             isOwnerView: true,
-                            userDisplayName: collaborator.role == .owner ? ownerDisplayName : nil,
-                            userAvatarUrl: collaborator.role == .owner ? appState.currentUser?.avatarUrl : nil,
+                            userDisplayName: collaborator.role == .owner
+                                ? ownerDisplayName
+                                : viewModel.collaboratorDisplayName(for: collaborator, currentUserId: appState.currentUser?.id),
+                            userAvatarUrl: collaborator.role == .owner
+                                ? appState.currentUser?.avatarUrl
+                                : viewModel.collaboratorAvatarUrl(for: collaborator, currentUserId: appState.currentUser?.id),
                             onChangeRole: { newRole in
                                 viewModel.updateCollaboratorRole(collaborator, to: newRole)
                             },
@@ -102,6 +106,11 @@ struct ManageCollaboratorsView: View {
                                 showRemoveConfirmation = true
                             }
                         )
+                        .onAppear {
+                            if collaborator.role != .owner {
+                                viewModel.cacheUserInfo(userId: collaborator.userId)
+                            }
+                        }
                         .listRowBackground(Color.riffitBackground)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(
@@ -232,7 +241,7 @@ struct CollaboratorRow: View {
                 Menu {
                     if hasRolePermissions {
                         // Role change options
-                        ForEach([CollaboratorRole.editor, .viewer, .commenter], id: \.self) { role in
+                        ForEach([CollaboratorRole.editor, .viewer, .commenter, .collaborator], id: \.self) { role in
                             if role != collaborator.role {
                                 Button {
                                     onChangeRole?(role)

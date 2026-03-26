@@ -284,10 +284,14 @@ struct StoryDetailView: View {
                 ForEach(collabs) { collaborator in
                     CollaboratorRow(
                         collaborator: collaborator,
-                        hasRolePermissions: false,
-                        isOwnerView: true,
-                        userDisplayName: collaborator.role == .owner ? ownerCollabDisplayName : nil,
-                        userAvatarUrl: collaborator.role == .owner ? appState.currentUser?.avatarUrl : nil,
+                        hasRolePermissions: true,
+                        isOwnerView: userRole == .owner,
+                        userDisplayName: collaborator.role == .owner
+                            ? ownerCollabDisplayName
+                            : viewModel.collaboratorDisplayName(for: collaborator, currentUserId: appState.currentUser?.id),
+                        userAvatarUrl: collaborator.role == .owner
+                            ? appState.currentUser?.avatarUrl
+                            : viewModel.collaboratorAvatarUrl(for: collaborator, currentUserId: appState.currentUser?.id),
                         onChangeRole: { newRole in
                             viewModel.updateCollaboratorRole(collaborator, to: newRole)
                         },
@@ -295,6 +299,12 @@ struct StoryDetailView: View {
                             viewModel.removeCollaborator(collaborator)
                         }
                     )
+                    .onAppear {
+                        // Cache user info for non-owner collaborators
+                        if collaborator.role != .owner {
+                            viewModel.cacheUserInfo(userId: collaborator.userId)
+                        }
+                    }
                     .listRowBackground(Color.riffitBackground)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(

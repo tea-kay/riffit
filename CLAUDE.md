@@ -900,7 +900,9 @@ Before writing any Swift code, complete:
 - [x] Supabase project created + schema deployed
 - [x] Apple Sign In auth working (sign in, sign out, session persistence)
 - [x] Settings wired to real user data from Supabase
-- [ ] Persistence — Library/Storybank data to Supabase (in-memory currently)
+- [x] Persistence — Library + Storybank data persists to Supabase
+- [x] Story Collaboration feature (UI + persistence)
+- [x] Wave splash loading screen
 - [ ] Earn feature (referral program) — specced, needs build
 - [ ] Onboarding flow
 - [ ] RevenueCat subscription logic
@@ -908,7 +910,7 @@ Before writing any Swift code, complete:
 - [ ] Test target + tests
 - [ ] CI configuration
 
-Next action: Persist Library and Storybank data to Supabase → Build Earn feature UI.
+Next action: Test collab flow end-to-end → Build Earn feature UI → Onboarding flow.
 
 ---
 

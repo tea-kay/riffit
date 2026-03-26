@@ -859,6 +859,76 @@ class StorybankViewModel: ObservableObject {
 
     // MARK: - Collaborators
 
+    /// Cached user profile data for collaborators, keyed by user ID.
+    /// Populated when collaborators are loaded so CollaboratorRow can
+    /// display real names and avatars instead of generic placeholders.
+    struct CollaboratorUserInfo {
+        let displayName: String
+        let avatarUrl: String?
+    }
+    @Published var collaboratorUserInfo: [UUID: CollaboratorUserInfo] = [:]
+
+    /// Fetches and caches display info for a user from Supabase.
+    /// Safe to call multiple times — skips if already cached.
+    func cacheUserInfo(userId: UUID) {
+        guard collaboratorUserInfo[userId] == nil else { return }
+        Task {
+            do {
+                let response = try await supabase
+                    .from("users")
+                    .select("id, full_name, username, avatar_url, email")
+                    .eq("id", value: userId)
+                    .single()
+                    .execute()
+
+                struct UserRow: Decodable {
+                    let id: UUID
+                    let fullName: String?
+                    let username: String?
+                    let avatarUrl: String?
+                    let email: String?
+                    enum CodingKeys: String, CodingKey {
+                        case id
+                        case fullName = "full_name"
+                        case username
+                        case avatarUrl = "avatar_url"
+                        case email
+                    }
+                }
+                let row = try JSONDecoder().decode(UserRow.self, from: response.data)
+
+                let name: String = {
+                    if let fn = row.fullName?.trimmingCharacters(in: .whitespacesAndNewlines), !fn.isEmpty { return fn }
+                    if let un = row.username?.trimmingCharacters(in: .whitespacesAndNewlines), !un.isEmpty { return "@\(un)" }
+                    if let em = row.email, let prefix = em.components(separatedBy: "@").first, !prefix.isEmpty { return prefix }
+                    return "User"
+                }()
+
+                await MainActor.run {
+                    self.collaboratorUserInfo[userId] = CollaboratorUserInfo(displayName: name, avatarUrl: row.avatarUrl)
+                }
+            } catch {
+                print("[StorybankVM] cacheUserInfo FAILED for \(userId): \(error)")
+            }
+        }
+    }
+
+    /// Convenience: returns display name for a collaborator, resolving from cache.
+    func collaboratorDisplayName(for collaborator: StoryCollaborator, currentUserId: UUID?) -> String? {
+        if collaborator.userId == currentUserId {
+            return nil // let the caller use the owner display name logic
+        }
+        return collaboratorUserInfo[collaborator.userId]?.displayName
+    }
+
+    /// Convenience: returns avatar URL for a collaborator, resolving from cache.
+    func collaboratorAvatarUrl(for collaborator: StoryCollaborator, currentUserId: UUID?) -> String? {
+        if collaborator.userId == currentUserId {
+            return nil // let the caller use appState.currentUser?.avatarUrl
+        }
+        return collaboratorUserInfo[collaborator.userId]?.avatarUrl
+    }
+
     /// Maps story ID → collaborators on that story.
     @Published var storyCollaboratorsMap: [UUID: [StoryCollaborator]] = [:]
 
@@ -974,6 +1044,9 @@ class StorybankViewModel: ObservableObject {
             status: .pending
         )
         storyCollaboratorsMap[storyId, default: []].append(collaborator)
+
+        // Fetch and cache the new collaborator's profile data for display
+        cacheUserInfo(userId: userId)
     }
 
     /// Removes a collaborator from a story.

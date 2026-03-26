@@ -315,16 +315,48 @@ struct InviteSheet: View {
             .clipShape(Circle())
     }
 
-    /// Stub: search for users by username. In-memory for now.
-    /// Will query Supabase `users` table when persistence is wired.
+    /// Searches Supabase users by username, full_name, or email (ILIKE).
+    /// Most new users only have email set, so email is the most reliable match.
     private func performSearch(query: String) {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             searchResults = []
             return
         }
-        // TODO: Debounced Supabase query on users.username
-        searchResults = []
+
+        let pattern = "%\(trimmed)%"
+        Task {
+            do {
+                let response = try await supabase
+                    .from("users")
+                    .select()
+                    .or("username.ilike.\(pattern),full_name.ilike.\(pattern),email.ilike.\(pattern)")
+                    .limit(10)
+                    .execute()
+
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .custom { decoder in
+                    let container = try decoder.singleValueContainer()
+                    let str = try container.decode(String.self)
+                    let f1 = ISO8601DateFormatter()
+                    f1.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                    let f2 = ISO8601DateFormatter()
+                    f2.formatOptions = [.withInternetDateTime]
+                    if let date = f1.date(from: str) { return date }
+                    if let date = f2.date(from: str) { return date }
+                    throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date: \(str)")
+                }
+
+                let users = try decoder.decode([RiffitUser].self, from: response.data)
+                // Exclude the current user from results
+                let currentId = appState.currentUser?.id
+                await MainActor.run {
+                    searchResults = users.filter { $0.id != currentId }
+                }
+            } catch {
+                print("[InviteSheet] performSearch FAILED: \(error)")
+            }
+        }
     }
 
     /// Invite a user to this story with the selected role

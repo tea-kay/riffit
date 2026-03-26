@@ -33,32 +33,47 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
+            // Main content underneath — always rendered so it's ready when splash fades
             Group {
-                if appState.isLoading {
-                    ProgressView()
-                        .tint(Color.riffitPrimary)
-                        .onAppear { print("[RootView] 🔄 Showing: ProgressView (isLoading=true)") }
-                } else if !appState.isAuthenticated {
+                if !appState.isAuthenticated && !appState.isLoading {
                     AuthView()
-                        .onAppear { print("[RootView] 🔒 Showing: AuthView (isAuthenticated=false, currentUser=\(appState.currentUser?.email ?? "nil"))") }
+                        .onAppear { print("[RootView] 🔒 Showing: AuthView") }
                 } else {
                     MainTabView()
                         .onAppear {
                             print("[RootView] ✅ Showing: MainTabView")
-                            // After auth completes, check if there's a pending invite
                             appState.checkPendingInviteAfterAuth()
                         }
                 }
             }
 
+            // Wave splash screen — covers everything while app initializes.
+            // Fades out with 0.4s easeInOut when isLoading becomes false.
+            if appState.isLoading || splashVisible {
+                WaveSplashView(isLoading: $appState.isLoading)
+                    .zIndex(2)
+                    .onAppear { print("[RootView] 🌊 Showing: WaveSplashView") }
+            }
+
             // CollabJoinView overlay — shown when a deep link invite is being resolved.
-            // Presented as a full-screen overlay above the current content.
             if appState.showCollabJoinView {
                 CollabJoinView()
                     .transition(.opacity)
-                    .zIndex(1)
+                    .zIndex(3)
             }
         }
         .animation(.easeInOut(duration: 0.25), value: appState.showCollabJoinView)
+        .onChange(of: appState.isLoading) { _, newValue in
+            if !newValue {
+                // Keep splash in the view tree briefly so the fade-out animation plays,
+                // then remove it after the animation completes.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    splashVisible = false
+                }
+            }
+        }
     }
+
+    /// Tracks whether the splash is still in the view tree for fade-out animation.
+    @State private var splashVisible: Bool = true
 }

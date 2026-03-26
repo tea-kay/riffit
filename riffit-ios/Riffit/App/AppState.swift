@@ -190,6 +190,10 @@ class AppState: ObservableObject {
             print("[AppState] ✅ fetchUser succeeded — email: \(user.email), onboardingComplete: \(user.onboardingComplete)")
             self.currentUser = user
 
+            // If full_name is empty, default it to the email prefix so new
+            // users have a visible display name immediately.
+            await ensureDisplayName(user: user)
+
             // Ensure a creator_profiles row exists so stories and ideas
             // can reference creator_profile_id = user.id.
             await ensureCreatorProfile(userId: user.id)
@@ -198,6 +202,48 @@ class AppState: ObservableObject {
             // A future session event will retry when the row is ready.
             print("[AppState] ❌ fetchUser FAILED — \(error)")
             self.currentUser = nil
+        }
+    }
+
+    // MARK: - Ensure Display Name
+
+    /// If the user's full_name is nil or empty, sets it to the email prefix
+    /// (everything before @). Example: "wow@wow.com" → "wow".
+    /// Never overwrites an existing name.
+    private func ensureDisplayName(user: RiffitUser) async {
+        let name = user.fullName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard name.isEmpty else { return }
+
+        let emailPrefix = user.email.components(separatedBy: "@").first ?? ""
+        guard !emailPrefix.isEmpty else { return }
+
+        // Update local state immediately
+        self.currentUser = RiffitUser(
+            id: user.id,
+            email: user.email,
+            fullName: emailPrefix,
+            username: user.username,
+            avatarUrl: user.avatarUrl,
+            subscriptionTier: user.subscriptionTier,
+            onboardingComplete: user.onboardingComplete,
+            referredBy: user.referredBy,
+            createdAt: user.createdAt
+        )
+
+        // Persist to Supabase
+        do {
+            struct NameUpdate: Encodable {
+                let fullName: String
+                enum CodingKeys: String, CodingKey { case fullName = "full_name" }
+            }
+            try await supabase
+                .from("users")
+                .update(NameUpdate(fullName: emailPrefix))
+                .eq("id", value: user.id)
+                .execute()
+            print("[AppState] ✅ ensureDisplayName — set full_name to '\(emailPrefix)'")
+        } catch {
+            print("[AppState] ⚠️ ensureDisplayName FAILED — \(error)")
         }
     }
 
