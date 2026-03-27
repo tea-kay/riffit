@@ -24,16 +24,34 @@ struct InviteSheet: View {
     /// Controls the share sheet presentation
     @State private var showShareSheet: Bool = false
 
+    /// Whether an invite link is currently being created
+    @State private var isCreatingLink: Bool = false
+
+    /// The URL string to share — built from the real Supabase invite link
+    @State private var shareUrl: String = ""
+
     /// Whether the current user's tier has granular role permissions (Studio+)
     /// Hardcoded to false for now — Free/Pro only get the "Collaborator" role.
     private var hasRolePermissions: Bool {
         false
     }
 
-    /// The invite link URL for this story
+    /// The invite link URL for display. Shows the real link if one exists,
+    /// otherwise shows a placeholder until the user creates one.
     private var inviteLinkText: String {
-        let userId = appState.currentUser?.id.uuidString ?? "unknown"
-        return "riffit.app/invite/\(story.id.uuidString.prefix(8))?ref=\(userId.prefix(8))"
+        if let existing = viewModel.activeInviteLink(for: story.id) {
+            return inviteUrl(for: existing)
+        }
+        return "Tap Copy or Share to generate a link"
+    }
+
+    /// Builds the shareable URL from an invite link record.
+    private func inviteUrl(for link: StoryInviteLink) -> String {
+        var url = "riffit.app/invite/\(link.token)"
+        if let refId = link.referralUserId {
+            url += "?ref=\(refId.uuidString)"
+        }
+        return url
     }
 
     var body: some View {
@@ -70,7 +88,7 @@ struct InviteSheet: View {
         .presentationCornerRadius(CGFloat(RR.modal))
         .presentationBackground(Color.riffitBackground)
         .sheet(isPresented: $showShareSheet) {
-            ShareSheet(items: [inviteLinkText])
+            ShareSheet(items: [shareUrl])
         }
     }
 
@@ -149,31 +167,44 @@ struct InviteSheet: View {
                             .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
                     )
 
-                // Copy button
+                // Copy button — creates invite link in Supabase if needed, then copies URL
                 Button {
-                    UIPasteboard.general.string = inviteLinkText
-                    // Haptic feedback
-                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                    generator.impactOccurred()
-                    // Show "Copied!" for 2 seconds
-                    showCopiedFeedback = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        showCopiedFeedback = false
+                    Task {
+                        guard let url = await getOrCreateInviteUrl() else { return }
+                        UIPasteboard.general.string = url
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+                        showCopiedFeedback = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            showCopiedFeedback = false
+                        }
                     }
                 } label: {
-                    Text(showCopiedFeedback ? "Copied!" : "Copy")
-                        .font(RF.tag)
-                        .foregroundStyle(Color.riffitTeal400)
-                        .padding(.vertical, RS.sm)
-                        .padding(.horizontal, RS.smPlus)
-                        .background(Color.riffitTealTint)
-                        .clipShape(Capsule())
+                    Group {
+                        if isCreatingLink {
+                            ProgressView()
+                                .tint(Color.riffitTeal400)
+                        } else {
+                            Text(showCopiedFeedback ? "Copied!" : "Copy")
+                        }
+                    }
+                    .font(RF.tag)
+                    .foregroundStyle(Color.riffitTeal400)
+                    .padding(.vertical, RS.sm)
+                    .padding(.horizontal, RS.smPlus)
+                    .background(Color.riffitTealTint)
+                    .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .disabled(isCreatingLink)
 
-                // Share button
+                // Share button — creates invite link in Supabase if needed, then opens share sheet
                 Button {
-                    showShareSheet = true
+                    Task {
+                        guard let url = await getOrCreateInviteUrl() else { return }
+                        shareUrl = url
+                        showShareSheet = true
+                    }
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.caption)
@@ -183,6 +214,7 @@ struct InviteSheet: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .disabled(isCreatingLink)
             }
         }
     }
@@ -278,6 +310,31 @@ struct InviteSheet: View {
     }
 
     // MARK: - Helpers
+
+    /// Returns the URL for an existing active invite link, or creates a new one
+    /// in Supabase and returns that URL. Returns nil only if the INSERT fails.
+    private func getOrCreateInviteUrl() async -> String? {
+        // Reuse an existing active link if one exists
+        if let existing = viewModel.activeInviteLink(for: story.id) {
+            return inviteUrl(for: existing)
+        }
+
+        // Create a new link in Supabase
+        guard let userId = appState.currentUser?.id else { return nil }
+        isCreatingLink = true
+        defer { isCreatingLink = false }
+
+        let role: CollaboratorRole = hasRolePermissions ? selectedRole : .collaborator
+        guard let link = await viewModel.createInviteLink(
+            for: story.id,
+            createdBy: userId,
+            role: role,
+            referralUserId: userId
+        ) else {
+            return nil
+        }
+        return inviteUrl(for: link)
+    }
 
     /// 32×32 avatar circle for search result users
     private func userAvatar(for user: RiffitUser) -> some View {

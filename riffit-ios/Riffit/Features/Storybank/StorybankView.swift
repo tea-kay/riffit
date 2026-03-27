@@ -13,6 +13,7 @@ struct StorybankView: View {
     @State private var showActionSheet: Bool = false
     @State private var showLeaveConfirm: Bool = false
     @State private var collaboratorToLeave: StoryCollaborator?
+    @State private var selectedSegment: StorybankSegment = .myStories
     @Environment(\.colorScheme) private var colorScheme
 
     /// First initial of the user's name or email for avatar fallback
@@ -115,40 +116,19 @@ struct StorybankView: View {
     private var storyList: some View {
         ScrollView {
             LazyVStack(spacing: RS.smPlus) {
-                // Unfiled stories (own stories first)
-                let unfiled = viewModel.unfiledStories
-                if !unfiled.isEmpty {
-                    if !viewModel.folders.isEmpty {
-                        Text("Unfiled")
-                            .font(RF.tag)
-                            .textCase(.uppercase)
-                            .tracking(0.08 * 12)
-                            .foregroundStyle(Color.riffitTextTertiary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, RS.sm)
-                    }
-
-                    ForEach(unfiled) { story in
-                        NavigationLink(value: story) {
-                            StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id), avatarUrl: appState.currentUser?.avatarUrl, avatarInitial: userAvatarInitial)
-                        }
-                        .buttonStyle(.plain)
-                        .draggable(story.id.uuidString)
-                    }
-                }
-
-                // MARK: Shared with me
-                // Only renders if user has ≥1 shared or pending story.
-                // Completely absent when zero — no header, no empty state.
+                // Segmented control — only when shared content exists
                 if viewModel.hasSharedContent {
-                    sharedWithMeSection
+                    StorybankSegmentedControl(
+                        selection: $selectedSegment,
+                        hasPending: !viewModel.pendingInvites.isEmpty
+                    )
+                    .padding(.bottom, RS.xs)
                 }
 
-                // Folders section
-                if !viewModel.folders.isEmpty {
-                    ForEach(viewModel.folders) { folder in
-                        StoryFolderDropTarget(folder: folder, viewModel: viewModel)
-                    }
+                if selectedSegment == .myStories || !viewModel.hasSharedContent {
+                    myStoriesContent
+                } else {
+                    sharedSegmentContent
                 }
             }
             .padding(.horizontal, RS.md)
@@ -181,57 +161,134 @@ struct StorybankView: View {
         }
     }
 
-    // MARK: - Shared With Me Section
+    // MARK: - My Stories Content
 
-    private var sharedWithMeSection: some View {
-        VStack(alignment: .leading, spacing: RS.smPlus) {
-            // Section header
-            Text("Shared with me")
-                .font(RF.tag)
-                .textCase(.uppercase)
-                .tracking(0.06 * 11)
-                .foregroundStyle(Color.riffitTextSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, RS.sm)
-
-            // Pending invites first (newest on top)
-            ForEach(viewModel.pendingInvites) { invite in
-                PendingInviteRow(
-                    collaborator: invite,
-                    onAccept: {
-                        withAnimation(.easeInOut) {
-                            viewModel.acceptInvite(invite)
-                        }
-                    },
-                    onDecline: {
-                        withAnimation(.easeInOut) {
-                            viewModel.declineInvite(invite)
-                        }
-                    }
-                )
-                .transition(.opacity.combined(with: .move(edge: .top)))
+    @ViewBuilder
+    private var myStoriesContent: some View {
+        let unfiled = viewModel.unfiledStories
+        if !unfiled.isEmpty {
+            if !viewModel.folders.isEmpty {
+                Text("Unfiled")
+                    .font(RF.tag)
+                    .textCase(.uppercase)
+                    .tracking(0.08 * 12)
+                    .foregroundStyle(Color.riffitTextTertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, RS.sm)
             }
 
-            // Accepted shared stories (most recently updated first)
-            ForEach(viewModel.acceptedSharedStories) { collab in
-                // Look up the actual story to display
-                if let story = viewModel.stories.first(where: { $0.id == collab.storyId }) {
-                    NavigationLink(value: story) {
-                        SharedStoryCard(
-                            story: story,
-                            collaborator: collab,
-                            countsLabel: viewModel.countsLabel(for: story.id),
-                            hasUnread: viewModel.hasUnreadNotes(for: story.id)
-                        )
+            ForEach(unfiled) { story in
+                NavigationLink(value: story) {
+                    StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id), avatarUrl: appState.currentUser?.avatarUrl, avatarInitial: userAvatarInitial)
+                }
+                .buttonStyle(.plain)
+                .draggable(story.id.uuidString)
+            }
+        }
+
+        if !viewModel.folders.isEmpty {
+            ForEach(viewModel.folders) { folder in
+                StoryFolderDropTarget(folder: folder, viewModel: viewModel)
+            }
+        }
+    }
+
+    // MARK: - Shared Segment Content
+
+    @ViewBuilder
+    private var sharedSegmentContent: some View {
+        // Pending section
+        if !viewModel.pendingInvites.isEmpty {
+            pendingSection
+        }
+
+        // Active section
+        if !viewModel.acceptedSharedStories.isEmpty {
+            activeSection
+        }
+
+        // Safety net — segment is normally hidden when empty
+        if viewModel.pendingInvites.isEmpty && viewModel.acceptedSharedStories.isEmpty {
+            Text("No shared stories yet")
+                .font(RF.displayItalic(15))
+                .foregroundStyle(Color.riffitTextSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, RS.xl2)
+        }
+    }
+
+    @ViewBuilder
+    private var pendingSection: some View {
+        // Section label + count badge
+        HStack(spacing: RS.sm) {
+            Text("PENDING")
+                .font(RF.body(11, weight: .medium))
+                .tracking(0.06 * 11)
+                .foregroundStyle(Color.riffitPrimary)
+
+            Text("\(viewModel.pendingInvites.count)")
+                .font(RF.meta)
+                .foregroundStyle(Color.riffitPrimary)
+                .padding(.vertical, 2)
+                .padding(.horizontal, 6)
+                .background(Color.riffitPrimaryTint)
+                .clipShape(Capsule())
+
+            Spacer()
+        }
+        .padding(.top, RS.sm)
+
+        ForEach(viewModel.pendingInvites) { invite in
+            PendingInviteCard(
+                collaborator: invite,
+                inviterDisplayName: invite.invitedBy.flatMap { viewModel.collaboratorUserInfo[$0]?.displayName } ?? "Someone",
+                inviterAvatarUrl: invite.invitedBy.flatMap { viewModel.collaboratorUserInfo[$0]?.avatarUrl },
+                storyTitle: viewModel.stories.first(where: { $0.id == invite.storyId })?.title ?? "Untitled Story",
+                countsLabel: viewModel.countsLabel(for: invite.storyId),
+                onAccept: {
+                    withAnimation(.easeInOut) {
+                        viewModel.acceptInvite(invite)
                     }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            collaboratorToLeave = collab
-                            showLeaveConfirm = true
-                        } label: {
-                            Label("Leave story", systemImage: "rectangle.portrait.and.arrow.right")
-                        }
+                },
+                onDecline: {
+                    withAnimation(.easeInOut) {
+                        viewModel.declineInvite(invite)
+                    }
+                }
+            )
+            .transition(.opacity.combined(with: .move(edge: .top)))
+        }
+    }
+
+    @ViewBuilder
+    private var activeSection: some View {
+        Text("ACTIVE")
+            .font(RF.body(11, weight: .medium))
+            .tracking(0.06 * 11)
+            .foregroundStyle(Color.riffitTeal600)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, RS.sm)
+
+        ForEach(viewModel.acceptedSharedStories) { collab in
+            if let story = viewModel.stories.first(where: { $0.id == collab.storyId }) {
+                let ownerInfo = viewModel.collaboratorUserInfo[story.creatorProfileId]
+                NavigationLink(value: story) {
+                    SharedStoryCard(
+                        story: story,
+                        collaborator: collab,
+                        countsLabel: viewModel.countsLabel(for: story.id),
+                        hasUnread: viewModel.hasUnreadNotes(for: story.id),
+                        ownerDisplayName: ownerInfo?.displayName ?? "Creator",
+                        ownerAvatarUrl: ownerInfo?.avatarUrl
+                    )
+                }
+                .buttonStyle(CardPressStyle())
+                .contextMenu {
+                    Button(role: .destructive) {
+                        collaboratorToLeave = collab
+                        showLeaveConfirm = true
+                    } label: {
+                        Label("Leave story", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
             }
@@ -693,76 +750,64 @@ struct StoryFolderDetailView: View {
 
 // MARK: - Shared Story Card
 
-/// A story card for the "Shared with me" section.
+/// A story card for the "Shared" segment.
 /// Shows owner attribution, role pill, and unread gold dot.
 struct SharedStoryCard: View {
     let story: Story
     let collaborator: StoryCollaborator
     let countsLabel: String
     let hasUnread: Bool
-
-    /// Placeholder owner name — will use real user data when persistence is wired.
-    private var ownerDisplayName: String {
-        "Owner"
-    }
+    let ownerDisplayName: String
+    let ownerAvatarUrl: String?
 
     var body: some View {
-        HStack(spacing: 0) {
-            // Unread gold dot on leading edge
-            if hasUnread {
-                Circle()
-                    .fill(Color.riffitPrimary)
-                    .frame(width: 6, height: 6)
-                    .padding(.trailing, RS.sm)
+        VStack(alignment: .leading, spacing: RS.sm) {
+            // Title + role pill
+            HStack {
+                Text(story.title)
+                    .font(RF.heading)
+                    .foregroundStyle(Color.riffitTextPrimary)
+                    .lineLimit(2)
+
+                Spacer()
+
+                // Role pill — teal tint, trailing
+                Text(collaborator.role.displayName)
+                    .font(RF.tag)
+                    .foregroundStyle(rolePillTextColor)
+                    .padding(.vertical, 3)
+                    .padding(.horizontal, 8)
+                    .background(rolePillBackground)
+                    .clipShape(Capsule())
             }
 
-            VStack(alignment: .leading, spacing: RS.sm) {
-                // Title + role pill
-                HStack {
-                    Text(story.title)
-                        .font(RF.heading)
-                        .foregroundStyle(Color.riffitTextPrimary)
-                        .lineLimit(2)
+            // Owner row: 20pt avatar + @ownerName
+            HStack(spacing: RS.xs) {
+                ownerAvatar
 
-                    Spacer()
+                Text("@\(ownerDisplayName)")
+                    .font(RF.caption)
+                    .foregroundStyle(Color.riffitTextSecondary)
+            }
 
-                    // Role pill
-                    Text(collaborator.role.displayName)
-                        .font(RF.tag)
-                        .foregroundStyle(rolePillTextColor)
-                        .padding(.vertical, 3)
-                        .padding(.horizontal, 8)
-                        .background(rolePillBackground)
-                        .clipShape(Capsule())
+            // Counts + timestamp + unread dot
+            HStack {
+                Text(countsLabel)
+                    .font(RF.caption)
+                    .foregroundStyle(Color.riffitTextSecondary)
+
+                Spacer()
+
+                // Unread gold dot
+                if hasUnread {
+                    Circle()
+                        .fill(Color.riffitPrimary)
+                        .frame(width: 7, height: 7)
                 }
 
-                // Owner attribution: avatar + "by [name]"
-                HStack(spacing: RS.xs) {
-                    // Owner avatar placeholder (24×24)
-                    Text(String(ownerDisplayName.first ?? Character("?")))
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Color.riffitTextPrimary)
-                        .frame(width: 24, height: 24)
-                        .background(Color.riffitTeal600)
-                        .clipShape(Circle())
-
-                    Text("by \(ownerDisplayName)")
-                        .font(RF.caption)
-                        .foregroundStyle(Color.riffitTextTertiary)
-                }
-
-                // Counts + timestamp
-                HStack {
-                    Text(countsLabel)
-                        .font(RF.caption)
-                        .foregroundStyle(Color.riffitTextSecondary)
-
-                    Spacer()
-
-                    Text(story.updatedAt.relativeTimestamp)
-                        .font(RF.meta)
-                        .foregroundStyle(Color.riffitTextTertiary)
-                }
+                Text(story.updatedAt.relativeTimestamp)
+                    .font(RF.meta)
+                    .foregroundStyle(Color.riffitTextTertiary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -773,6 +818,30 @@ struct SharedStoryCard: View {
             RoundedRectangle(cornerRadius: RR.card)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
+    }
+
+    @ViewBuilder
+    private var ownerAvatar: some View {
+        if let urlString = ownerAvatarUrl, let url = URL(string: urlString) {
+            AsyncImage(url: url) { image in
+                image.resizable().aspectRatio(contentMode: .fill)
+            } placeholder: {
+                ownerAvatarFallback
+            }
+            .frame(width: 20, height: 20)
+            .clipShape(Circle())
+        } else {
+            ownerAvatarFallback
+        }
+    }
+
+    private var ownerAvatarFallback: some View {
+        Text(String(ownerDisplayName.first ?? Character("?")))
+            .font(.system(size: 9, weight: .medium))
+            .foregroundStyle(Color.riffitTextPrimary)
+            .frame(width: 20, height: 20)
+            .background(Color.riffitTeal600)
+            .clipShape(Circle())
     }
 
     private var rolePillTextColor: Color {
@@ -798,64 +867,76 @@ struct SharedStoryCard: View {
     }
 }
 
-// MARK: - Pending Invite Row
+// MARK: - Pending Invite Card
 
-/// A muted card for pending collaboration invites.
-/// Shows owner info + Accept/Decline buttons inline.
-struct PendingInviteRow: View {
+/// Rich invite card with real inviter info, story title, and Join/Decline actions.
+/// Gold-tinted border distinguishes it from regular story cards.
+struct PendingInviteCard: View {
     let collaborator: StoryCollaborator
+    let inviterDisplayName: String
+    let inviterAvatarUrl: String?
+    let storyTitle: String
+    let countsLabel: String
     let onAccept: () -> Void
     let onDecline: () -> Void
 
-    /// Placeholder — will use real owner name when persistence is wired.
-    private var ownerDisplayName: String {
-        "Someone"
-    }
-
-    /// Placeholder — will use real story title when persistence is wired.
-    private var storyTitle: String {
-        "a story"
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: RS.smPlus) {
-            // Invitation message
+            // Top row: avatar + "@name invited you" + timestamp
             HStack(spacing: RS.sm) {
-                // Owner avatar placeholder (32×32)
-                Text(String(ownerDisplayName.first ?? Character("?")))
-                    .font(RF.caption)
-                    .foregroundStyle(Color.riffitTextPrimary)
-                    .frame(width: 32, height: 32)
-                    .background(Color.riffitTeal600)
-                    .clipShape(Circle())
+                inviterAvatar
 
-                Text("\(ownerDisplayName) invited you to *\(storyTitle)*")
-                    .font(RF.bodyMd)
-                    .foregroundStyle(Color.riffitTextSecondary)
-                    .lineLimit(2)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("@\(inviterDisplayName) invited you")
+                        .font(RF.bodySm)
+                        .foregroundStyle(Color.riffitTextSecondary)
+
+                    Text(collaborator.createdAt.relativeTimestamp)
+                        .font(RF.meta)
+                        .foregroundStyle(Color.riffitTextTertiary)
+                }
+
+                Spacer()
             }
 
-            // Accept / Decline buttons
+            // Story title
+            Text(storyTitle)
+                .font(RF.display(17))
+                .foregroundStyle(Color.riffitTextPrimary)
+                .lineLimit(2)
+
+            // Counts
+            if !countsLabel.isEmpty {
+                Text(countsLabel)
+                    .font(RF.caption)
+                    .foregroundStyle(Color.riffitTextTertiary)
+            }
+
+            // Action buttons
             HStack(spacing: RS.sm) {
+                // "Join story" — primary gold fill
                 Button(action: onAccept) {
-                    Text("Accept")
-                        .font(RF.tag)
-                        .foregroundStyle(Color.riffitTeal400)
-                        .padding(.vertical, RS.sm)
-                        .padding(.horizontal, RS.md)
-                        .background(Color.riffitTealTint)
-                        .clipShape(Capsule())
+                    Text("Join story")
+                        .font(RF.displayMedium(14))
+                        .foregroundStyle(Color.riffitOnPrimary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background(Color.riffitPrimary)
+                        .cornerRadius(RR.button)
                 }
                 .buttonStyle(.plain)
 
+                // "Decline" — transparent with border
                 Button(action: onDecline) {
                     Text("Decline")
-                        .font(RF.tag)
+                        .font(RF.displayMedium(14))
                         .foregroundStyle(Color.riffitTextSecondary)
-                        .padding(.vertical, RS.sm)
-                        .padding(.horizontal, RS.md)
-                        .background(Color.riffitElevated)
-                        .clipShape(Capsule())
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: RR.button)
+                                .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
+                        )
                 }
                 .buttonStyle(.plain)
             }
@@ -866,8 +947,108 @@ struct PendingInviteRow: View {
         .cornerRadius(RR.card)
         .overlay(
             RoundedRectangle(cornerRadius: RR.card)
-                .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+                .stroke(Color.riffitPrimary.opacity(0.25), lineWidth: 0.5)
         )
-        .opacity(0.8)
+    }
+
+    @ViewBuilder
+    private var inviterAvatar: some View {
+        if let urlString = inviterAvatarUrl, let url = URL(string: urlString) {
+            AsyncImage(url: url) { image in
+                image.resizable().aspectRatio(contentMode: .fill)
+            } placeholder: {
+                inviterAvatarFallback
+            }
+            .frame(width: 32, height: 32)
+            .clipShape(Circle())
+        } else {
+            inviterAvatarFallback
+        }
+    }
+
+    private var inviterAvatarFallback: some View {
+        Text(String(inviterDisplayName.first ?? Character("?")))
+            .font(RF.caption)
+            .foregroundStyle(Color.riffitTextPrimary)
+            .frame(width: 32, height: 32)
+            .background(Color.riffitTeal600)
+            .clipShape(Circle())
+    }
+}
+
+// MARK: - Segmented Control
+
+/// Which segment is active in the Storybank view.
+enum StorybankSegment {
+    case myStories
+    case shared
+}
+
+/// Custom segmented control matching the Riffit design system.
+/// Shows "My stories" and "Shared" tabs with a gold notification dot
+/// on the Shared segment when pending invites exist.
+struct StorybankSegmentedControl: View {
+    @Binding var selection: StorybankSegment
+    let hasPending: Bool
+
+    var body: some View {
+        HStack(spacing: 0) {
+            segmentButton(.myStories, label: "My stories")
+            segmentButton(.shared, label: "Shared", showDot: hasPending)
+        }
+        .padding(3)
+        .background(Color.riffitElevated)
+        .cornerRadius(RR.button)
+    }
+
+    private func segmentButton(
+        _ segment: StorybankSegment,
+        label: String,
+        showDot: Bool = false
+    ) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selection = segment
+            }
+        } label: {
+            HStack(spacing: RS.xs) {
+                Text(label)
+                    .font(RF.bodyMd)
+                    .foregroundStyle(
+                        selection == segment
+                            ? Color.riffitTextPrimary
+                            : Color.riffitTextSecondary
+                    )
+
+                if showDot {
+                    Circle()
+                        .fill(Color.riffitPrimary)
+                        .frame(width: 7, height: 7)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, RS.sm)
+            .background(
+                Group {
+                    if selection == segment {
+                        RoundedRectangle(cornerRadius: RR.button - 3)
+                            .fill(Color.riffitSurface)
+                            .shadow(color: .black.opacity(0.08), radius: 1, y: 0.5)
+                    }
+                }
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Card Press Style
+
+/// Tap feedback for tappable cards — subtle scale on press.
+struct CardPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }

@@ -37,6 +37,10 @@ class StorybankViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var error: Error?
 
+    /// The current user's ID, stored when fetchStories runs so that
+    /// fetchSharedStories can use it without a parameter.
+    private var currentUserId: UUID?
+
     /// Maps story ID → folder ID. Stories not in this dictionary are unfiled.
     @Published var storyFolderMap: [UUID: UUID] = [:]
 
@@ -52,14 +56,21 @@ class StorybankViewModel: ObservableObject {
     /// Maps story ID → notes thread.
     @Published var storyNotesMap: [UUID: [StoryNote]] = [:]
 
+    /// IDs of stories where the current user is a non-owner collaborator.
+    /// Used to exclude shared stories from the owned stories sections.
+    /// Filters out owner records so owned stories are never accidentally excluded.
+    private var sharedStoryIds: Set<UUID> {
+        Set(sharedCollaborations.filter { $0.role != .owner }.map { $0.storyId })
+    }
+
     var isEmpty: Bool { stories.isEmpty && folders.isEmpty }
 
     var unfiledStories: [Story] {
-        stories.filter { storyFolderMap[$0.id] == nil }
+        stories.filter { storyFolderMap[$0.id] == nil && !sharedStoryIds.contains($0.id) }
     }
 
     func stories(in folder: StoryFolder) -> [Story] {
-        stories.filter { storyFolderMap[$0.id] == folder.id }
+        stories.filter { storyFolderMap[$0.id] == folder.id && !sharedStoryIds.contains($0.id) }
     }
 
     // MARK: - Flat Rows
@@ -168,6 +179,7 @@ class StorybankViewModel: ObservableObject {
             isLoading = false
             return
         }
+        self.currentUserId = profileId
         isLoading = true
         error = nil
 
@@ -182,10 +194,13 @@ class StorybankViewModel: ObservableObject {
                 .data
             let fetchedStories = try Self.decoder.decode([Story].self, from: storiesData)
             self.stories = fetchedStories
+            print("[DEBUG] fetchStories assigned \(fetchedStories.count) owned stories")
 
             let storyIds = fetchedStories.map { $0.id }
             guard !storyIds.isEmpty else {
                 isLoading = false
+                // Still fetch shared stories even if user has no owned stories
+                Task { await self.fetchSharedStories() }
                 return
             }
 
@@ -271,6 +286,38 @@ class StorybankViewModel: ObservableObject {
         }
 
         isLoading = false
+
+        // Fetch collaboration data in background — owned stories are already visible.
+        // Capture owned IDs before shared stories get added to the array.
+        let ownedStoryIds = self.stories.map { $0.id }
+        Task {
+            // Shared stories for "Shared with me" section
+            await self.fetchSharedStories()
+
+            // Batch-fetch collaborators for all owned stories (for CREATORS section)
+            guard !ownedStoryIds.isEmpty else { return }
+            do {
+                let data = try await supabase
+                    .from("story_collaborators")
+                    .select()
+                    .in("story_id", values: ownedStoryIds.map { $0.uuidString })
+                    .execute()
+                    .data
+                let allCollabs = try Self.decoder.decode([StoryCollaborator].self, from: data)
+                let grouped = Dictionary(grouping: allCollabs, by: \.storyId)
+                for (storyId, collabs) in grouped {
+                    self.storyCollaboratorsMap[storyId] = collabs
+                }
+                // Cache display info for each collaborator
+                let userIds = Set(allCollabs.map { $0.userId })
+                for uid in userIds {
+                    self.cacheUserInfo(userId: uid)
+                }
+                print("[StorybankVM] fetchOwnedCollaborators OK — \(allCollabs.count) records across \(grouped.count) stories")
+            } catch {
+                print("[StorybankVM] fetchOwnedCollaborators FAILED: \(error)")
+            }
+        }
     }
 
     // MARK: - Stories
@@ -281,6 +328,7 @@ class StorybankViewModel: ObservableObject {
         let profileId = userId ?? UUID()
         let story = Story(creatorProfileId: profileId, title: title)
         stories.insert(story, at: 0)
+        print("[DEBUG] createStory inserted '\(title)', stories.count = \(stories.count)")
 
         Task {
             do {
@@ -298,6 +346,7 @@ class StorybankViewModel: ObservableObject {
         storyNotesMap.removeValue(forKey: story.id)
         storyFolderMap.removeValue(forKey: story.id)
         stories.removeAll { $0.id == story.id }
+        print("[DEBUG] deleteStory removed '\(story.title)', stories.count = \(stories.count)")
 
         Task {
             do {
@@ -316,6 +365,7 @@ class StorybankViewModel: ObservableObject {
             title: story.title + " Copy"
         )
         stories.insert(newStory, at: 0)
+        print("[DEBUG] duplicateStory inserted '\(newStory.title)', stories.count = \(stories.count)")
 
         // Duplicate sections with ID mapping so assets land in the right copied section
         var sectionIdMap: [UUID: UUID] = [:]
@@ -778,16 +828,93 @@ class StorybankViewModel: ObservableObject {
 
     // MARK: - Invite Links
 
-    /// In-memory store of invite links. Keyed by token for lookup.
-    /// Will be replaced by Supabase queries when persistence is wired.
+    /// Local cache of invite links, keyed by token for lookup.
+    /// Populated from Supabase via fetchInviteLinks(for:) and createInviteLink().
     @Published var inviteLinks: [String: StoryInviteLink] = [:]
+
+    /// Creates a new invite link in Supabase and caches it locally.
+    /// The token is a server-generated UUID. Returns the created link,
+    /// or nil if the INSERT fails.
+    func createInviteLink(
+        for storyId: UUID,
+        createdBy: UUID,
+        role: CollaboratorRole = .collaborator,
+        referralUserId: UUID? = nil
+    ) async -> StoryInviteLink? {
+        let token = UUID().uuidString
+        let link = StoryInviteLink(
+            storyId: storyId,
+            createdBy: createdBy,
+            role: role,
+            referralUserId: referralUserId,
+            token: token
+        )
+
+        do {
+            try await supabase.from("story_invite_links").insert(link).execute()
+            // Cache locally after successful INSERT
+            inviteLinks[token] = link
+            print("[StorybankVM] createInviteLink OK — token: \(token)")
+            return link
+        } catch {
+            print("[StorybankVM] createInviteLink FAILED: \(error)")
+            return nil
+        }
+    }
+
+    /// Fetches all invite links for a story from Supabase and caches them locally.
+    /// Called when StoryDetailView appears so the owner can see existing links.
+    func fetchInviteLinks(for storyId: UUID) async {
+        do {
+            let data = try await supabase
+                .from("story_invite_links")
+                .select()
+                .eq("story_id", value: storyId)
+                .order("created_at", ascending: false)
+                .execute()
+                .data
+            let links = try Self.decoder.decode([StoryInviteLink].self, from: data)
+            for link in links {
+                inviteLinks[link.token] = link
+            }
+            print("[StorybankVM] fetchInviteLinks OK — \(links.count) links for story \(storyId)")
+        } catch {
+            print("[StorybankVM] fetchInviteLinks FAILED: \(error)")
+        }
+    }
+
+    /// Returns the most recent active invite link for a story, if one exists in the local cache.
+    func activeInviteLink(for storyId: UUID) -> StoryInviteLink? {
+        inviteLinks.values
+            .filter { $0.storyId == storyId && $0.isActive }
+            .sorted { $0.createdAt > $1.createdAt }
+            .first
+    }
 
     /// Resolves an invite token to an invite link record + story details.
     /// Returns an AppState.ResolvedInvite if valid, sets appState.inviteError if not.
     func resolveInviteToken(_ token: String, appState: AppState) {
-        // Look up the invite link by token
+        // Look up the invite link by token — check local cache first
         guard let inviteLink = inviteLinks[token] else {
-            appState.inviteError = .notFound
+            // Not in cache — try fetching from Supabase
+            Task {
+                do {
+                    let data = try await supabase
+                        .from("story_invite_links")
+                        .select()
+                        .eq("token", value: token)
+                        .single()
+                        .execute()
+                        .data
+                    let link = try Self.decoder.decode(StoryInviteLink.self, from: data)
+                    self.inviteLinks[link.token] = link
+                    // Re-run resolution now that the link is cached
+                    self.resolveInviteToken(token, appState: appState)
+                } catch {
+                    print("[StorybankVM] resolveInviteToken fetch FAILED: \(error)")
+                    appState.inviteError = .notFound
+                }
+            }
             return
         }
 
@@ -810,26 +937,96 @@ class StorybankViewModel: ObservableObject {
         // Store the referral user ID from the invite link
         appState.pendingReferralUserId = inviteLink.referralUserId
 
-        // Look up story details for the preview
-        let story = stories.first(where: { $0.id == inviteLink.storyId })
-        let storyTitle = story?.title ?? "Untitled Story"
-        let assetCount = assets(for: inviteLink.storyId).count
-        let refCount = references(for: inviteLink.storyId).count
+        // Look up story details for the preview — check local cache first,
+        // fall back to Supabase query for stories the current user doesn't own.
+        if let story = stories.first(where: { $0.id == inviteLink.storyId }) {
+            let ownerInfo = collaboratorUserInfo[inviteLink.createdBy]
+            appState.resolvedInvite = AppState.ResolvedInvite(
+                inviteLink: inviteLink,
+                storyTitle: story.title,
+                ownerName: ownerInfo?.displayName ?? "Creator",
+                ownerAvatarUrl: ownerInfo?.avatarUrl,
+                assetCount: assets(for: inviteLink.storyId).count,
+                referenceCount: references(for: inviteLink.storyId).count
+            )
+            appState.inviteError = nil
+        } else {
+            // Story not in local cache — fetch title + owner info from Supabase
+            Task {
+                do {
+                    struct StoryRow: Decodable {
+                        let title: String
+                    }
+                    let storyData = try await supabase
+                        .from("stories")
+                        .select("title")
+                        .eq("id", value: inviteLink.storyId)
+                        .single()
+                        .execute()
+                        .data
+                    let storyRow = try JSONDecoder().decode(StoryRow.self, from: storyData)
 
-        // Set resolved invite on AppState for CollabJoinView to display
-        appState.resolvedInvite = AppState.ResolvedInvite(
-            inviteLink: inviteLink,
-            storyTitle: storyTitle,
-            ownerName: "Creator",  // TODO: Look up owner's display name from user record
-            ownerAvatarUrl: nil,   // TODO: Look up owner's avatar URL
-            assetCount: assetCount,
-            referenceCount: refCount
-        )
-        appState.inviteError = nil
+                    // Fetch owner's display name + avatar
+                    var ownerName = "Creator"
+                    var ownerAvatarUrl: String? = nil
+                    if let info = self.collaboratorUserInfo[inviteLink.createdBy] {
+                        ownerName = info.displayName
+                        ownerAvatarUrl = info.avatarUrl
+                    } else {
+                        struct UserRow: Decodable {
+                            let fullName: String?
+                            let username: String?
+                            let avatarUrl: String?
+                            let email: String?
+                            enum CodingKeys: String, CodingKey {
+                                case fullName = "full_name"
+                                case username
+                                case avatarUrl = "avatar_url"
+                                case email
+                            }
+                        }
+                        let userData = try await supabase
+                            .from("users")
+                            .select("full_name, username, avatar_url, email")
+                            .eq("id", value: inviteLink.createdBy)
+                            .single()
+                            .execute()
+                            .data
+                        let userRow = try JSONDecoder().decode(UserRow.self, from: userData)
+                        ownerName = userRow.fullName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                            ? userRow.fullName! : userRow.username ?? userRow.email?.components(separatedBy: "@").first ?? "Creator"
+                        ownerAvatarUrl = userRow.avatarUrl
+                    }
+
+                    appState.resolvedInvite = AppState.ResolvedInvite(
+                        inviteLink: inviteLink,
+                        storyTitle: storyRow.title,
+                        ownerName: ownerName,
+                        ownerAvatarUrl: ownerAvatarUrl,
+                        assetCount: 0,
+                        referenceCount: 0
+                    )
+                    appState.inviteError = nil
+                } catch {
+                    print("[StorybankVM] resolveInviteToken story fetch FAILED: \(error)")
+                    // Still show the invite with fallback title
+                    appState.resolvedInvite = AppState.ResolvedInvite(
+                        inviteLink: inviteLink,
+                        storyTitle: "Untitled Story",
+                        ownerName: "Creator",
+                        ownerAvatarUrl: nil,
+                        assetCount: 0,
+                        referenceCount: 0
+                    )
+                    appState.inviteError = nil
+                }
+            }
+        }
     }
 
     /// Joins a story from a resolved invite link.
     /// Creates the StoryCollaborator record and increments the invite link use_count.
+    /// Optimistic local update first, then persists to Supabase in background.
     func joinStoryFromInvite(inviteLink: StoryInviteLink, userId: UUID) {
         // Create the collaborator record
         let collaborator = StoryCollaborator(
@@ -842,19 +1039,41 @@ class StorybankViewModel: ObservableObject {
             lastViewedAt: Date()
         )
 
-        // Add to the shared collaborations list (collaborator side)
+        // Optimistic local updates
         sharedCollaborations.append(collaborator)
-
-        // Also add to the story's collaborators map (so People section shows them)
         storyCollaboratorsMap[inviteLink.storyId, default: []].append(collaborator)
-
-        // Increment use count on the invite link
         if var link = inviteLinks[inviteLink.token] {
             link.useCount += 1
             inviteLinks[inviteLink.token] = link
         }
 
-        // TODO: Persist to Supabase story_collaborators table
+        // Persist collaborator record to Supabase
+        Task {
+            do {
+                try await supabase.from("story_collaborators").insert(collaborator).execute()
+                print("[StorybankVM] joinStoryFromInvite INSERT OK — user \(userId) → story \(inviteLink.storyId)")
+            } catch {
+                print("[StorybankVM] joinStoryFromInvite INSERT FAILED: \(error)")
+            }
+        }
+
+        // Increment use_count on the invite link in Supabase
+        Task {
+            do {
+                struct UseCountUpdate: Encodable {
+                    let useCount: Int
+                    enum CodingKeys: String, CodingKey { case useCount = "use_count" }
+                }
+                let newCount = (inviteLinks[inviteLink.token]?.useCount ?? inviteLink.useCount)
+                try await supabase.from("story_invite_links")
+                    .update(UseCountUpdate(useCount: newCount))
+                    .eq("id", value: inviteLink.id)
+                    .execute()
+                print("[StorybankVM] joinStoryFromInvite use_count UPDATE OK")
+            } catch {
+                print("[StorybankVM] joinStoryFromInvite use_count UPDATE FAILED: \(error)")
+            }
+        }
     }
 
     // MARK: - Collaborators
@@ -933,7 +1152,7 @@ class StorybankViewModel: ObservableObject {
     @Published var storyCollaboratorsMap: [UUID: [StoryCollaborator]] = [:]
 
     /// Stories shared WITH the current user (where they are a non-owner collaborator).
-    /// Populated by fetchSharedStories() — in-memory for now.
+    /// Populated from Supabase via fetchSharedStories().
     @Published var sharedCollaborations: [StoryCollaborator] = []
 
     /// Returns collaborators for a story, owner first, then by status + name.
@@ -1030,7 +1249,7 @@ class StorybankViewModel: ObservableObject {
     }
 
     /// Adds a collaborator to a story. Creates a pending invitation.
-    /// TODO: Will call Supabase when persistence is wired.
+    /// Optimistic local update + Supabase INSERT in background.
     func addCollaborator(to storyId: UUID, userId: UUID, role: CollaboratorRole, invitedBy: UUID) {
         // Check for duplicate
         let existing = storyCollaboratorsMap[storyId] ?? []
@@ -1047,52 +1266,249 @@ class StorybankViewModel: ObservableObject {
 
         // Fetch and cache the new collaborator's profile data for display
         cacheUserInfo(userId: userId)
+
+        // Persist to Supabase
+        Task {
+            do {
+                try await supabase.from("story_collaborators").insert(collaborator).execute()
+                print("[StorybankVM] addCollaborator INSERT OK — user \(userId) → story \(storyId)")
+            } catch {
+                print("[StorybankVM] addCollaborator INSERT FAILED: \(error)")
+            }
+        }
     }
 
-    /// Removes a collaborator from a story.
+    /// Removes a collaborator from a story (owner action).
+    /// Optimistic local removal + Supabase DELETE in background.
     func removeCollaborator(_ collaborator: StoryCollaborator) {
         storyCollaboratorsMap[collaborator.storyId]?.removeAll { $0.id == collaborator.id }
+
+        Task {
+            do {
+                try await supabase.from("story_collaborators")
+                    .delete()
+                    .eq("id", value: collaborator.id)
+                    .execute()
+                print("[StorybankVM] removeCollaborator DELETE OK — \(collaborator.id)")
+            } catch {
+                print("[StorybankVM] removeCollaborator DELETE FAILED: \(error)")
+            }
+        }
     }
 
     /// Updates a collaborator's role (Studio+ feature).
+    /// Optimistic local update + Supabase UPDATE in background.
     func updateCollaboratorRole(_ collaborator: StoryCollaborator, to newRole: CollaboratorRole) {
         guard var collabs = storyCollaboratorsMap[collaborator.storyId],
               let index = collabs.firstIndex(where: { $0.id == collaborator.id })
         else { return }
         collabs[index].role = newRole
         storyCollaboratorsMap[collaborator.storyId] = collabs
+
+        Task {
+            do {
+                struct RoleUpdate: Encodable {
+                    let role: String
+                }
+                try await supabase.from("story_collaborators")
+                    .update(RoleUpdate(role: newRole.rawValue))
+                    .eq("id", value: collaborator.id)
+                    .execute()
+                print("[StorybankVM] updateCollaboratorRole OK — \(collaborator.id) → \(newRole.rawValue)")
+            } catch {
+                print("[StorybankVM] updateCollaboratorRole FAILED: \(error)")
+            }
+        }
     }
 
-    /// Fetches collaborators for a story from Supabase.
-    /// Stubbed for now — in-memory only.
+    /// Fetches collaborators for a single story from Supabase.
+    /// Populates storyCollaboratorsMap and caches user info for display.
     func fetchCollaborators(for storyId: UUID) async {
-        // TODO: Fetch from Supabase story_collaborators table
+        do {
+            let data = try await supabase
+                .from("story_collaborators")
+                .select()
+                .eq("story_id", value: storyId)
+                .execute()
+                .data
+            let collaborators = try Self.decoder.decode([StoryCollaborator].self, from: data)
+            self.storyCollaboratorsMap[storyId] = collaborators
+            // Cache display info for each collaborator
+            for collab in collaborators {
+                cacheUserInfo(userId: collab.userId)
+            }
+            print("[StorybankVM] fetchCollaborators OK — \(collaborators.count) for story \(storyId)")
+        } catch {
+            print("[StorybankVM] fetchCollaborators FAILED for \(storyId): \(error)")
+        }
     }
 
-    /// Fetches stories shared with the current user.
-    /// Stubbed for now — returns in-memory data.
+    /// Fetches stories shared with the current user from Supabase.
+    /// Populates sharedCollaborations, adds the shared Story objects to the
+    /// stories array (so StorybankView can look them up), and fetches
+    /// assets/notes/references for counts and unread detection.
     func fetchSharedStories() async {
-        // TODO: Query Supabase story_collaborators where user_id = currentUser
-        // and role != 'owner', then fetch the corresponding stories
+        guard let userId = currentUserId else { return }
+
+        do {
+            // 1. Fetch collaborator records where this user is a non-owner collaborator
+            let collabData = try await supabase
+                .from("story_collaborators")
+                .select()
+                .eq("user_id", value: userId)
+                .neq("role", value: "owner")
+                .execute()
+                .data
+            let collaborators = try Self.decoder.decode([StoryCollaborator].self, from: collabData)
+            self.sharedCollaborations = collaborators
+            print("[DEBUG] fetchSharedStories got \(collaborators.count) collab records: \(collaborators.map { "storyId=\($0.storyId), role=\($0.role.rawValue)" })")
+
+            let sharedIds = collaborators.map { $0.storyId }
+            guard !sharedIds.isEmpty else {
+                print("[StorybankVM] fetchSharedStories OK — no shared stories")
+                return
+            }
+            let idsForQuery = sharedIds.map { $0.uuidString }
+
+            // 2. Fetch the shared stories themselves (other users' stories)
+            let storiesData = try await supabase
+                .from("stories")
+                .select()
+                .in("id", values: idsForQuery)
+                .execute()
+                .data
+            let fetchedSharedStories = try Self.decoder.decode([Story].self, from: storiesData)
+
+            // Merge into the main stories array — remove stale shared entries first,
+            // then append fresh ones. unfiledStories filters these out via sharedStoryIds.
+            let sharedIdSet = Set(sharedIds)
+            let storiesBeforeRemove = self.stories.map { $0.id }
+            let ownedBeingRemoved = storiesBeforeRemove.filter { sharedIdSet.contains($0) }
+            print("[DEBUG] fetchSharedStories sharedIdSet = \(sharedIdSet)")
+            print("[DEBUG] fetchSharedStories stories BEFORE removeAll: \(self.stories.count), ids: \(storiesBeforeRemove)")
+            print("[DEBUG] fetchSharedStories will remove ids: \(ownedBeingRemoved)")
+            self.stories.removeAll { sharedIdSet.contains($0.id) }
+            self.stories.append(contentsOf: fetchedSharedStories)
+            print("[DEBUG] fetchSharedStories stories AFTER merge: \(self.stories.count)")
+
+            // 3. Fetch assets for shared stories (for counts label)
+            let assetsData = try await supabase
+                .from("story_assets")
+                .select()
+                .in("story_id", values: idsForQuery)
+                .order("display_order")
+                .execute()
+                .data
+            let sharedAssets = try Self.decoder.decode([StoryAsset].self, from: assetsData)
+            for (storyId, assets) in Dictionary(grouping: sharedAssets, by: \.storyId) {
+                self.storyAssetsMap[storyId] = assets
+            }
+
+            // 4. Fetch references for shared stories (for counts label)
+            let refsData = try await supabase
+                .from("story_references")
+                .select()
+                .in("story_id", values: idsForQuery)
+                .order("display_order")
+                .execute()
+                .data
+            let sharedRefs = try Self.decoder.decode([StoryReference].self, from: refsData)
+            for (storyId, refs) in Dictionary(grouping: sharedRefs, by: \.storyId) {
+                self.storyReferencesMap[storyId] = refs
+            }
+
+            // 5. Fetch notes for shared stories (for unread detection)
+            let notesData = try await supabase
+                .from("story_notes")
+                .select()
+                .in("story_id", values: idsForQuery)
+                .order("created_at")
+                .execute()
+                .data
+            let sharedNotes = try Self.decoder.decode([StoryNote].self, from: notesData)
+            for (storyId, notes) in Dictionary(grouping: sharedNotes, by: \.storyId) {
+                self.storyNotesMap[storyId] = notes
+            }
+
+            // 6. Cache owner display info for each shared story
+            let ownerIds = Set(fetchedSharedStories.map { $0.creatorProfileId })
+            for ownerId in ownerIds {
+                cacheUserInfo(userId: ownerId)
+            }
+
+            print("[StorybankVM] fetchSharedStories OK — \(collaborators.count) collaborations, \(fetchedSharedStories.count) stories")
+        } catch {
+            print("[StorybankVM] fetchSharedStories FAILED: \(error)")
+        }
     }
 
     /// Accepts a pending invite. Updates status and sets acceptedAt.
+    /// Optimistic local update + Supabase UPDATE in background.
     func acceptInvite(_ collaborator: StoryCollaborator) {
+        let now = Date()
         if let index = sharedCollaborations.firstIndex(where: { $0.id == collaborator.id }) {
             sharedCollaborations[index].status = .accepted
-            sharedCollaborations[index].acceptedAt = Date()
+            sharedCollaborations[index].acceptedAt = now
+        }
+
+        Task {
+            do {
+                struct AcceptUpdate: Encodable {
+                    let status: String
+                    let acceptedAt: String
+                    enum CodingKeys: String, CodingKey {
+                        case status
+                        case acceptedAt = "accepted_at"
+                    }
+                }
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                try await supabase.from("story_collaborators")
+                    .update(AcceptUpdate(status: "accepted", acceptedAt: formatter.string(from: now)))
+                    .eq("id", value: collaborator.id)
+                    .execute()
+                print("[StorybankVM] acceptInvite UPDATE OK — \(collaborator.id)")
+            } catch {
+                print("[StorybankVM] acceptInvite UPDATE FAILED: \(error)")
+            }
         }
     }
 
     /// Declines a pending invite. Removes the collaborator record.
+    /// Optimistic local removal + Supabase DELETE in background.
     func declineInvite(_ collaborator: StoryCollaborator) {
         sharedCollaborations.removeAll { $0.id == collaborator.id }
+
+        Task {
+            do {
+                try await supabase.from("story_collaborators")
+                    .delete()
+                    .eq("id", value: collaborator.id)
+                    .execute()
+                print("[StorybankVM] declineInvite DELETE OK — \(collaborator.id)")
+            } catch {
+                print("[StorybankVM] declineInvite DELETE FAILED: \(error)")
+            }
+        }
     }
 
     /// Removes the current user's collaboration record — they leave the shared story.
+    /// Optimistic local removal + Supabase DELETE in background.
     func leaveStory(_ collaborator: StoryCollaborator) {
         sharedCollaborations.removeAll { $0.id == collaborator.id }
         storyCollaboratorsMap[collaborator.storyId]?.removeAll { $0.id == collaborator.id }
+
+        Task {
+            do {
+                try await supabase.from("story_collaborators")
+                    .delete()
+                    .eq("id", value: collaborator.id)
+                    .execute()
+                print("[StorybankVM] leaveStory DELETE OK — \(collaborator.id)")
+            } catch {
+                print("[StorybankVM] leaveStory DELETE FAILED: \(error)")
+            }
+        }
     }
 
     /// Ensures the owner has a collaborator record for display in the People section.

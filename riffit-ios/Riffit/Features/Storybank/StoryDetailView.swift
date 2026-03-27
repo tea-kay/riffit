@@ -474,6 +474,10 @@ struct StoryDetailView: View {
             if userRole != .owner {
                 viewModel.updateLastViewed(for: story.id)
             }
+            // Fetch existing invite links so the owner can see/reuse them
+            if userRole == .owner {
+                Task { await viewModel.fetchInviteLinks(for: story.id) }
+            }
         }
         .alert("Leave Story?", isPresented: $showLeaveConfirm) {
             Button("Leave", role: .destructive) {

@@ -12,6 +12,13 @@ struct MainTabView: View {
     @StateObject private var libraryViewModel = LibraryViewModel()
     @StateObject private var storybankViewModel = StorybankViewModel()
 
+    /// Gold tab badge color — no SwiftUI equivalent for badge color customization
+    init() {
+        UITabBarItem.appearance().badgeColor = UIColor(
+            red: 240.0 / 255, green: 170.0 / 255, blue: 32.0 / 255, alpha: 1
+        )
+    }
+
     enum Tab: String {
         case library
         case storybank
@@ -35,6 +42,7 @@ struct MainTabView: View {
                 Label("Storybank", systemImage: "bookmark")
             }
             .tag(Tab.storybank)
+            .badge(storybankViewModel.pendingInvites.count)
 
             NavigationStack {
                 SettingsView()
