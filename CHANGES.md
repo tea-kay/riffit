@@ -315,3 +315,71 @@
 - Migrations/ directory removed
 
 **Build status:** Zero errors confirmed
+
+### 2026-03-25 / 2026-03-26 — Collaboration persistence + segmented Storybank UI
+
+**What changed:**
+
+*Step 1 — Invite link persistence (InviteSheet → Supabase):*
+- InviteSheet no longer fabricates URLs from story ID prefixes. Copy/Share now INSERT a real StoryInviteLink row into `story_invite_links` via `StorybankViewModel.createInviteLink()`, then build the URL from the returned UUID token
+- Token is a server-generated UUID (not a story ID substring)
+- Existing active links are reused — `activeInviteLink(for:)` returns the most recent non-expired link from the local cache
+- Added `fetchInviteLinks(for:)` — SELECTs from `story_invite_links` WHERE story_id matches, populates the local `inviteLinks` cache
+- StoryDetailView `.onAppear` calls `fetchInviteLinks` for owners so existing links load from Supabase
+- `resolveInviteToken` now falls through to a Supabase query when the token isn't in the local cache, then re-resolves
+- Copy/Share buttons show a ProgressView spinner while the link is being created, and are disabled to prevent double-creates
+
+*Step 2 — Collaboration mutations wired to Supabase:*
+- `joinStoryFromInvite` — INSERT into `story_collaborators` + UPDATE `story_invite_links` use_count (two background Tasks)
+- `addCollaborator` — INSERT into `story_collaborators` (background Task)
+- `removeCollaborator` — DELETE FROM `story_collaborators` (background Task)
+- `updateCollaboratorRole` — UPDATE `story_collaborators` SET role (background Task)
+- `acceptInvite` — UPDATE `story_collaborators` SET status='accepted', accepted_at (background Task)
+- `declineInvite` — DELETE FROM `story_collaborators` (background Task)
+- `leaveStory` — DELETE FROM `story_collaborators` (background Task)
+- `resolveInviteToken` — now fetches story title + owner display name/avatar from Supabase when the story isn't in local cache (for CollabJoinView display)
+- All mutations follow the existing optimistic UI + background Task + print-on-error pattern
+
+*Step 3 — Collaboration fetch on login (data survives app restart):*
+- `fetchSharedStories()` implemented — SELECTs `story_collaborators` WHERE user_id = currentUser AND role != 'owner', then fetches the Story objects, assets, references, notes for those shared stories, and caches owner user info
+- Shared stories are merged into the main `stories` array (for view lookup) but excluded from `unfiledStories` and `stories(in:)` via a `sharedStoryIds` computed property
+- `fetchCollaborators(for:)` implemented — SELECTs `story_collaborators` WHERE story_id matches, populates `storyCollaboratorsMap`, caches user info
+- `fetchStories()` updated — after owned stories load and `isLoading = false`, spawns a background Task that calls `fetchSharedStories()` then batch-fetches all collaborators for owned stories in a single query
+- Added `currentUserId` private property so `fetchSharedStories()` can access the user ID without a parameter (since the view calls it with no args in `.refreshable`)
+
+*Step 4 — Segmented Storybank UI:*
+- Added "My stories" / "Shared" segmented control to StorybankView (custom-styled, not system Picker)
+- Segmented control only appears when user has ≥1 pending invite or accepted shared story
+- "My stories" (default): shows owned stories + folders, identical to the previous view
+- "Shared": shows Pending section (gold label + count badge + redesigned invite cards) and Active section (teal label + shared story cards with real owner info)
+- `PendingInviteCard` replaces `PendingInviteRow`: gold-tinted border, real inviter avatar + "@name invited you" + timestamp, story title in display font, counts, "Join story" (gold) + "Decline" (transparent) buttons
+- `SharedStoryCard` updated: accepts real `ownerDisplayName` and `ownerAvatarUrl` from `collaboratorUserInfo` cache, 20pt owner avatar with AsyncImage, unread gold dot inline with timestamp
+- Gold notification dot on "Shared" segment when pending invites exist
+- `CardPressStyle` added — scaleEffect(0.97) on press with 0.1s easeInOut animation
+- `StorybankSegment` enum and `StorybankSegmentedControl` custom view added
+- Gold `.badge()` on Storybank tab in MainTabView (reactively shows/hides based on pending invite count)
+- `UITabBarItem.appearance().badgeColor` set to gold (#F0AA20) — UIKit used because SwiftUI has no tab badge color API
+
+*Step 5 — Bug fix: owned stories disappearing:*
+- `sharedStoryIds` computed property now filters `sharedCollaborations` by `role != .owner` before building the exclusion set — prevents owned stories from being accidentally excluded from `unfiledStories`
+- Added temporary debug prints to trace `stories` array mutations (fetchStories, fetchSharedStories removeAll, createStory, deleteStory, duplicateStory) — for console-based debugging of the disappearing stories issue
+
+**Decisions made:**
+- Invite link tokens are server-generated UUIDs, not derived from story IDs
+- Existing active invite links are reused (one link per story unless expired/maxed)
+- Shared stories are stored in the main `stories` array and excluded from owned-story views via `sharedStoryIds`
+- `sharedStoryIds` filters by `role != .owner` as defense-in-depth
+- Segmented control is custom SwiftUI (not system Picker) to match design system
+- Tab badge color uses UIKit appearance proxy (no SwiftUI equivalent)
+
+**Files created:**
+- None (all changes within existing files)
+
+**Files modified:**
+- Features/Storybank/StorybankViewModel.swift (createInviteLink, fetchInviteLinks, activeInviteLink, fetchSharedStories, fetchCollaborators, joinStoryFromInvite, addCollaborator, removeCollaborator, updateCollaboratorRole, acceptInvite, declineInvite, leaveStory, resolveInviteToken, sharedStoryIds, unfiledStories, stories(in:), currentUserId, debug prints)
+- Features/Storybank/InviteSheet.swift (getOrCreateInviteUrl, inviteUrl(for:), real invite link flow, loading state)
+- Features/Storybank/StoryDetailView.swift (fetchInviteLinks on appear for owners)
+- Features/Storybank/StorybankView.swift (StorybankSegmentedControl, segmented layout, PendingInviteCard, SharedStoryCard with real owner data, CardPressStyle, sharedSegmentContent, pendingSection, activeSection)
+- App/MainTabView.swift (gold badge on Storybank tab, UITabBarItem badge color)
+
+**Build status:** Zero errors confirmed
