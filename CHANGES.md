@@ -383,3 +383,43 @@
 - App/MainTabView.swift (gold badge on Storybank tab, UITabBarItem badge color)
 
 **Build status:** Zero errors confirmed
+
+### 2026-03-27 — Collab persistence fixes, flicker bug, owner collaborator records
+
+**What changed:**
+
+*Collaboration debugging + fixes (be43c99, 6285179):*
+- `fetchStories()` rewritten: Phase 1 fires owned stories + shared collab records in parallel (`async let`), Phase 2 fires all sub-data (assets, sections, refs, notes, folders, folder maps, shared story objects) in parallel — up to 10 concurrent queries
+- Three code paths for Phase 2 based on data shape: owned+shared, owned-only, shared-only — avoids empty `IN ()` queries
+- Added `hasLoadedOnce` and `hasLoadedSharedOnce` published bools to prevent empty state flicker
+- Added `currentUserId` private property so `fetchSharedStories` logic is embedded in `fetchStories` (no separate call needed)
+- `sharedStoryIds` computed property added — filters `sharedCollaborations` by `role != .owner` to build exclusion set for owned story views
+- `unfiledStories` and `stories(in:)` now exclude shared stories via `sharedStoryIds`
+- `refreshable` on StorybankView simplified — only calls `fetchStories` (shared fetch is now integrated)
+- `resolveInviteToken` falls through to Supabase query when token isn't in local cache
+- StoryDetailView `userRole` now checks `creatorProfileId == currentUser.id` as fallback when no collaborator record exists (fixes owner seeing viewer permissions)
+- StoryDetailView `.onAppear` now calls `fetchCollaborators(for:)` from Supabase instead of `ensureOwnerCollaborator` — People section populated from real data
+
+*Storybank flicker bug fix (341833e):*
+- StorybankView loading state changed: shows `Color.clear` instead of `ProgressView` while `!hasLoadedOnce` — prevents empty state from flashing before data arrives (<200ms load)
+
+*Owner collaborator records (unstaged):*
+- `createStory()` now auto-creates an owner `StoryCollaborator` record both locally and in Supabase — People section works immediately without needing `ensureOwnerCollaborator`
+- `ensureOwnerCollaborator()` removed — owner records are now created at story creation time and fetched by `fetchCollaborators()`
+- StoryDetailView `.onAppear` simplified: fetches collaborators from Supabase, fetches invite links for owners, tracks last viewed for non-owners
+
+**Decisions made:**
+- `fetchStories` is now a single unified fetch that loads owned + shared data in two parallel phases
+- Owner collaborator records created at story creation time (not lazily on detail view open)
+- `ensureOwnerCollaborator` removed — redundant with proper record creation
+- Empty state flicker solved with `hasLoadedOnce` flag + Color.clear (not ProgressView)
+
+**Files created:**
+- None
+
+**Files modified:**
+- Features/Storybank/StorybankViewModel.swift (fetchStories rewrite, createStory owner collab, sharedStoryIds, hasLoadedOnce, ensureOwnerCollaborator removed)
+- Features/Storybank/StoryDetailView.swift (userRole fallback, onAppear simplified, fetchCollaborators call)
+- Features/Storybank/StorybankView.swift (flicker fix, segmented control, refreshable simplified)
+
+**Build status:** Zero errors confirmed

@@ -50,7 +50,6 @@ struct StoryDetailView: View {
         if let role = viewModel.currentUserRole(for: story.id, userId: appState.currentUser?.id) {
             return role
         }
-        // No collaborator record — check if the user owns this story
         if story.creatorProfileId == appState.currentUser?.id {
             return .owner
         }
@@ -232,44 +231,7 @@ struct StoryDetailView: View {
 
             // MARK: Notes Section
             Section {
-                let storyNotes = viewModel.notes(for: story.id)
-                if storyNotes.isEmpty {
-                    emptyNotesState
-                        .listRowBackground(Color.riffitBackground)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 0, leading: RS.md, bottom: 0, trailing: RS.md))
-                } else {
-                    ForEach(storyNotes) { note in
-                        StoryNoteBubble(
-                            note: note,
-                            displayName: noteDisplayName,
-                            initial: noteAvatarInitial,
-                            avatarUrl: appState.currentUser?.avatarUrl,
-                            isEditing: editingNoteId == note.id,
-                            editText: editingNoteId == note.id ? $editingNoteText : .constant(""),
-                            onTap: {
-                                editingNoteId = note.id
-                                editingNoteText = note.text
-                            },
-                            onSave: {
-                                let trimmed = editingNoteText.trimmingCharacters(in: .whitespacesAndNewlines)
-                                if !trimmed.isEmpty {
-                                    viewModel.updateNote(id: note.id, storyId: story.id, newText: trimmed)
-                                }
-                                editingNoteId = nil
-                            },
-                            onCancel: {
-                                editingNoteId = nil
-                            }
-                        )
-                        .listRowBackground(Color.riffitBackground)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(
-                            top: RS.xs, leading: RS.md,
-                            bottom: RS.xs, trailing: RS.md
-                        ))
-                    }
-                }
+                notesContent
 
                 // Add note input row — only if role allows leaving notes
                 if userRole.canLeaveNotes {
@@ -293,10 +255,10 @@ struct StoryDetailView: View {
                         collaborator: collaborator,
                         hasRolePermissions: true,
                         isOwnerView: userRole == .owner,
-                        userDisplayName: collaborator.role == .owner
-                            ? ownerCollabDisplayName
+                        userDisplayName: collaborator.userId == appState.currentUser?.id
+                            ? currentUserDisplayName
                             : viewModel.collaboratorDisplayName(for: collaborator, currentUserId: appState.currentUser?.id),
-                        userAvatarUrl: collaborator.role == .owner
+                        userAvatarUrl: collaborator.userId == appState.currentUser?.id
                             ? appState.currentUser?.avatarUrl
                             : viewModel.collaboratorAvatarUrl(for: collaborator, currentUserId: appState.currentUser?.id),
                         onChangeRole: { newRole in
@@ -307,8 +269,8 @@ struct StoryDetailView: View {
                         }
                     )
                     .onAppear {
-                        // Cache user info for non-owner collaborators
-                        if collaborator.role != .owner {
+                        // Cache user info for other users (not the current user)
+                        if collaborator.userId != appState.currentUser?.id {
                             viewModel.cacheUserInfo(userId: collaborator.userId)
                         }
                     }
@@ -473,17 +435,14 @@ struct StoryDetailView: View {
             ManageCollaboratorsView(story: story, viewModel: viewModel)
         }
         .onAppear {
-            // Ensure the owner has a collaborator record for the People section
-            if let userId = appState.currentUser?.id {
-                viewModel.ensureOwnerCollaborator(for: story.id, ownerId: userId)
-            }
-            // Track last viewed time for unread dot calculation on shared stories
-            if userRole != .owner {
-                viewModel.updateLastViewed(for: story.id)
-            }
-            // Fetch existing invite links so the owner can see/reuse them
-            if userRole == .owner {
+            // Load collaborator data from Supabase for the People section
+            Task { await viewModel.fetchCollaborators(for: story.id) }
+
+            let isOwner = story.creatorProfileId == appState.currentUser?.id
+            if isOwner {
                 Task { await viewModel.fetchInviteLinks(for: story.id) }
+            } else {
+                viewModel.updateLastViewed(for: story.id)
             }
         }
         .alert("Leave Story?", isPresented: $showLeaveConfirm) {
@@ -768,6 +727,60 @@ struct StoryDetailView: View {
 
     // MARK: - Notes
 
+    /// Extracted from body to reduce type-checker complexity.
+    @ViewBuilder
+    private var notesContent: some View {
+        let storyNotes = viewModel.notes(for: story.id)
+        if storyNotes.isEmpty {
+            emptyNotesState
+                .listRowBackground(Color.riffitBackground)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 0, leading: RS.md, bottom: 0, trailing: RS.md))
+        } else {
+            ForEach(storyNotes) { note in
+                noteBubbleRow(for: note)
+                    .listRowBackground(Color.riffitBackground)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(
+                        top: RS.xs, leading: RS.md,
+                        bottom: RS.xs, trailing: RS.md
+                    ))
+            }
+        }
+    }
+
+    /// Builds a single StoryNoteBubble row, determining own vs other styling.
+    private func noteBubbleRow(for note: StoryNote) -> some View {
+        let isOwn: Bool = note.userId == appState.currentUser?.id
+        let name: String = isOwn ? noteDisplayName : note.authorName
+        let initial: String = isOwn ? noteAvatarInitial : String(note.authorName.first ?? Character("?")).uppercased()
+        let avatar: String? = isOwn ? appState.currentUser?.avatarUrl : viewModel.collaboratorAvatarUrl(forUserId: note.userId)
+
+        return StoryNoteBubble(
+            note: note,
+            displayName: name,
+            initial: initial,
+            avatarUrl: avatar,
+            isEditing: editingNoteId == note.id,
+            isOwnMessage: isOwn,
+            editText: editingNoteId == note.id ? $editingNoteText : .constant(""),
+            onTap: {
+                editingNoteId = note.id
+                editingNoteText = note.text
+            },
+            onSave: {
+                let trimmed = editingNoteText.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    viewModel.updateNote(id: note.id, storyId: story.id, newText: trimmed)
+                }
+                editingNoteId = nil
+            },
+            onCancel: {
+                editingNoteId = nil
+            }
+        )
+    }
+
     private var notesHeader: some View {
         Text("Notes")
             .font(RF.tag)
@@ -794,9 +807,9 @@ struct StoryDetailView: View {
 
     // MARK: - People
 
-    /// Owner display name for the People section: @username > fullName > @email_prefix, with "(You)" suffix.
-    /// Same logic as SettingsView.displayName.
-    private var ownerCollabDisplayName: String {
+    /// Display name for the current user in the People section: @username > fullName > @email_prefix, with "(You)" suffix.
+    /// Used for any collaborator row where collaborator.userId == currentUser.id, regardless of role.
+    private var currentUserDisplayName: String {
         let baseName: String = {
             if let username = appState.currentUser?.username?.trimmingCharacters(in: .whitespacesAndNewlines),
                !username.isEmpty {
@@ -1096,19 +1109,85 @@ struct StoryNoteBubble: View {
     let initial: String
     let avatarUrl: String?
     let isEditing: Bool
+    /// Whether this note was written by the current user — drives iMessage-style alignment
+    let isOwnMessage: Bool
     @Binding var editText: String
     let onTap: () -> Void
     let onSave: () -> Void
     let onCancel: () -> Void
 
+    /// iMessage-style corner radii: the "tail" corner is smaller
+    private var bubbleCorners: RoundedCornerShape {
+        if isOwnMessage {
+            // Own messages: bottom-right is the tail
+            RoundedCornerShape(tl: RR.input, tr: RR.input, bl: RR.input, br: RS.xs)
+        } else {
+            // Others' messages: bottom-left is the tail
+            RoundedCornerShape(tl: RR.input, tr: RR.input, bl: RS.xs, br: RR.input)
+        }
+    }
+
+    private var bubbleBackground: Color {
+        if isEditing { return Color.riffitElevated }
+        return isOwnMessage ? Color.riffitPrimaryTint : Color.riffitSurface
+    }
+
+    private var bubbleBorder: Color {
+        if isEditing { return Color.riffitPrimary.opacity(0.5) }
+        return isOwnMessage ? Color.riffitPrimary.opacity(0.15) : Color.riffitBorderSubtle
+    }
+
     var body: some View {
+        HStack {
+            if isOwnMessage { Spacer(minLength: RS.xl3) }
+
+            if isOwnMessage {
+                ownBubble
+            } else {
+                otherBubble
+            }
+
+            if !isOwnMessage { Spacer(minLength: RS.xl3) }
+        }
+    }
+
+    // MARK: - Own message (right-aligned, no avatar/name)
+
+    private var ownBubble: some View {
+        VStack(alignment: .trailing, spacing: RS.xs) {
+            VStack(alignment: .trailing, spacing: RS.xs) {
+                // Save/Cancel row when editing
+                if isEditing {
+                    editingControls
+                }
+
+                // Note text or inline editor
+                noteContent
+            }
+            .padding(RS.smPlus)
+            .background(bubbleBackground)
+            .clipShape(bubbleCorners)
+            .overlay(bubbleCorners.stroke(bubbleBorder, lineWidth: isEditing ? 1 : 0.5))
+            .contentShape(Rectangle())
+            .onTapGesture { if !isEditing { onTap() } }
+
+            // Timestamp below the bubble
+            if !isEditing {
+                Text(note.createdAt.relativeTimestamp)
+                    .font(RF.meta)
+                    .foregroundStyle(Color.riffitTextTertiary)
+            }
+        }
+    }
+
+    // MARK: - Other person's message (left-aligned, avatar + name)
+
+    private var otherBubble: some View {
         HStack(alignment: .top, spacing: RS.sm) {
-            // Avatar — 28×28 circle, leading, top-aligned
+            // Avatar — 28×28 circle
             if let urlString = avatarUrl, let url = URL(string: urlString) {
                 AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
+                    image.resizable().aspectRatio(contentMode: .fill)
                 } placeholder: {
                     noteInitialsCircle
                 }
@@ -1118,71 +1197,71 @@ struct StoryNoteBubble: View {
                 noteInitialsCircle
             }
 
-            // Content
             VStack(alignment: .leading, spacing: RS.xs) {
-                // Author row: name · time ago  |  or Save/Cancel when editing
-                HStack {
-                    HStack(spacing: 0) {
-                        Text(displayName)
-                            .font(RF.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(Color.riffitTextPrimary)
+                // Author name + timestamp above the bubble
+                HStack(spacing: 0) {
+                    Text(displayName)
+                        .font(RF.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.riffitTextPrimary)
 
-                        if !isEditing {
-                            Text(" · \(note.createdAt.relativeTimestamp)")
-                                .font(RF.meta)
-                                .foregroundStyle(Color.riffitTextTertiary)
-                        }
+                    if !isEditing {
+                        Text(" · \(note.createdAt.relativeTimestamp)")
+                            .font(RF.meta)
+                            .foregroundStyle(Color.riffitTextTertiary)
                     }
 
                     Spacer()
 
                     if isEditing {
-                        Button {
-                            onCancel()
-                        } label: {
-                            Text("Cancel")
-                                .font(RF.caption)
-                                .foregroundStyle(Color.riffitTextTertiary)
-                        }
-
-                        Button {
-                            onSave()
-                        } label: {
-                            Text("Save")
-                                .font(RF.caption)
-                                .fontWeight(.medium)
-                                .foregroundStyle(Color.riffitPrimary)
-                        }
+                        editingControls
                     }
                 }
 
-                // Note text or inline editor
-                if isEditing {
-                    TextEditor(text: $editText)
-                        .font(RF.bodyMd)
-                        .foregroundStyle(Color.riffitTextPrimary)
-                        .scrollContentBackground(.hidden)
-                        .frame(minHeight: 40)
-                } else {
-                    Text(note.text)
-                        .font(RF.bodyMd)
-                        .foregroundStyle(Color.riffitTextSecondary)
+                // Bubble
+                VStack(alignment: .leading, spacing: RS.xs) {
+                    noteContent
                 }
+                .padding(RS.smPlus)
+                .background(bubbleBackground)
+                .clipShape(bubbleCorners)
+                .overlay(bubbleCorners.stroke(bubbleBorder, lineWidth: isEditing ? 1 : 0.5))
+                .contentShape(Rectangle())
+                .onTapGesture { if !isEditing { onTap() } }
             }
         }
-        .padding(RS.smPlus)
-        .background(isEditing ? Color.riffitElevated : Color.riffitSurface)
-        .cornerRadius(RR.input)
-        .overlay(
-            RoundedRectangle(cornerRadius: RR.input)
-                .stroke(isEditing ? Color.riffitPrimary.opacity(0.5) : Color.riffitBorderSubtle, lineWidth: isEditing ? 1 : 0.5)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if !isEditing {
-                onTap()
+    }
+
+    // MARK: - Shared subviews
+
+    private var editingControls: some View {
+        HStack(spacing: RS.sm) {
+            Button { onCancel() } label: {
+                Text("Cancel")
+                    .font(RF.caption)
+                    .foregroundStyle(Color.riffitTextTertiary)
             }
+            Button { onSave() } label: {
+                Text("Save")
+                    .font(RF.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.riffitPrimary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var noteContent: some View {
+        if isEditing {
+            TextEditor(text: $editText)
+                .font(RF.bodyMd)
+                .foregroundStyle(Color.riffitTextPrimary)
+                .scrollContentBackground(.hidden)
+                .frame(minHeight: 40)
+        } else {
+            Text(note.text)
+                .font(RF.bodyMd)
+                .foregroundStyle(isOwnMessage ? Color.riffitTextPrimary : Color.riffitTextSecondary)
         }
     }
 
@@ -1194,6 +1273,33 @@ struct StoryNoteBubble: View {
             .frame(width: 28, height: 28)
             .background(Color.riffitTeal600)
             .clipShape(Circle())
+    }
+}
+
+/// Shape with independently controllable corner radii for iMessage-style bubbles.
+struct RoundedCornerShape: Shape {
+    let tl: CGFloat
+    let tr: CGFloat
+    let bl: CGFloat
+    let br: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let w = rect.width
+        let h = rect.height
+
+        path.move(to: CGPoint(x: tl, y: 0))
+        path.addLine(to: CGPoint(x: w - tr, y: 0))
+        path.addArc(tangent1End: CGPoint(x: w, y: 0), tangent2End: CGPoint(x: w, y: tr), radius: tr)
+        path.addLine(to: CGPoint(x: w, y: h - br))
+        path.addArc(tangent1End: CGPoint(x: w, y: h), tangent2End: CGPoint(x: w - br, y: h), radius: br)
+        path.addLine(to: CGPoint(x: bl, y: h))
+        path.addArc(tangent1End: CGPoint(x: 0, y: h), tangent2End: CGPoint(x: 0, y: h - bl), radius: bl)
+        path.addLine(to: CGPoint(x: 0, y: tl))
+        path.addArc(tangent1End: CGPoint(x: 0, y: 0), tangent2End: CGPoint(x: tl, y: 0), radius: tl)
+        path.closeSubpath()
+
+        return path
     }
 }
 

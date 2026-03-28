@@ -5,7 +5,7 @@
 > For the changelog, see CHANGES.md.
 > For architecture and rules, see CLAUDE.md.
 >
-> Last updated: 2026-03-25
+> Last updated: 2026-03-27
 
 ---
 
@@ -15,7 +15,7 @@ MVP v1 — solo creator tool with multi-user collaboration. Supabase fully conne
 
 ### What Works
 - **Auth:** Sign in with Apple → auto-creates user row → routes to main app. Session persists to Keychain. Sign out clears everything. New users get full_name auto-populated from email prefix.
-- **Supabase persistence:** All data survives app relaunch — stories, assets, sections, references, notes, folders, ideas, comments, tags, folder mappings. Optimistic UI + background Supabase calls.
+- **Supabase persistence:** All data survives app relaunch — stories, assets, sections, references, notes, folders, ideas, comments, tags, folder mappings. Optimistic UI + background Supabase calls. Unified fetch loads owned + shared data in two parallel phases (up to 10 concurrent Supabase queries).
 - **Library (Ideas):** Save ideas from Instagram, YouTube, TikTok, X/Twitter, LinkedIn. Platform auto-detection, browse/search/filter by tag, edit, organize in folders. Delete with orphaned reference cleanup. All persisted.
 - **Storybank:** Create stories with text, voice, image, video assets. Organize into named sections with drag reorder. Add idea references linked to sections. Duplicate stories (full deep copy). All persisted.
 - **Media:** Record voice notes (press-and-hold), take/pick photos, record/pick videos. Playback and export to Camera Roll or share as files. Media files stored locally (metadata only in Supabase).
@@ -23,7 +23,8 @@ MVP v1 — solo creator tool with multi-user collaboration. Supabase fully conne
   - Owner: CREATORS section in StoryDetailView with role pills, InviteSheet (link copy/share + username/email search), ManageCollaboratorsView (role change, remove, count vs limit)
   - Collaborator: "Shared with me" section in StorybankView (pending invites with Accept/Decline, accepted stories with owner attribution + role pill + unread gold dot)
   - CollabJoinView: full-screen invite landing with error states (expired/not found/already member)
-  - Permission-gated StoryDetailView: all UI gated by CollaboratorRole (owner/editor/viewer/commenter/collaborator)
+  - Permission-gated StoryDetailView: all UI gated by CollaboratorRole (owner/editor/viewer/commenter/collaborator), with creatorProfileId fallback for owner detection
+  - Owner collaborator records auto-created at story creation time (in createStory), fetched from Supabase on detail view open
   - Deep link handling: .onOpenURL parses riffit.app/invite/{token}, resolves invite, shows CollabJoinView overlay
   - Referral attribution: invite links carry referral_user_id, set as referred_by on new user creation
   - Unread tracking: lastViewedAt updated on story open, gold dot when new notes exist
@@ -90,6 +91,9 @@ MVP v1 — solo creator tool with multi-user collaboration. Supabase fully conne
 - Referral attribution: first referrer wins (referred_by only set if nil)
 - Username search in InviteSheet includes email as fallback
 - Feature specs live in specs/ folder, read by Claude Code before building
+- `fetchStories` is a single unified method that loads owned + shared data in two parallel phases (no separate `fetchSharedStories` call)
+- Owner collaborator records created at story creation time (not lazily via `ensureOwnerCollaborator`)
+- Storybank empty state flicker solved with `hasLoadedOnce` flag + Color.clear (not ProgressView)
 - YouTube and X use thumbnail + deep link (both block WKWebView embeds)
 - TikTok uses embed URL in WKWebView with 9:16 aspect ratio
 - Tags are user-manageable (create/delete any tag, including defaults)

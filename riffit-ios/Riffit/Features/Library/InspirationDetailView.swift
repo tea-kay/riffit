@@ -446,12 +446,14 @@ struct InspirationDetailView: View {
                 emptyCommentsState
             } else {
                 ForEach(comments) { comment in
+                    let isOwn = comment.userId == appState.currentUser?.id
                     CommentBubble(
                         comment: comment,
-                        displayName: displayName,
-                        initial: avatarInitial,
-                        avatarUrl: appState.currentUser?.avatarUrl,
+                        displayName: isOwn ? displayName : comment.authorName,
+                        initial: isOwn ? avatarInitial : String(comment.authorName.first ?? Character("?")).uppercased(),
+                        avatarUrl: isOwn ? appState.currentUser?.avatarUrl : nil,
                         isEditing: editingCommentId == comment.id,
+                        isOwnMessage: isOwn,
                         editText: editingCommentId == comment.id ? $editingCommentText : .constant(""),
                         onTap: {
                             editingCommentId = comment.id
@@ -542,19 +544,76 @@ struct CommentBubble: View {
     let initial: String
     let avatarUrl: String?
     let isEditing: Bool
+    /// Whether this comment was written by the current user — drives iMessage-style alignment
+    let isOwnMessage: Bool
     @Binding var editText: String
     let onTap: () -> Void
     let onSave: () -> Void
     let onCancel: () -> Void
 
+    /// iMessage-style corner radii: the "tail" corner is smaller
+    private var bubbleCorners: RoundedCornerShape {
+        if isOwnMessage {
+            RoundedCornerShape(tl: RR.input, tr: RR.input, bl: RR.input, br: RS.xs)
+        } else {
+            RoundedCornerShape(tl: RR.input, tr: RR.input, bl: RS.xs, br: RR.input)
+        }
+    }
+
+    private var bubbleBackground: Color {
+        if isEditing { return Color.riffitElevated }
+        return isOwnMessage ? Color.riffitPrimaryTint : Color.riffitSurface
+    }
+
+    private var bubbleBorder: Color {
+        if isEditing { return Color.riffitPrimary.opacity(0.5) }
+        return isOwnMessage ? Color.riffitPrimary.opacity(0.15) : Color.riffitBorderSubtle
+    }
+
     var body: some View {
+        HStack {
+            if isOwnMessage { Spacer(minLength: RS.xl3) }
+
+            if isOwnMessage {
+                ownBubble
+            } else {
+                otherBubble
+            }
+
+            if !isOwnMessage { Spacer(minLength: RS.xl3) }
+        }
+    }
+
+    // MARK: - Own message (right-aligned, no avatar/name)
+
+    private var ownBubble: some View {
+        VStack(alignment: .trailing, spacing: RS.xs) {
+            VStack(alignment: .trailing, spacing: RS.xs) {
+                if isEditing { editingControls }
+                commentContent
+            }
+            .padding(RS.smPlus)
+            .background(bubbleBackground)
+            .clipShape(bubbleCorners)
+            .overlay(bubbleCorners.stroke(bubbleBorder, lineWidth: isEditing ? 1 : 0.5))
+            .contentShape(Rectangle())
+            .onTapGesture { if !isEditing { onTap() } }
+
+            if !isEditing {
+                Text(comment.createdAt.relativeTimestamp)
+                    .font(RF.meta)
+                    .foregroundStyle(Color.riffitTextTertiary)
+            }
+        }
+    }
+
+    // MARK: - Other person's message (left-aligned, avatar + name)
+
+    private var otherBubble: some View {
         HStack(alignment: .top, spacing: RS.sm) {
-            // Avatar — 28×28 circle, leading, top-aligned
             if let urlString = avatarUrl, let url = URL(string: urlString) {
                 AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
+                    image.resizable().aspectRatio(contentMode: .fill)
                 } placeholder: {
                     commentInitialsCircle
                 }
@@ -564,71 +623,67 @@ struct CommentBubble: View {
                 commentInitialsCircle
             }
 
-            // Content
             VStack(alignment: .leading, spacing: RS.xs) {
-                // Author row: name · time ago  |  or  Save/Cancel when editing
-                HStack {
-                    HStack(spacing: 0) {
-                        Text(displayName)
-                            .font(RF.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(Color.riffitTextPrimary)
+                HStack(spacing: 0) {
+                    Text(displayName)
+                        .font(RF.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.riffitTextPrimary)
 
-                        if !isEditing {
-                            Text(" · \(comment.createdAt.relativeTimestamp)")
-                                .font(RF.meta)
-                                .foregroundStyle(Color.riffitTextTertiary)
-                        }
+                    if !isEditing {
+                        Text(" · \(comment.createdAt.relativeTimestamp)")
+                            .font(RF.meta)
+                            .foregroundStyle(Color.riffitTextTertiary)
                     }
 
                     Spacer()
 
-                    if isEditing {
-                        Button {
-                            onCancel()
-                        } label: {
-                            Text("Cancel")
-                                .font(RF.caption)
-                                .foregroundStyle(Color.riffitTextTertiary)
-                        }
-
-                        Button {
-                            onSave()
-                        } label: {
-                            Text("Save")
-                                .font(RF.caption)
-                                .fontWeight(.medium)
-                                .foregroundStyle(Color.riffitPrimary)
-                        }
-                    }
+                    if isEditing { editingControls }
                 }
 
-                // Note text or inline editor
-                if isEditing {
-                    TextEditor(text: $editText)
-                        .font(RF.bodyMd)
-                        .foregroundStyle(Color.riffitTextPrimary)
-                        .scrollContentBackground(.hidden)
-                        .frame(minHeight: 40)
-                } else {
-                    Text(comment.text)
-                        .font(RF.bodyMd)
-                        .foregroundStyle(Color.riffitTextSecondary)
+                VStack(alignment: .leading, spacing: RS.xs) {
+                    commentContent
                 }
+                .padding(RS.smPlus)
+                .background(bubbleBackground)
+                .clipShape(bubbleCorners)
+                .overlay(bubbleCorners.stroke(bubbleBorder, lineWidth: isEditing ? 1 : 0.5))
+                .contentShape(Rectangle())
+                .onTapGesture { if !isEditing { onTap() } }
             }
         }
-        .padding(RS.smPlus)
-        .background(isEditing ? Color.riffitElevated : Color.riffitSurface)
-        .cornerRadius(RR.input)
-        .overlay(
-            RoundedRectangle(cornerRadius: RR.input)
-                .stroke(isEditing ? Color.riffitPrimary.opacity(0.5) : Color.riffitBorderSubtle, lineWidth: isEditing ? 1 : 0.5)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if !isEditing {
-                onTap()
+    }
+
+    // MARK: - Shared subviews
+
+    private var editingControls: some View {
+        HStack(spacing: RS.sm) {
+            Button { onCancel() } label: {
+                Text("Cancel")
+                    .font(RF.caption)
+                    .foregroundStyle(Color.riffitTextTertiary)
             }
+            Button { onSave() } label: {
+                Text("Save")
+                    .font(RF.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.riffitPrimary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var commentContent: some View {
+        if isEditing {
+            TextEditor(text: $editText)
+                .font(RF.bodyMd)
+                .foregroundStyle(Color.riffitTextPrimary)
+                .scrollContentBackground(.hidden)
+                .frame(minHeight: 40)
+        } else {
+            Text(comment.text)
+                .font(RF.bodyMd)
+                .foregroundStyle(isOwnMessage ? Color.riffitTextPrimary : Color.riffitTextSecondary)
         }
     }
 

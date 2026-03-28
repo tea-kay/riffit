@@ -398,11 +398,23 @@ class StorybankViewModel: ObservableObject {
         let profileId = userId ?? UUID()
         let story = Story(creatorProfileId: profileId, title: title)
         stories.insert(story, at: 0)
+
+        // Create an owner collaborator record locally so the People section works immediately
+        let ownerCollab = StoryCollaborator(
+            storyId: story.id,
+            userId: profileId,
+            role: .owner,
+            status: .accepted,
+            acceptedAt: Date()
+        )
+        storyCollaboratorsMap[story.id, default: []].insert(ownerCollab, at: 0)
         print("[DEBUG] createStory inserted '\(title)', stories.count = \(stories.count)")
 
         Task {
             do {
                 try await supabase.from("stories").insert(story).execute()
+                // Persist owner collaborator record so collaborators can see the owner
+                try await supabase.from("story_collaborators").insert(ownerCollab).execute()
             } catch {
                 print("[StorybankVM] createStory FAILED: \(error)")
             }
@@ -1218,6 +1230,12 @@ class StorybankViewModel: ObservableObject {
         return collaboratorUserInfo[collaborator.userId]?.avatarUrl
     }
 
+    /// Convenience: returns avatar URL by user ID directly, for note/comment bubbles.
+    func collaboratorAvatarUrl(forUserId userId: UUID?) -> String? {
+        guard let userId = userId else { return nil }
+        return collaboratorUserInfo[userId]?.avatarUrl
+    }
+
     /// Maps story ID → collaborators on that story.
     @Published var storyCollaboratorsMap: [UUID: [StoryCollaborator]] = [:]
 
@@ -1645,21 +1663,8 @@ class StorybankViewModel: ObservableObject {
         }
     }
 
-    /// Ensures the owner has a collaborator record for display in the People section.
-    /// Call this when entering StoryDetailView.
-    func ensureOwnerCollaborator(for storyId: UUID, ownerId: UUID) {
-        let existing = storyCollaboratorsMap[storyId] ?? []
-        guard !existing.contains(where: { $0.role == .owner }) else { return }
-
-        let ownerRecord = StoryCollaborator(
-            storyId: storyId,
-            userId: ownerId,
-            role: .owner,
-            status: .accepted,
-            acceptedAt: Date()
-        )
-        storyCollaboratorsMap[storyId, default: []].insert(ownerRecord, at: 0)
-    }
+    // ensureOwnerCollaborator removed — owner records are now created in the
+    // database by createStory() and fetched by fetchCollaborators().
 
     // MARK: - Story Folders
 
