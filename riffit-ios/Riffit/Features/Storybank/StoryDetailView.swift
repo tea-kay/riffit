@@ -471,10 +471,11 @@ struct StoryDetailView: View {
                 isDestructive: true,
                 onConfirm: {
                     showDeleteStoryConfirm = false
-                    dismiss()
-                    // Delete after dismiss so navigation pops before data changes
-                    DispatchQueue.main.async {
-                        viewModel.deleteStory(story)
+                    // Await Supabase DELETE before dismiss so the .task re-fetch
+                    // on StorybankView cannot resurrect the deleted story
+                    Task {
+                        await viewModel.deleteStory(story)
+                        dismiss()
                     }
                 },
                 onCancel: {

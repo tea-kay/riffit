@@ -8,6 +8,7 @@ struct StorybankView: View {
     @EnvironmentObject var viewModel: StorybankViewModel
     @State private var showNewStoryAlert: Bool = false
     @State private var newStoryTitle: String = ""
+    @State private var newStoryFolderId: UUID?
     @State private var showNewFolderAlert: Bool = false
     @State private var newFolderName: String = ""
     @State private var showActionSheet: Bool = false
@@ -89,10 +90,17 @@ struct StorybankView: View {
                 actionLabel: "Create",
                 text: $newStoryTitle,
                 onCancel: {
+                    newStoryFolderId = nil
                     showNewStoryAlert = false
                 },
                 onAction: { title in
                     viewModel.createStory(title: title, userId: appState.currentUser?.id)
+                    // Auto-assign to folder if triggered from a folder empty state
+                    if let folderId = newStoryFolderId,
+                       let story = viewModel.stories.first {
+                        viewModel.moveStory(story.id, to: folderId)
+                    }
+                    newStoryFolderId = nil
                     showNewStoryAlert = false
                 }
             )
@@ -267,19 +275,40 @@ struct StorybankView: View {
                 }
             }
         } else if selectedFolderFilter != nil && filteredMyStories.isEmpty {
-            // Filtered empty state — folder selected but has no stories
-            VStack(spacing: RS.sm) {
+            // Filtered empty state — use containerRelativeFrame so Spacers
+            // expand to fill the visible area (Spacer has zero height inside ScrollView)
+            VStack(spacing: 0) {
+                Spacer()
+
+                // Illustration — fixed 140pt height to match Ideas and Storybank empty states
+                FolderEmptyRipple()
+                    .frame(width: 180, height: 140)
+
+                Spacer().frame(height: RS.lg)  // 24pt
+
                 Text("Nothing in here yet")
-                    .font(.custom("Lora-Bold", size: 18))
+                    .font(RF.heading)
                     .foregroundStyle(Color.riffitTextPrimary)
 
-                Text("Move a story into this folder to see it here.")
-                    .font(RF.body(14))
+                Spacer().frame(height: RS.sm)  // 8pt
+
+                Text("Move a story here or start a new one.")
+                    .font(RF.caption)
                     .foregroundStyle(Color.riffitTextSecondary)
-                    .multilineTextAlignment(.center)
+
+                Spacer().frame(height: RS.lg)  // 24pt
+
+                RiffitButton(title: "Start a new story", variant: .ghostGold) {
+                    newStoryTitle = ""
+                    newStoryFolderId = selectedFolderFilter
+                    showNewStoryAlert = true
+                }
+                .padding(.horizontal, RS.xl2)
+
+                Spacer()
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, RS.xl3)
+            .containerRelativeFrame(.vertical) { length, _ in length }
         } else {
             ForEach(filteredMyStories) { story in
                 storyCardLink(story)
@@ -1208,5 +1237,96 @@ struct CardPressStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
             .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Folder Empty Ripple Illustration
+
+/// Concentric ripple rings with a gold drop point — used for filtered
+/// folder empty states. Transparent background, decorative only.
+struct FolderEmptyRipple: View {
+    var body: some View {
+        Canvas { context, size in
+            let midX = size.width / 2
+            let midY = size.height / 2
+
+            // ── Ripple rings — elliptical, radiating outward ──
+            struct Ring {
+                let rx: CGFloat
+                let ry: CGFloat
+                let color: Color
+                let lineWidth: CGFloat
+                let opacity: Double
+            }
+
+            // Scaled to fill 180×140 frame proportionally
+            let rings: [Ring] = [
+                // Outermost — teal 900
+                Ring(rx: 160, ry: 100, color: .riffitTeal900, lineWidth: 0.5, opacity: 0.15),
+                // Middle — teal 600
+                Ring(rx: 126, ry: 78, color: .riffitTeal600, lineWidth: 0.6, opacity: 0.2),
+                Ring(rx: 94, ry: 58, color: .riffitTeal600, lineWidth: 0.8, opacity: 0.3),
+                // Inner — teal 400
+                Ring(rx: 64, ry: 40, color: .riffitTeal400, lineWidth: 1.0, opacity: 0.45),
+                Ring(rx: 36, ry: 22, color: .riffitTeal400, lineWidth: 1.2, opacity: 0.6),
+            ]
+
+            for ring in rings {
+                let rect = CGRect(
+                    x: midX - ring.rx / 2,
+                    y: midY - ring.ry / 2,
+                    width: ring.rx,
+                    height: ring.ry
+                )
+                let path = Path(ellipseIn: rect)
+                context.stroke(
+                    path,
+                    with: .color(ring.color.opacity(ring.opacity)),
+                    lineWidth: ring.lineWidth
+                )
+            }
+
+            // ── Teal accent dots on the ripple paths ──
+            let accentDots: [(x: CGFloat, y: CGFloat, opacity: Double)] = [
+                (midX - 58, midY - 18, 0.25),
+                (midX + 54, midY + 22, 0.2),
+                (midX - 32, midY + 26, 0.3),
+                (midX + 68, midY - 10, 0.2),
+            ]
+            for dot in accentDots {
+                let dotRect = CGRect(x: dot.x - 1.5, y: dot.y - 1.5, width: 3, height: 3)
+                context.fill(
+                    Path(ellipseIn: dotRect),
+                    with: .color(Color.riffitTeal400.opacity(dot.opacity))
+                )
+            }
+
+            // ── Gold glow — concentric soft circles ──
+            let outerGlow = CGRect(x: midX - 20, y: midY - 20, width: 40, height: 40)
+            context.fill(Path(ellipseIn: outerGlow), with: .color(Color.riffitPrimary.opacity(0.04)))
+
+            let innerGlow = CGRect(x: midX - 12, y: midY - 12, width: 24, height: 24)
+            context.fill(Path(ellipseIn: innerGlow), with: .color(Color.riffitPrimary.opacity(0.08)))
+
+            // ── Center drop — gold circle ──
+            let dropOuter = CGRect(x: midX - 5, y: midY - 5, width: 10, height: 10)
+            context.fill(Path(ellipseIn: dropOuter), with: .color(Color.riffitPrimary.opacity(0.8)))
+
+            let dropInner = CGRect(x: midX - 2.5, y: midY - 2.5, width: 5, height: 5)
+            context.fill(Path(ellipseIn: dropInner), with: .color(Color.riffitPrimary))
+
+            // ── Star accents ✦ ──
+            let starFont = Font.system(size: 10, weight: .bold)
+            // Gold star — upper right
+            context.draw(
+                Text("✦").font(starFont).foregroundColor(Color.riffitPrimary.opacity(0.3)),
+                at: CGPoint(x: midX + 80, y: midY - 42)
+            )
+            // Teal star — lower left
+            context.draw(
+                Text("✦").font(starFont).foregroundColor(Color.riffitTeal400.opacity(0.25)),
+                at: CGPoint(x: midX - 76, y: midY + 38)
+            )
+        }
     }
 }

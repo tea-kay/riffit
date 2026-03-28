@@ -494,3 +494,59 @@
 - Features/Storybank/StorybankViewModel.swift (added `isSharedStory()` public method)
 
 **Build status:** Zero errors confirmed
+
+### 2026-03-27 — RiffitConfirmationModal, delete story confirm, loading flicker fix, folder empty state
+
+**What changed:**
+
+*RiffitConfirmationModal component:*
+- Created reusable `RiffitConfirmationModal` in `Components/RiffitConfirmationModal.swift` — replaces all native `.alert()` confirmation prompts app-wide
+- Supports destructive (coral confirm button) and non-destructive (gold confirm button) modes via `isDestructive` parameter
+- Presented via existing `.riffitModal(isPresented:)` overlay with spring animation + dimmed backdrop
+- Replaced 9 native alerts across 7 files: Leave Story (×2), Delete Folder (×3), Remove Collaborator, Sign Out, Delete Idea (×2)
+- Removed old `RiffitConfirmModal` from `View+Riffit.swift` (fully superseded)
+- Added component pattern documentation to `DESIGN_SYSTEM_UPDATE.md`
+- Added "never use native alerts for confirmations" rule to `CLAUDE.md`
+
+*Delete story confirmation:*
+- "Delete Story" toolbar button in StoryDetailView now triggers a `RiffitConfirmationModal` instead of directly calling `deleteStory()` (was the only destructive action without a confirmation)
+- Fixed dismiss ordering: modal closes → navigation pops → delete runs on next run loop tick via `DispatchQueue.main.async` (prevents ghost card in list)
+
+*View loading standard (hasLoadedOnce pattern):*
+- Added `hasLoadedOnce` to `LibraryViewModel` — first fetch shows `Color.clear`, subsequent refreshes are silent (no spinner flash)
+- Updated `LibraryView` to use `!viewModel.hasLoadedOnce` → `Color.clear` instead of `isLoading && isEmpty` → `ProgressView()`
+- Fixed `StorybankViewModel.fetchStories()` to only set `isLoading = true` on first fetch (was showing loading on every refresh)
+- Documented the pattern in `DESIGN_SYSTEM_UPDATE.md` (View Loading Standard) and `CLAUDE.md` (SwiftUI Patterns + Never Do rules)
+
+*Folder empty state:*
+- Added filtered empty state for when a folder is selected but contains no stories
+- Ripple rings illustration (`FolderEmptyRipple`): Canvas-drawn concentric elliptical rings (teal 900/600/400), gold drop point at center with glow, teal accent dots, star accents
+- Layout matches Ideas and Storybank main empty states exactly: same VStack(spacing: 0), Spacer/Spacer centering, RS.lg/RS.sm/RS.lg spacing, RF.heading/RF.caption fonts, RS.xl2 button padding
+- Ghost gold "Start a new story" button auto-assigns the new story to the currently selected folder via `newStoryFolderId` state
+- Illustration scaled to fill 180×140 frame proportionally (outermost ring rx=160 ry=100, matching visual weight of wave barrel and gem illustrations)
+
+**Decisions made:**
+- Native `.alert()` and `.confirmationDialog()` banned for confirmation prompts — always use `RiffitConfirmationModal`
+- Empty state or loading spinner before first fetch banned — always use `hasLoadedOnce` pattern
+- Delete story requires confirmation modal (was the only unguarded destructive action)
+- Folder empty state uses same vertical rhythm as main empty states for visual consistency
+
+**Files created:**
+- Components/RiffitConfirmationModal.swift
+
+**Files modified:**
+- Core/Extensions/View+Riffit.swift (removed old RiffitConfirmModal)
+- Features/Storybank/StorybankView.swift (Leave Story alert → modal, folder delete modals → RiffitConfirmationModal, folder empty state with ripple illustration, newStoryFolderId state)
+- Features/Storybank/StoryDetailView.swift (Leave Story alert → modal, delete story confirmation added, dismiss ordering fix)
+- Features/Storybank/ManageCollaboratorsView.swift (Remove Collaborator alert → modal)
+- Features/Settings/SettingsView.swift (Sign Out alert → modal)
+- Features/Library/InspirationDetailView.swift (Delete Idea alert → modal)
+- Features/Library/LibraryView.swift (Delete Idea alert → modal, hasLoadedOnce loading pattern)
+- Features/Library/FolderDetailView.swift (Delete Folder → RiffitConfirmationModal)
+- Features/Library/LibraryViewModel.swift (hasLoadedOnce, silent refresh on subsequent fetches)
+- Features/Storybank/StorybankViewModel.swift (silent refresh on subsequent fetches)
+- CLAUDE.md (confirmation modal rule, hasLoadedOnce rules, SwiftUI pattern example)
+- DESIGN_SYSTEM_UPDATE.md (RiffitConfirmationModal spec, View Loading Standard)
+- Riffit.xcodeproj/project.pbxproj (added RiffitConfirmationModal.swift)
+
+**Build status:** Zero errors confirmed

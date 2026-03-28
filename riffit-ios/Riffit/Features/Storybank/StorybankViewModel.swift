@@ -367,7 +367,17 @@ class StorybankViewModel: ObservableObject {
         }
 
         // ── Single assignment — self.stories written exactly once ──
-        self.stories = ownedStories + sharedStories
+        // Filter out any stories that were deleted locally but may still be in Supabase
+        // due to a race between the DELETE and this re-fetch
+        let allFetched = ownedStories + sharedStories
+        if !deletedStoryIds.isEmpty {
+            let fetchedIds = Set(allFetched.map(\.id))
+            // Clear IDs that are confirmed gone from Supabase
+            deletedStoryIds = deletedStoryIds.intersection(fetchedIds)
+            self.stories = allFetched.filter { !deletedStoryIds.contains($0.id) }
+        } else {
+            self.stories = allFetched
+        }
         hasLoadedSharedOnce = true
 
         // Owned collaborators (for CREATORS section in StoryDetailView)
@@ -429,22 +439,28 @@ class StorybankViewModel: ObservableObject {
         }
     }
 
-    func deleteStory(_ story: Story) {
+    /// Tracks story IDs that have been deleted locally but may not yet be
+    /// confirmed gone from Supabase — prevents zombie re-fetch from .task.
+    private var deletedStoryIds: Set<UUID> = []
+
+    func deleteStory(_ story: Story) async {
+        // 1. Remove from local arrays immediately so UI never shows the deleted story
         storyAssetsMap.removeValue(forKey: story.id)
         storyReferencesMap.removeValue(forKey: story.id)
         storySectionsMap.removeValue(forKey: story.id)
         storyNotesMap.removeValue(forKey: story.id)
         storyFolderMap.removeValue(forKey: story.id)
+        storyCollaboratorsMap.removeValue(forKey: story.id)
         stories.removeAll { $0.id == story.id }
+        deletedStoryIds.insert(story.id)
         print("[DEBUG] deleteStory removed '\(story.title)', stories.count = \(stories.count)")
 
-        Task {
-            do {
-                // CASCADE handles assets, sections, references, notes
-                try await supabase.from("stories").delete().eq("id", value: story.id).execute()
-            } catch {
-                print("[StorybankVM] deleteStory FAILED: \(error)")
-            }
+        // 2. Await the Supabase DELETE so it completes before dismiss triggers a re-fetch
+        do {
+            // CASCADE handles assets, sections, references, notes
+            try await supabase.from("stories").delete().eq("id", value: story.id).execute()
+        } catch {
+            print("[StorybankVM] deleteStory FAILED: \(error)")
         }
     }
 
