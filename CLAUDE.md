@@ -832,6 +832,37 @@ if viewModel.isLoading {
 // NEVER: Direct API calls from a View
 // NEVER: Force unwraps
 // NEVER: Hardcoded color hex values in Views
+
+// ALWAYS: Use hasLoadedOnce pattern for views that fetch data
+@MainActor
+class ExampleViewModel: ObservableObject {
+    @Published var items: [Item] = []
+    @Published var isLoading = false
+    @Published var hasLoadedOnce = false
+
+    func fetchItems() async {
+        if !hasLoadedOnce { isLoading = true }
+        do {
+            items = try await supabase.from("items").select().execute().value
+            hasLoadedOnce = true
+        } catch {
+            print("[ExampleVM] fetch failed: \(error)")
+        }
+        isLoading = false
+    }
+}
+
+// In the View:
+if !viewModel.hasLoadedOnce {
+    Color.clear
+} else if viewModel.items.isEmpty {
+    EmptyStateView()
+} else {
+    // content
+}
+
+// NEVER: Show empty state before first fetch
+// NEVER: Flash a loading spinner on tab switch when data exists
 ```
 
 ---
@@ -881,6 +912,9 @@ Before writing any Swift code, complete:
 - Skip RLS policies on a new table
 - Call external APIs directly from the iOS client
 - Mix light/dark hardcoded colors — always use the token system
+- Use native .alert() or .confirmationDialog() for confirmation prompts — always use RiffitConfirmationModal
+- Show an empty state or loading spinner before the first data fetch completes — use the hasLoadedOnce pattern (see Design System: View Loading Standard)
+- Re-fetch data with a visible loading state on tab switch — cached data should render instantly, background refresh should be silent
 
 ---
 

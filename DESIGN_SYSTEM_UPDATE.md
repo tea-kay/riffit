@@ -342,6 +342,38 @@ Danger:       fill danger-tint   text danger   border 0.5pt danger
 Disabled:     opacity 0.4 on any of the above, non-interactive
 ```
 
+#### RiffitConfirmationModal
+```
+Presentation:    ZStack overlay with dimmed background (black 0.4 opacity)
+Animation:       .spring(response: 0.4, dampingFraction: 0.85) on present/dismiss
+                 Scale 0.9 → 1.0 combined with opacity transition
+
+Card:            Surface fill, 24pt corner radius (RR.modal), 24pt padding (RS.lg)
+                 Horizontal margin: 32pt (RS.xl)
+
+Title:           Lora Bold (RF.heading), 20pt, text primary, centered
+Message:         DM Sans (RF.bodyMd), 15pt, text secondary, centered
+
+Button row:      HStack, 12pt spacing (RS.smPlus)
+  Cancel:        Elevated fill, text primary, border default 0.5pt stroke
+                 Height 48pt, radius 10pt (RR.button), Lora Medium (RF.button)
+  Confirm:       Height 48pt, radius 10pt, Lora Medium (RF.button)
+                 Destructive: danger fill (#D94E2A), white text
+                 Non-destructive: primary fill (#F0AA20), onPrimary text (#111111)
+
+Parameters:
+  title          String — modal headline
+  message        String — explanation text
+  confirmLabel   String — e.g. "Delete", "Leave", "Sign out"
+  isDestructive  Bool (default true) — coral vs gold confirm button
+  onConfirm      () -> Void
+  onCancel       (() -> Void)? = nil
+
+Usage:           .riffitModal(isPresented:) { RiffitConfirmationModal(...) }
+Replaces:        All native .alert() confirmation prompts app-wide
+Do NOT use for:  Informational alerts, permission prompts, error messages
+```
+
 ---
 
 ### Navigation
@@ -377,6 +409,54 @@ Card tap feedback:       scaleEffect(0.97) on press, .easeInOut 0.1s
 Button press:           scaleEffect(0.96) + opacity(0.9) on press
 Loading state:          ProgressView() tinted primary gold
 Skeleton loading:       Surface elevated shimmer (redacted view modifier)
+```
+
+#### View Loading Standard
+
+Every view that fetches data follows this lifecycle. No exceptions.
+```
+First load:          Color.clear — never flash empty state before data arrives
+Has data:            Render immediately from cached array, refresh silently in background
+Empty (confirmed):   Show empty state only after hasLoadedOnce == true AND data is empty
+Pull-to-refresh:     System refresh indicator only — no custom loading overlay
+Tab switch:          Cached data renders instantly, background fetch is silent
+```
+
+ViewModel requirements:
+```swift
+@Published var hasLoadedOnce: Bool = false
+
+func fetch() async {
+    // Only show loading indicator on first fetch
+    if !hasLoadedOnce { isLoading = true }
+    do {
+        // ... fetch from Supabase ...
+        hasLoadedOnce = true
+    } catch {
+        // ... handle error ...
+    }
+    isLoading = false
+}
+```
+
+View logic:
+```swift
+if !viewModel.hasLoadedOnce {
+    Color.clear          // invisible — no flicker, no empty state
+} else if viewModel.data.isEmpty {
+    EmptyStateView()     // confirmed empty — show illustration
+} else {
+    ContentView()        // render data
+}
+```
+
+Rules:
+```
+Never show empty state before first fetch completes
+Never blank the screen on tab switch when cached data exists
+Never show a loading spinner on background refresh
+Only the pull-to-refresh gesture shows a loading indicator
+hasLoadedOnce is set after first fetch succeeds (even if result is empty)
 ```
 
 ---

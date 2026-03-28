@@ -120,15 +120,22 @@ struct InspirationDetailView: View {
                 }
             }
         }
-        .alert("Delete this idea?", isPresented: $showDeleteConfirm) {
-            Button("Delete", role: .destructive) {
-                storybankViewModel.removeReferences(for: video.id)
-                viewModel.deleteVideo(video.id)
-                dismiss()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This can't be undone.")
+        .riffitModal(isPresented: $showDeleteConfirm) {
+            RiffitConfirmationModal(
+                title: "Delete this idea?",
+                message: "This can't be undone.",
+                confirmLabel: "Delete",
+                isDestructive: true,
+                onConfirm: {
+                    storybankViewModel.removeReferences(for: video.id)
+                    viewModel.deleteVideo(video.id)
+                    showDeleteConfirm = false
+                    dismiss()
+                },
+                onCancel: {
+                    showDeleteConfirm = false
+                }
+            )
         }
         .onAppear {
             titleText = video.title ?? ""

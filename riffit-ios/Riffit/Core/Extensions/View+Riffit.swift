@@ -128,68 +128,6 @@ struct RiffitInputModal: View {
     }
 }
 
-// MARK: - Riffit Confirm Modal
-
-/// Centered modal dialog for destructive confirmations.
-/// Shows title, message, Cancel + destructive action button.
-struct RiffitConfirmModal: View {
-    let title: String
-    let message: String
-    let actionLabel: String
-    let onCancel: () -> Void
-    let onAction: () -> Void
-
-    var body: some View {
-        VStack(spacing: RS.lg) {
-            Text(title)
-                .font(RF.heading)
-                .foregroundStyle(Color.riffitTextPrimary)
-
-            Text(message)
-                .font(RF.bodyMd)
-                .foregroundStyle(Color.riffitTextSecondary)
-                .multilineTextAlignment(.center)
-
-            // Buttons
-            HStack(spacing: RS.smPlus) {
-                // Cancel
-                Button {
-                    onCancel()
-                } label: {
-                    Text("Cancel")
-                        .font(RF.button)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .foregroundStyle(Color.riffitTextSecondary)
-                        .background(Color.riffitBackground)
-                        .cornerRadius(RR.button)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: RR.button)
-                                .stroke(Color.riffitBorderDefault, lineWidth: 0.5)
-                        )
-                }
-
-                // Destructive action
-                Button {
-                    onAction()
-                } label: {
-                    Text(actionLabel)
-                        .font(RF.button)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .foregroundStyle(.white)
-                        .background(Color.riffitDanger)
-                        .cornerRadius(RR.button)
-                }
-            }
-        }
-        .padding(RS.lg)
-        .background(Color.riffitSurface)
-        .cornerRadius(RR.card)
-        .padding(.horizontal, 32)
-    }
-}
-
 // MARK: - Riffit Action Modal
 
 /// Centered modal for action menus — replaces system Menu/ActionSheet

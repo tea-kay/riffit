@@ -62,9 +62,9 @@ struct LibraryView: View {
             Color.riffitBackground
                 .ignoresSafeArea()
 
-            if viewModel.isLoading && viewModel.isEmpty {
-                ProgressView()
-                    .tint(Color.riffitPrimary)
+            if !viewModel.hasLoadedOnce {
+                // Blank background while data loads — avoids empty state flicker
+                Color.clear
             } else if viewModel.isEmpty {
                 emptyState
             } else {
@@ -125,19 +125,25 @@ struct LibraryView: View {
         .task {
             await viewModel.fetchVideos(userId: appState.currentUser?.id)
         }
-        .alert("Delete this idea?", isPresented: $showDeleteConfirm) {
-            Button("Delete", role: .destructive) {
-                if let video = videoToDelete {
-                    storybankViewModel.removeReferences(for: video.id)
-                    viewModel.deleteVideo(video.id)
+        .riffitModal(isPresented: $showDeleteConfirm) {
+            RiffitConfirmationModal(
+                title: "Delete this idea?",
+                message: "This can't be undone.",
+                confirmLabel: "Delete",
+                isDestructive: true,
+                onConfirm: {
+                    if let video = videoToDelete {
+                        storybankViewModel.removeReferences(for: video.id)
+                        viewModel.deleteVideo(video.id)
+                        videoToDelete = nil
+                    }
+                    showDeleteConfirm = false
+                },
+                onCancel: {
                     videoToDelete = nil
+                    showDeleteConfirm = false
                 }
-            }
-            Button("Cancel", role: .cancel) {
-                videoToDelete = nil
-            }
-        } message: {
-            Text("This can't be undone.")
+            )
         }
     }
 

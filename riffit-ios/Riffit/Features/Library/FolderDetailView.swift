@@ -106,17 +106,18 @@ struct FolderDetailView: View {
             )
         }
         .riffitModal(isPresented: $showDeleteConfirm) {
-            RiffitConfirmModal(
+            RiffitConfirmationModal(
                 title: "Delete Folder?",
                 message: "Ideas inside will be moved back to Unfiled.",
-                actionLabel: "Delete",
-                onCancel: {
-                    showDeleteConfirm = false
-                },
-                onAction: {
+                confirmLabel: "Delete",
+                isDestructive: true,
+                onConfirm: {
                     viewModel.deleteFolder(folder)
                     showDeleteConfirm = false
                     dismiss()
+                },
+                onCancel: {
+                    showDeleteConfirm = false
                 }
             )
         }

@@ -176,15 +176,12 @@ struct StorybankView: View {
         }
         // Folder delete confirmation
         .riffitModal(isPresented: $showDeleteFolderConfirm) {
-            RiffitConfirmModal(
+            RiffitConfirmationModal(
                 title: "Delete Folder?",
                 message: "Stories inside will be moved to Unfiled.",
-                actionLabel: "Delete",
-                onCancel: {
-                    showDeleteFolderConfirm = false
-                    deleteFolderTarget = nil
-                },
-                onAction: {
+                confirmLabel: "Delete",
+                isDestructive: true,
+                onConfirm: {
                     if let folder = deleteFolderTarget {
                         if selectedFolderFilter == folder.id {
                             selectedFolderFilter = nil
@@ -193,23 +190,33 @@ struct StorybankView: View {
                     }
                     showDeleteFolderConfirm = false
                     deleteFolderTarget = nil
+                },
+                onCancel: {
+                    showDeleteFolderConfirm = false
+                    deleteFolderTarget = nil
                 }
             )
         }
-        .alert("Leave Story?", isPresented: $showLeaveConfirm) {
-            Button("Leave", role: .destructive) {
-                if let collab = collaboratorToLeave {
-                    withAnimation(.easeInOut) {
-                        viewModel.leaveStory(collab)
+        .riffitModal(isPresented: $showLeaveConfirm) {
+            RiffitConfirmationModal(
+                title: "Leave Story?",
+                message: "You will lose access to this story.",
+                confirmLabel: "Leave",
+                isDestructive: true,
+                onConfirm: {
+                    if let collab = collaboratorToLeave {
+                        withAnimation(.easeInOut) {
+                            viewModel.leaveStory(collab)
+                        }
                     }
+                    collaboratorToLeave = nil
+                    showLeaveConfirm = false
+                },
+                onCancel: {
+                    collaboratorToLeave = nil
+                    showLeaveConfirm = false
                 }
-                collaboratorToLeave = nil
-            }
-            Button("Cancel", role: .cancel) {
-                collaboratorToLeave = nil
-            }
-        } message: {
-            Text("You will lose access to this story.")
+            )
         }
     }
 
@@ -259,6 +266,20 @@ struct StorybankView: View {
                     storyCardLink(story)
                 }
             }
+        } else if selectedFolderFilter != nil && filteredMyStories.isEmpty {
+            // Filtered empty state — folder selected but has no stories
+            VStack(spacing: RS.sm) {
+                Text("Nothing in here yet")
+                    .font(.custom("Lora-Bold", size: 18))
+                    .foregroundStyle(Color.riffitTextPrimary)
+
+                Text("Move a story into this folder to see it here.")
+                    .font(RF.body(14))
+                    .foregroundStyle(Color.riffitTextSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, RS.xl3)
         } else {
             ForEach(filteredMyStories) { story in
                 storyCardLink(story)
@@ -861,17 +882,18 @@ struct StoryFolderDetailView: View {
             )
         }
         .riffitModal(isPresented: $showDeleteConfirm) {
-            RiffitConfirmModal(
+            RiffitConfirmationModal(
                 title: "Delete Folder?",
                 message: "Stories inside will be moved to Unfiled.",
-                actionLabel: "Delete",
-                onCancel: {
-                    showDeleteConfirm = false
-                },
-                onAction: {
+                confirmLabel: "Delete",
+                isDestructive: true,
+                onConfirm: {
                     viewModel.deleteFolder(folder)
                     showDeleteConfirm = false
                     dismiss()
+                },
+                onCancel: {
+                    showDeleteConfirm = false
                 }
             )
         }

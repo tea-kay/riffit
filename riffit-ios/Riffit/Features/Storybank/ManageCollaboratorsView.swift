@@ -150,18 +150,24 @@ struct ManageCollaboratorsView: View {
                     .foregroundStyle(Color.riffitPrimary)
                 }
             }
-            .alert("Remove Collaborator", isPresented: $showRemoveConfirmation) {
-                Button("Remove", role: .destructive) {
-                    if let collaborator = collaboratorToRemove {
-                        viewModel.removeCollaborator(collaborator)
+            .riffitModal(isPresented: $showRemoveConfirmation) {
+                RiffitConfirmationModal(
+                    title: "Remove Collaborator",
+                    message: "They will lose access to this story immediately.",
+                    confirmLabel: "Remove",
+                    isDestructive: true,
+                    onConfirm: {
+                        if let collaborator = collaboratorToRemove {
+                            viewModel.removeCollaborator(collaborator)
+                        }
+                        collaboratorToRemove = nil
+                        showRemoveConfirmation = false
+                    },
+                    onCancel: {
+                        collaboratorToRemove = nil
+                        showRemoveConfirmation = false
                     }
-                    collaboratorToRemove = nil
-                }
-                Button("Cancel", role: .cancel) {
-                    collaboratorToRemove = nil
-                }
-            } message: {
-                Text("They will lose access to this story immediately.")
+                )
             }
         }
         .presentationBackground(Color.riffitBackground)

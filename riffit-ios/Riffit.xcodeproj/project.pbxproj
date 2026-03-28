@@ -18,6 +18,7 @@
 		287C3C14CE2B464B9A70AE9F /* LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCFFDEC95DDE5AEC083E6F70 /* LibraryViewModel.swift */; };
 		33B2A22A9DF6F87AA22A444A /* StorybankViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B41C262581B8EBD33B6C7DA /* StorybankViewModel.swift */; };
 		3630990DBB8E9773F3C77176 /* RiffitButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00798CA0356C2C648DDE4C3E /* RiffitButton.swift */; };
+		BB22CC33DD44EE55FF66AA11 /* RiffitConfirmationModal.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* RiffitConfirmationModal.swift */; };
 		38025785851FC11D5C7D7363 /* View+Riffit.swift in Sources */ = {isa = PBXBuildFile; fileRef = B58725C9ED0FE78FCE0F9095 /* View+Riffit.swift */; };
 		38025785851FC11D5C7D7364 /* PlatformDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B58725C9ED0FE78FCE0F9096 /* PlatformDetector.swift */; };
 		50A859AC41E5825A09C91848 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3782FCAF634A66428418A55 /* AuthViewModel.swift */; };
@@ -99,6 +100,7 @@
 
 /* Begin PBXFileReference section */
 		00798CA0356C2C648DDE4C3E /* RiffitButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitButton.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF66 /* RiffitConfirmationModal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffitConfirmationModal.swift; sourceTree = "<group>"; };
 		069D025481ECE0A021008223 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		08D17B3D22B4EF12F4E471B3 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		0C8324F7E1E52BBC5D8F498B /* InterviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewView.swift; sourceTree = "<group>"; };
@@ -271,6 +273,7 @@
 				1120BC2824BE7C4619C6A84D /* LoadingOverlay.swift */,
 				CC00112233445566778800B2 /* WaveSplashView.swift */,
 				00798CA0356C2C648DDE4C3E /* RiffitButton.swift */,
+				AA11BB22CC33DD44EE55FF66 /* RiffitConfirmationModal.swift */,
 				E6F7A8B9C0D1E2F3A4B5C6D7 /* RiffitWordmark.swift */,
 				EE3344556677889900AA0002 /* ShareSheet.swift */,
 			);
@@ -579,6 +582,7 @@
 				6CE9EEEBF6BE9C4ED91F26D5 /* OnboardingViewModel.swift in Sources */,
 				1D8795CEF94FF6F9816E2E99 /* RiffitApp.swift in Sources */,
 				3630990DBB8E9773F3C77176 /* RiffitButton.swift in Sources */,
+				BB22CC33DD44EE55FF66AA11 /* RiffitConfirmationModal.swift in Sources */,
 				D3749D5D3757E22BA0FAD5D2 /* RiffitColors.swift in Sources */,
 				CC11DD22EE33FF44AA55BB66 /* RiffitTheme.swift in Sources */,
 				0C0C3D99022F0B87CD5FCF50 /* SettingsView.swift in Sources */,

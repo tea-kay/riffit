@@ -215,15 +215,22 @@ struct SettingsView: View {
         .sheet(isPresented: $showComingSoon) {
             comingSoonSheet
         }
-        .alert("Sign out?", isPresented: $showSignOutConfirm) {
-            Button("Sign out", role: .destructive) {
-                Task {
-                    await appState.signOut()
+        .riffitModal(isPresented: $showSignOutConfirm) {
+            RiffitConfirmationModal(
+                title: "Sign out?",
+                message: "You'll need to sign back in to access your stories.",
+                confirmLabel: "Sign out",
+                isDestructive: false,
+                onConfirm: {
+                    showSignOutConfirm = false
+                    Task {
+                        await appState.signOut()
+                    }
+                },
+                onCancel: {
+                    showSignOutConfirm = false
                 }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("You'll need to sign back in to access your stories.")
+            )
         }
     }
 

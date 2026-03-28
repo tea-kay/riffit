@@ -41,6 +41,7 @@ struct StoryDetailView: View {
     @State private var showInviteSheet: Bool = false
     @State private var showManageCollaborators: Bool = false
     @State private var showLeaveConfirm: Bool = false
+    @State private var showDeleteStoryConfirm: Bool = false
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var libraryViewModel: LibraryViewModel
 
@@ -372,8 +373,7 @@ struct StoryDetailView: View {
                     // Delete Story — owner only
                     if userRole.canDeleteStory {
                         Button(role: .destructive) {
-                            viewModel.deleteStory(story)
-                            dismiss()
+                            showDeleteStoryConfirm = true
                         } label: {
                             Label("Delete Story", systemImage: "trash")
                         }
@@ -445,17 +445,42 @@ struct StoryDetailView: View {
                 viewModel.updateLastViewed(for: story.id)
             }
         }
-        .alert("Leave Story?", isPresented: $showLeaveConfirm) {
-            Button("Leave", role: .destructive) {
-                // Find this user's collaboration record and leave
-                if let collab = viewModel.sharedCollaborations.first(where: { $0.storyId == story.id }) {
-                    viewModel.leaveStory(collab)
+        .riffitModal(isPresented: $showLeaveConfirm) {
+            RiffitConfirmationModal(
+                title: "Leave Story?",
+                message: "You will lose access to this story.",
+                confirmLabel: "Leave",
+                isDestructive: true,
+                onConfirm: {
+                    if let collab = viewModel.sharedCollaborations.first(where: { $0.storyId == story.id }) {
+                        viewModel.leaveStory(collab)
+                    }
+                    showLeaveConfirm = false
+                    dismiss()
+                },
+                onCancel: {
+                    showLeaveConfirm = false
                 }
-                dismiss()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("You will lose access to this story.")
+            )
+        }
+        .riffitModal(isPresented: $showDeleteStoryConfirm) {
+            RiffitConfirmationModal(
+                title: "Delete Story?",
+                message: "This story and all its assets will be permanently deleted.",
+                confirmLabel: "Delete",
+                isDestructive: true,
+                onConfirm: {
+                    showDeleteStoryConfirm = false
+                    dismiss()
+                    // Delete after dismiss so navigation pops before data changes
+                    DispatchQueue.main.async {
+                        viewModel.deleteStory(story)
+                    }
+                },
+                onCancel: {
+                    showDeleteStoryConfirm = false
+                }
+            )
         }
         .riffitModal(isPresented: $showRenameModal) {
             RiffitInputModal(

@@ -188,7 +188,10 @@ class StorybankViewModel: ObservableObject {
             return
         }
         self.currentUserId = profileId
-        isLoading = true
+        // Only show loading indicator on initial fetch — refreshes are silent
+        if !hasLoadedOnce {
+            isLoading = true
+        }
         error = nil
 
         var ownedStories: [Story] = []

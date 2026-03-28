@@ -11,6 +11,7 @@ class LibraryViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var isSubmitting: Bool = false
     @Published var error: Error?
+    @Published var hasLoadedOnce: Bool = false
 
     /// Maps video ID → folder ID. Videos not in this dictionary are unfiled.
     @Published var videoFolderMap: [UUID: UUID] = [:]
@@ -80,9 +81,13 @@ class LibraryViewModel: ObservableObject {
     func fetchVideos(userId: UUID? = nil) async {
         guard let profileId = userId else {
             isLoading = false
+            hasLoadedOnce = true
             return
         }
-        isLoading = true
+        // Only show loading indicator on initial fetch — refreshes are silent
+        if !hasLoadedOnce {
+            isLoading = true
+        }
         error = nil
 
         do {
@@ -193,6 +198,7 @@ class LibraryViewModel: ObservableObject {
         }
 
         isLoading = false
+        hasLoadedOnce = true
     }
 
     // MARK: - Add Video
