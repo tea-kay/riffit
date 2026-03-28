@@ -36,6 +36,8 @@ class StorybankViewModel: ObservableObject {
     @Published var folders: [StoryFolder] = []
     @Published var isLoading: Bool = false
     @Published var error: Error?
+    @Published var hasLoadedOnce: Bool = false
+    @Published var hasLoadedSharedOnce: Bool = false
 
     /// The current user's ID, stored when fetchStories runs so that
     /// fetchSharedStories can use it without a parameter.
@@ -177,130 +179,196 @@ class StorybankViewModel: ObservableObject {
     func fetchStories(userId: UUID? = nil) async {
         guard let profileId = userId else {
             isLoading = false
+            hasLoadedOnce = true
             return
         }
         self.currentUserId = profileId
         isLoading = true
         error = nil
 
+        var ownedStories: [Story] = []
+        var sharedStories: [Story] = []
+
+        // ── Phase 1: Owned stories + shared collab records in parallel ──
+        // These are independent queries — fire both at once.
         do {
-            // 1. Fetch stories
-            let storiesData = try await supabase
+            async let ownedQuery = supabase
                 .from("stories")
                 .select()
                 .eq("creator_profile_id", value: profileId)
                 .order("updated_at", ascending: false)
                 .execute()
                 .data
-            let fetchedStories = try Self.decoder.decode([Story].self, from: storiesData)
-            self.stories = fetchedStories
-            print("[DEBUG] fetchStories assigned \(fetchedStories.count) owned stories")
-
-            let storyIds = fetchedStories.map { $0.id }
-            guard !storyIds.isEmpty else {
-                isLoading = false
-                // Still fetch shared stories even if user has no owned stories
-                Task { await self.fetchSharedStories() }
-                return
-            }
-
-            // 2. Fetch assets for all stories
-            let assetsData = try await supabase
-                .from("story_assets")
-                .select()
-                .in("story_id", values: storyIds.map { $0.uuidString })
-                .order("display_order")
-                .execute()
-                .data
-            let allAssets = try Self.decoder.decode([StoryAsset].self, from: assetsData)
-            self.storyAssetsMap = Dictionary(grouping: allAssets, by: \.storyId)
-
-            // 3. Fetch sections for all stories
-            let sectionsData = try await supabase
-                .from("asset_sections")
-                .select()
-                .in("story_id", values: storyIds.map { $0.uuidString })
-                .order("display_order")
-                .execute()
-                .data
-            let allSections = try Self.decoder.decode([AssetSection].self, from: sectionsData)
-            self.storySectionsMap = Dictionary(grouping: allSections, by: \.storyId)
-
-            // 4. Fetch references for all stories
-            let refsData = try await supabase
-                .from("story_references")
-                .select()
-                .in("story_id", values: storyIds.map { $0.uuidString })
-                .order("display_order")
-                .execute()
-                .data
-            let allRefs = try Self.decoder.decode([StoryReference].self, from: refsData)
-            self.storyReferencesMap = Dictionary(grouping: allRefs, by: \.storyId)
-
-            // 5. Fetch notes for all stories
-            let notesData = try await supabase
-                .from("story_notes")
-                .select()
-                .in("story_id", values: storyIds.map { $0.uuidString })
-                .order("created_at")
-                .execute()
-                .data
-            let allNotes = try Self.decoder.decode([StoryNote].self, from: notesData)
-            self.storyNotesMap = Dictionary(grouping: allNotes, by: \.storyId)
-
-            // 6. Fetch folders
-            let foldersData = try await supabase
-                .from("story_folders")
+            async let collabQuery = supabase
+                .from("story_collaborators")
                 .select()
                 .eq("user_id", value: profileId)
+                .neq("role", value: "owner")
                 .execute()
                 .data
-            self.folders = try Self.decoder.decode([StoryFolder].self, from: foldersData)
 
-            // 7. Fetch folder mappings
-            let mapData = try await supabase
-                .from("story_folder_map")
-                .select()
-                .in("story_id", values: storyIds.map { $0.uuidString })
-                .execute()
-                .data
-            // story_folder_map has story_id + folder_id columns
-            struct FolderMapRow: Decodable {
-                let storyId: UUID
-                let folderId: UUID
-                enum CodingKeys: String, CodingKey {
-                    case storyId = "story_id"
-                    case folderId = "folder_id"
-                }
-            }
-            let mapRows = try Self.decoder.decode([FolderMapRow].self, from: mapData)
-            var newMap: [UUID: UUID] = [:]
-            for row in mapRows {
-                newMap[row.storyId] = row.folderId
-            }
-            self.storyFolderMap = newMap
-
+            let (ownedData, collabData) = try await (ownedQuery, collabQuery)
+            ownedStories = try Self.decoder.decode([Story].self, from: ownedData)
+            let collaborators = try Self.decoder.decode([StoryCollaborator].self, from: collabData)
+            self.sharedCollaborations = collaborators
+            print("[DEBUG] Phase 1: \(ownedStories.count) owned stories, \(collaborators.count) collab records")
         } catch {
-            print("[StorybankVM] fetchStories FAILED: \(error)")
+            print("[StorybankVM] Phase 1 FAILED: \(error)")
             self.error = error
         }
 
-        isLoading = false
+        let ownedIds: [String] = ownedStories.map { $0.id.uuidString }
+        let sharedIds: [String] = self.sharedCollaborations.map { $0.storyId.uuidString }
 
-        // Fetch collaboration data in background — owned stories are already visible.
-        // Capture owned IDs before shared stories get added to the array.
-        let ownedStoryIds = self.stories.map { $0.id }
-        Task {
-            // Shared stories for "Shared with me" section
-            await self.fetchSharedStories()
+        // ── Phase 2: All sub-data in parallel ──
+        // Owned sub-data (assets, sections, refs, notes, folders, folder maps)
+        // + shared data (story objects, assets, refs, notes) — all independent.
+        // We know the shared story IDs from collab records, so no need to wait.
 
-            // Batch-fetch collaborators for all owned stories (for CREATORS section)
-            guard !ownedStoryIds.isEmpty else { return }
+        // Decode helper for folder mappings
+        struct FolderMapRow: Decodable {
+            let storyId: UUID
+            let folderId: UUID
+            enum CodingKeys: String, CodingKey {
+                case storyId = "story_id"
+                case folderId = "folder_id"
+            }
+        }
+
+        if !ownedIds.isEmpty && !sharedIds.isEmpty {
+            // Both owned and shared — fire all 10 queries in parallel
+            do {
+                async let assetsQ = supabase.from("story_assets").select()
+                    .in("story_id", values: ownedIds).order("display_order").execute().data
+                async let sectionsQ = supabase.from("asset_sections").select()
+                    .in("story_id", values: ownedIds).order("display_order").execute().data
+                async let refsQ = supabase.from("story_references").select()
+                    .in("story_id", values: ownedIds).order("display_order").execute().data
+                async let notesQ = supabase.from("story_notes").select()
+                    .in("story_id", values: ownedIds).order("created_at").execute().data
+                async let foldersQ = supabase.from("story_folders").select()
+                    .eq("user_id", value: profileId).execute().data
+                async let folderMapQ = supabase.from("story_folder_map").select()
+                    .in("story_id", values: ownedIds).execute().data
+                async let sharedStoriesQ = supabase.from("stories").select()
+                    .in("id", values: sharedIds).execute().data
+                async let sharedAssetsQ = supabase.from("story_assets").select()
+                    .in("story_id", values: sharedIds).order("display_order").execute().data
+                async let sharedRefsQ = supabase.from("story_references").select()
+                    .in("story_id", values: sharedIds).order("display_order").execute().data
+                async let sharedNotesQ = supabase.from("story_notes").select()
+                    .in("story_id", values: sharedIds).order("created_at").execute().data
+
+                let (aData, sData, rData, nData, fData, fmData, ssData, saData, srData, snData) =
+                    try await (assetsQ, sectionsQ, refsQ, notesQ, foldersQ, folderMapQ,
+                               sharedStoriesQ, sharedAssetsQ, sharedRefsQ, sharedNotesQ)
+
+                // Decode owned sub-data
+                self.storyAssetsMap = Dictionary(grouping: try Self.decoder.decode([StoryAsset].self, from: aData), by: \.storyId)
+                self.storySectionsMap = Dictionary(grouping: try Self.decoder.decode([AssetSection].self, from: sData), by: \.storyId)
+                self.storyReferencesMap = Dictionary(grouping: try Self.decoder.decode([StoryReference].self, from: rData), by: \.storyId)
+                self.storyNotesMap = Dictionary(grouping: try Self.decoder.decode([StoryNote].self, from: nData), by: \.storyId)
+                self.folders = try Self.decoder.decode([StoryFolder].self, from: fData)
+                let mapRows = try Self.decoder.decode([FolderMapRow].self, from: fmData)
+                var newMap: [UUID: UUID] = [:]
+                for row in mapRows { newMap[row.storyId] = row.folderId }
+                self.storyFolderMap = newMap
+
+                // Decode shared sub-data
+                sharedStories = try Self.decoder.decode([Story].self, from: ssData)
+                for (storyId, assets) in Dictionary(grouping: try Self.decoder.decode([StoryAsset].self, from: saData), by: \.storyId) {
+                    self.storyAssetsMap[storyId] = assets
+                }
+                for (storyId, refs) in Dictionary(grouping: try Self.decoder.decode([StoryReference].self, from: srData), by: \.storyId) {
+                    self.storyReferencesMap[storyId] = refs
+                }
+                for (storyId, notes) in Dictionary(grouping: try Self.decoder.decode([StoryNote].self, from: snData), by: \.storyId) {
+                    self.storyNotesMap[storyId] = notes
+                }
+                for ownerId in Set(sharedStories.map({ $0.creatorProfileId })) {
+                    cacheUserInfo(userId: ownerId)
+                }
+                print("[DEBUG] Phase 2: owned + shared sub-data loaded")
+            } catch {
+                print("[StorybankVM] Phase 2 FAILED: \(error)")
+            }
+        } else if !ownedIds.isEmpty {
+            // Owned only — 6 queries in parallel
+            do {
+                async let assetsQ = supabase.from("story_assets").select()
+                    .in("story_id", values: ownedIds).order("display_order").execute().data
+                async let sectionsQ = supabase.from("asset_sections").select()
+                    .in("story_id", values: ownedIds).order("display_order").execute().data
+                async let refsQ = supabase.from("story_references").select()
+                    .in("story_id", values: ownedIds).order("display_order").execute().data
+                async let notesQ = supabase.from("story_notes").select()
+                    .in("story_id", values: ownedIds).order("created_at").execute().data
+                async let foldersQ = supabase.from("story_folders").select()
+                    .eq("user_id", value: profileId).execute().data
+                async let folderMapQ = supabase.from("story_folder_map").select()
+                    .in("story_id", values: ownedIds).execute().data
+
+                let (aData, sData, rData, nData, fData, fmData) =
+                    try await (assetsQ, sectionsQ, refsQ, notesQ, foldersQ, folderMapQ)
+
+                self.storyAssetsMap = Dictionary(grouping: try Self.decoder.decode([StoryAsset].self, from: aData), by: \.storyId)
+                self.storySectionsMap = Dictionary(grouping: try Self.decoder.decode([AssetSection].self, from: sData), by: \.storyId)
+                self.storyReferencesMap = Dictionary(grouping: try Self.decoder.decode([StoryReference].self, from: rData), by: \.storyId)
+                self.storyNotesMap = Dictionary(grouping: try Self.decoder.decode([StoryNote].self, from: nData), by: \.storyId)
+                self.folders = try Self.decoder.decode([StoryFolder].self, from: fData)
+                let mapRows = try Self.decoder.decode([FolderMapRow].self, from: fmData)
+                var newMap: [UUID: UUID] = [:]
+                for row in mapRows { newMap[row.storyId] = row.folderId }
+                self.storyFolderMap = newMap
+                print("[DEBUG] Phase 2: owned sub-data loaded")
+            } catch {
+                print("[StorybankVM] Phase 2 (owned) FAILED: \(error)")
+            }
+        } else if !sharedIds.isEmpty {
+            // Shared only — 4 queries in parallel
+            do {
+                async let sharedStoriesQ = supabase.from("stories").select()
+                    .in("id", values: sharedIds).execute().data
+                async let sharedAssetsQ = supabase.from("story_assets").select()
+                    .in("story_id", values: sharedIds).order("display_order").execute().data
+                async let sharedRefsQ = supabase.from("story_references").select()
+                    .in("story_id", values: sharedIds).order("display_order").execute().data
+                async let sharedNotesQ = supabase.from("story_notes").select()
+                    .in("story_id", values: sharedIds).order("created_at").execute().data
+
+                let (ssData, saData, srData, snData) =
+                    try await (sharedStoriesQ, sharedAssetsQ, sharedRefsQ, sharedNotesQ)
+
+                sharedStories = try Self.decoder.decode([Story].self, from: ssData)
+                for (storyId, assets) in Dictionary(grouping: try Self.decoder.decode([StoryAsset].self, from: saData), by: \.storyId) {
+                    self.storyAssetsMap[storyId] = assets
+                }
+                for (storyId, refs) in Dictionary(grouping: try Self.decoder.decode([StoryReference].self, from: srData), by: \.storyId) {
+                    self.storyReferencesMap[storyId] = refs
+                }
+                for (storyId, notes) in Dictionary(grouping: try Self.decoder.decode([StoryNote].self, from: snData), by: \.storyId) {
+                    self.storyNotesMap[storyId] = notes
+                }
+                for ownerId in Set(sharedStories.map({ $0.creatorProfileId })) {
+                    cacheUserInfo(userId: ownerId)
+                }
+                print("[DEBUG] Phase 2: shared sub-data loaded")
+            } catch {
+                print("[StorybankVM] Phase 2 (shared) FAILED: \(error)")
+            }
+        }
+
+        // ── Single assignment — self.stories written exactly once ──
+        self.stories = ownedStories + sharedStories
+        hasLoadedSharedOnce = true
+
+        // Owned collaborators (for CREATORS section in StoryDetailView)
+        if !ownedIds.isEmpty {
             do {
                 let data = try await supabase
                     .from("story_collaborators")
                     .select()
-                    .in("story_id", values: ownedStoryIds.map { $0.uuidString })
+                    .in("story_id", values: ownedIds)
                     .execute()
                     .data
                 let allCollabs = try Self.decoder.decode([StoryCollaborator].self, from: data)
@@ -308,7 +376,6 @@ class StorybankViewModel: ObservableObject {
                 for (storyId, collabs) in grouped {
                     self.storyCollaboratorsMap[storyId] = collabs
                 }
-                // Cache display info for each collaborator
                 let userIds = Set(allCollabs.map { $0.userId })
                 for uid in userIds {
                     self.cacheUserInfo(userId: uid)
@@ -318,6 +385,9 @@ class StorybankViewModel: ObservableObject {
                 print("[StorybankVM] fetchOwnedCollaborators FAILED: \(error)")
             }
         }
+
+        isLoading = false
+        hasLoadedOnce = true
     }
 
     // MARK: - Stories
@@ -1344,11 +1414,15 @@ class StorybankViewModel: ObservableObject {
     }
 
     /// Fetches stories shared with the current user from Supabase.
-    /// Populates sharedCollaborations, adds the shared Story objects to the
-    /// stories array (so StorybankView can look them up), and fetches
-    /// assets/notes/references for counts and unread detection.
-    func fetchSharedStories() async {
-        guard let userId = currentUserId else { return }
+    /// Populates sharedCollaborations, merges shared Story objects with the
+    /// provided owned stories, and assigns self.stories once (single render).
+    /// Also fetches assets/notes/references for counts and unread detection.
+    func fetchSharedStories(ownedStories: [Story]) async {
+        guard let userId = currentUserId else {
+            // No user — just assign owned stories as-is
+            self.stories = ownedStories
+            return
+        }
 
         do {
             // 1. Fetch collaborator records where this user is a non-owner collaborator
@@ -1366,6 +1440,8 @@ class StorybankViewModel: ObservableObject {
             let sharedIds = collaborators.map { $0.storyId }
             guard !sharedIds.isEmpty else {
                 print("[StorybankVM] fetchSharedStories OK — no shared stories")
+                self.stories = ownedStories
+                hasLoadedSharedOnce = true
                 return
             }
             let idsForQuery = sharedIds.map { $0.uuidString }
@@ -1379,16 +1455,9 @@ class StorybankViewModel: ObservableObject {
                 .data
             let fetchedSharedStories = try Self.decoder.decode([Story].self, from: storiesData)
 
-            // Merge into the main stories array — remove stale shared entries first,
-            // then append fresh ones. unfiledStories filters these out via sharedStoryIds.
-            let sharedIdSet = Set(sharedIds)
-            let storiesBeforeRemove = self.stories.map { $0.id }
-            let ownedBeingRemoved = storiesBeforeRemove.filter { sharedIdSet.contains($0) }
-            print("[DEBUG] fetchSharedStories sharedIdSet = \(sharedIdSet)")
-            print("[DEBUG] fetchSharedStories stories BEFORE removeAll: \(self.stories.count), ids: \(storiesBeforeRemove)")
-            print("[DEBUG] fetchSharedStories will remove ids: \(ownedBeingRemoved)")
-            self.stories.removeAll { sharedIdSet.contains($0.id) }
-            self.stories.append(contentsOf: fetchedSharedStories)
+            // Single assignment — owned + shared merged in one @Published update
+            print("[DEBUG] fetchSharedStories owned: \(ownedStories.count), shared: \(fetchedSharedStories.count)")
+            self.stories = ownedStories + fetchedSharedStories
             print("[DEBUG] fetchSharedStories stories AFTER merge: \(self.stories.count)")
 
             // 3. Fetch assets for shared stories (for counts label)
@@ -1439,11 +1508,17 @@ class StorybankViewModel: ObservableObject {
             print("[StorybankVM] fetchSharedStories OK — \(collaborators.count) collaborations, \(fetchedSharedStories.count) stories")
         } catch {
             print("[StorybankVM] fetchSharedStories FAILED: \(error)")
+            // On failure, still assign owned stories so the view has data
+            if self.stories.isEmpty {
+                self.stories = ownedStories
+            }
         }
+        hasLoadedSharedOnce = true
     }
 
     /// Accepts a pending invite. Updates status and sets acceptedAt.
-    /// Optimistic local update + Supabase UPDATE in background.
+    /// Optimistic local update + Supabase UPDATE, then fetches the
+    /// Story object so it appears in the Active section immediately.
     func acceptInvite(_ collaborator: StoryCollaborator) {
         let now = Date()
         if let index = sharedCollaborations.firstIndex(where: { $0.id == collaborator.id }) {
@@ -1451,7 +1526,10 @@ class StorybankViewModel: ObservableObject {
             sharedCollaborations[index].acceptedAt = now
         }
 
+        let storyId = collaborator.storyId
+
         Task {
+            // 1. Persist the accept to Supabase
             do {
                 struct AcceptUpdate: Encodable {
                     let status: String
@@ -1470,6 +1548,62 @@ class StorybankViewModel: ObservableObject {
                 print("[StorybankVM] acceptInvite UPDATE OK — \(collaborator.id)")
             } catch {
                 print("[StorybankVM] acceptInvite UPDATE FAILED: \(error)")
+            }
+
+            // 2. Fetch the Story object so ActiveSection can render it
+            do {
+                let storyData = try await supabase
+                    .from("stories")
+                    .select()
+                    .eq("id", value: storyId)
+                    .execute()
+                    .data
+                let fetchedStories = try Self.decoder.decode([Story].self, from: storyData)
+                guard let story = fetchedStories.first else {
+                    print("[StorybankVM] acceptInvite — story \(storyId) not returned (RLS or deleted)")
+                    return
+                }
+
+                // Merge into stories array (remove stale entry if present, then append)
+                self.stories.removeAll { $0.id == storyId }
+                self.stories.append(story)
+
+                // 3. Fetch assets, references, notes for counts and unread detection
+                let idForQuery = [storyId.uuidString]
+
+                let assetsData = try await supabase
+                    .from("story_assets")
+                    .select()
+                    .in("story_id", values: idForQuery)
+                    .order("display_order")
+                    .execute()
+                    .data
+                self.storyAssetsMap[storyId] = try Self.decoder.decode([StoryAsset].self, from: assetsData)
+
+                let refsData = try await supabase
+                    .from("story_references")
+                    .select()
+                    .in("story_id", values: idForQuery)
+                    .order("display_order")
+                    .execute()
+                    .data
+                self.storyReferencesMap[storyId] = try Self.decoder.decode([StoryReference].self, from: refsData)
+
+                let notesData = try await supabase
+                    .from("story_notes")
+                    .select()
+                    .in("story_id", values: idForQuery)
+                    .order("created_at")
+                    .execute()
+                    .data
+                self.storyNotesMap[storyId] = try Self.decoder.decode([StoryNote].self, from: notesData)
+
+                // 4. Cache owner display info
+                cacheUserInfo(userId: story.creatorProfileId)
+
+                print("[StorybankVM] acceptInvite — fetched story + assets for \(storyId)")
+            } catch {
+                print("[StorybankVM] acceptInvite — fetch story FAILED: \(error)")
             }
         }
     }

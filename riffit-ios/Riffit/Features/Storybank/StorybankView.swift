@@ -33,9 +33,9 @@ struct StorybankView: View {
             Color.riffitBackground
                 .ignoresSafeArea()
 
-            if viewModel.isLoading && viewModel.isEmpty {
-                ProgressView()
-                    .tint(Color.riffitPrimary)
+            if !viewModel.hasLoadedOnce {
+                // Blank background while data loads (<200ms) — avoids empty state flicker
+                Color.clear
             } else if viewModel.isEmpty && !viewModel.hasSharedContent {
                 emptyState
             } else {
@@ -127,8 +127,16 @@ struct StorybankView: View {
 
                 if selectedSegment == .myStories || !viewModel.hasSharedContent {
                     myStoriesContent
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .leading),
+                            removal: .move(edge: .leading)
+                        ))
                 } else {
                     sharedSegmentContent
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing),
+                            removal: .move(edge: .trailing)
+                        ))
                 }
             }
             .padding(.horizontal, RS.md)
@@ -136,7 +144,6 @@ struct StorybankView: View {
         }
         .refreshable {
             await viewModel.fetchStories(userId: appState.currentUser?.id)
-            await viewModel.fetchSharedStories()
         }
         .navigationDestination(for: Story.self) { story in
             StoryDetailView(story: story, viewModel: viewModel)
@@ -209,11 +216,18 @@ struct StorybankView: View {
 
         // Safety net — segment is normally hidden when empty
         if viewModel.pendingInvites.isEmpty && viewModel.acceptedSharedStories.isEmpty {
-            Text("No shared stories yet")
-                .font(RF.displayItalic(15))
-                .foregroundStyle(Color.riffitTextSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, RS.xl2)
+            if viewModel.hasLoadedSharedOnce {
+                Text("No shared stories yet")
+                    .font(RF.displayItalic(15))
+                    .foregroundStyle(Color.riffitTextSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, RS.xl2)
+            } else {
+                ProgressView()
+                    .tint(Color.riffitPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, RS.xl2)
+            }
         }
     }
 

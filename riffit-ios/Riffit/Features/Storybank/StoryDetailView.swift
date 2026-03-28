@@ -44,10 +44,17 @@ struct StoryDetailView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var libraryViewModel: LibraryViewModel
 
-    /// The current user's role on this story. Defaults to .owner for own stories.
-    /// Used to permission-gate all UI actions in this view.
+    /// The current user's role on this story. If no collaborator record exists,
+    /// checks ownership via creatorProfileId. Falls back to .viewer (safe default).
     private var userRole: CollaboratorRole {
-        viewModel.currentUserRole(for: story.id, userId: appState.currentUser?.id) ?? .owner
+        if let role = viewModel.currentUserRole(for: story.id, userId: appState.currentUser?.id) {
+            return role
+        }
+        // No collaborator record — check if the user owns this story
+        if story.creatorProfileId == appState.currentUser?.id {
+            return .owner
+        }
+        return .viewer
     }
 
     /// Display name for note bubbles: username > full_name > email prefix
