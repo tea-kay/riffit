@@ -127,10 +127,12 @@ struct InspirationDetailView: View {
                 confirmLabel: "Delete",
                 isDestructive: true,
                 onConfirm: {
-                    storybankViewModel.removeReferences(for: video.id)
-                    viewModel.deleteVideo(video.id)
                     showDeleteConfirm = false
-                    dismiss()
+                    storybankViewModel.removeReferences(for: video.id)
+                    Task {
+                        await viewModel.deleteVideo(video.id)
+                        dismiss()
+                    }
                 },
                 onCancel: {
                     showDeleteConfirm = false

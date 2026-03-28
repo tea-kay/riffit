@@ -318,9 +318,8 @@ struct AddInspirationView: View {
                 folderId: selectedFolderId,
                 userId: appState.currentUser?.id
             )
+            dismiss()
         }
-
-        dismiss()
     }
 }
 

@@ -99,7 +99,18 @@ class LibraryViewModel: ObservableObject {
                 .order("created_at", ascending: false)
                 .execute()
                 .data
-            self.videos = try Self.decoder.decode([InspirationVideo].self, from: videosData)
+            var fetchedVideos = try Self.decoder.decode([InspirationVideo].self, from: videosData)
+
+            // Filter out any videos deleted locally but possibly still in Supabase
+            // due to a race between the DELETE and this re-fetch
+            if !deletedVideoIds.isEmpty {
+                let fetchedIds = Set(fetchedVideos.map(\.id))
+                // Clear IDs confirmed gone from Supabase
+                deletedVideoIds = deletedVideoIds.intersection(fetchedIds)
+                fetchedVideos = fetchedVideos.filter { !deletedVideoIds.contains($0.id) }
+            }
+
+            self.videos = fetchedVideos
 
             let videoIds = videos.map { $0.id }
 
@@ -250,50 +261,48 @@ class LibraryViewModel: ObservableObject {
         videos.insert(newVideo, at: 0)
         isSubmitting = false
 
-        // Persist to Supabase
-        Task {
-            do {
-                try await supabase.from("inspiration_videos").insert(newVideo).execute()
+        // Persist to Supabase — awaited so callers can dismiss after data is safe
+        do {
+            try await supabase.from("inspiration_videos").insert(newVideo).execute()
 
-                // Persist tags
-                if let tags, !tags.isEmpty {
-                    for tag in tags {
-                        struct TagInsert: Encodable {
-                            let inspirationVideoId: UUID
-                            let tag: String
-                            enum CodingKeys: String, CodingKey {
-                                case inspirationVideoId = "inspiration_video_id"
-                                case tag
-                            }
-                        }
-                        try await supabase.from("idea_tags")
-                            .insert(TagInsert(inspirationVideoId: newVideo.id, tag: tag))
-                            .execute()
-                    }
-                }
-
-                // Persist folder mapping
-                if let folderId {
-                    struct FolderMapInsert: Encodable {
+            // Persist tags
+            if let tags, !tags.isEmpty {
+                for tag in tags {
+                    struct TagInsert: Encodable {
                         let inspirationVideoId: UUID
-                        let folderId: UUID
+                        let tag: String
                         enum CodingKeys: String, CodingKey {
                             case inspirationVideoId = "inspiration_video_id"
-                            case folderId = "folder_id"
+                            case tag
                         }
                     }
-                    try await supabase.from("idea_folder_map")
-                        .insert(FolderMapInsert(inspirationVideoId: newVideo.id, folderId: folderId))
+                    try await supabase.from("idea_tags")
+                        .insert(TagInsert(inspirationVideoId: newVideo.id, tag: tag))
                         .execute()
                 }
-
-                // Persist first comment
-                if let firstComment = videoCommentsMap[newVideo.id]?.first {
-                    try await supabase.from("idea_comments").insert(firstComment).execute()
-                }
-            } catch {
-                print("[LibraryVM] addVideo persist FAILED: \(error)")
             }
+
+            // Persist folder mapping
+            if let folderId {
+                struct FolderMapInsert: Encodable {
+                    let inspirationVideoId: UUID
+                    let folderId: UUID
+                    enum CodingKeys: String, CodingKey {
+                        case inspirationVideoId = "inspiration_video_id"
+                        case folderId = "folder_id"
+                    }
+                }
+                try await supabase.from("idea_folder_map")
+                    .insert(FolderMapInsert(inspirationVideoId: newVideo.id, folderId: folderId))
+                    .execute()
+            }
+
+            // Persist first comment
+            if let firstComment = videoCommentsMap[newVideo.id]?.first {
+                try await supabase.from("idea_comments").insert(firstComment).execute()
+            }
+        } catch {
+            print("[LibraryVM] addVideo persist FAILED: \(error)")
         }
     }
 
@@ -592,25 +601,30 @@ class LibraryViewModel: ObservableObject {
 
     // MARK: - Delete Video
 
+    /// Tracks video IDs deleted locally but possibly not yet confirmed gone from
+    /// Supabase — prevents zombie re-fetch from .task.
+    private var deletedVideoIds: Set<UUID> = []
+
     /// Removes an idea and all its associated data (folder mapping, tags, comments).
     /// Call StorybankViewModel.removeReferences(for:) separately to clean up
     /// any story references pointing to this video.
-    func deleteVideo(_ videoId: UUID) {
+    func deleteVideo(_ videoId: UUID) async {
+        // 1. Remove from local arrays immediately so UI never shows the deleted video
         videos.removeAll { $0.id == videoId }
         videoFolderMap.removeValue(forKey: videoId)
         videoTagsMap.removeValue(forKey: videoId)
         videoCommentsMap.removeValue(forKey: videoId)
+        deletedVideoIds.insert(videoId)
 
-        Task {
-            do {
-                // CASCADE handles comments, tags, folder mappings
-                try await supabase.from("inspiration_videos")
-                    .delete()
-                    .eq("id", value: videoId)
-                    .execute()
-            } catch {
-                print("[LibraryVM] deleteVideo FAILED: \(error)")
-            }
+        // 2. Await the Supabase DELETE so it completes before any re-fetch
+        do {
+            // CASCADE handles comments, tags, folder mappings
+            try await supabase.from("inspiration_videos")
+                .delete()
+                .eq("id", value: videoId)
+                .execute()
+        } catch {
+            print("[LibraryVM] deleteVideo FAILED: \(error)")
         }
     }
 
