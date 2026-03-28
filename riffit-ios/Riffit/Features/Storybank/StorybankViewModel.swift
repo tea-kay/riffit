@@ -67,6 +67,11 @@ class StorybankViewModel: ObservableObject {
 
     var isEmpty: Bool { stories.isEmpty && folders.isEmpty }
 
+    /// Whether a story is shared (current user is a non-owner collaborator).
+    func isSharedStory(_ storyId: UUID) -> Bool {
+        sharedStoryIds.contains(storyId)
+    }
+
     var unfiledStories: [Story] {
         stories.filter { storyFolderMap[$0.id] == nil && !sharedStoryIds.contains($0.id) }
     }

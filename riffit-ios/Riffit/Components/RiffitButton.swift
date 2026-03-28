@@ -87,10 +87,10 @@ struct RiffitGhostGoldButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         let isPressed = configuration.isPressed
         configuration.label
-            .foregroundStyle(isPressed ? Color(hex: 0x111111) : Color.riffitPrimary)
+            .foregroundStyle(isPressed ? Color.riffitBackground : Color.riffitPrimary)
             .background(
                 RoundedRectangle(cornerRadius: RR.button)
-                    .fill(isPressed ? Color.riffitPrimary : Color(hex: 0x111111))
+                    .fill(isPressed ? Color.riffitPrimary : Color.riffitBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: RR.button)

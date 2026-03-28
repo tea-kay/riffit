@@ -14,6 +14,12 @@ struct StorybankView: View {
     @State private var showLeaveConfirm: Bool = false
     @State private var collaboratorToLeave: StoryCollaborator?
     @State private var selectedSegment: StorybankSegment = .myStories
+    @State private var selectedFolderFilter: UUID?
+    @State private var showRenameFolderAlert: Bool = false
+    @State private var renameFolderTarget: StoryFolder?
+    @State private var renameFolderText: String = ""
+    @State private var showDeleteFolderConfirm: Bool = false
+    @State private var deleteFolderTarget: StoryFolder?
     @Environment(\.colorScheme) private var colorScheme
 
     /// First initial of the user's name or email for avatar fallback
@@ -148,8 +154,47 @@ struct StorybankView: View {
         .navigationDestination(for: Story.self) { story in
             StoryDetailView(story: story, viewModel: viewModel)
         }
-        .navigationDestination(for: StoryFolder.self) { folder in
-            StoryFolderDetailView(folder: folder, viewModel: viewModel)
+        // Folder rename modal
+        .riffitModal(isPresented: $showRenameFolderAlert) {
+            RiffitInputModal(
+                title: "Rename Folder",
+                placeholder: "Folder name",
+                actionLabel: "Save",
+                text: $renameFolderText,
+                onCancel: {
+                    showRenameFolderAlert = false
+                    renameFolderTarget = nil
+                },
+                onAction: { name in
+                    if let folder = renameFolderTarget {
+                        viewModel.renameFolder(folder, to: name)
+                    }
+                    showRenameFolderAlert = false
+                    renameFolderTarget = nil
+                }
+            )
+        }
+        // Folder delete confirmation
+        .riffitModal(isPresented: $showDeleteFolderConfirm) {
+            RiffitConfirmModal(
+                title: "Delete Folder?",
+                message: "Stories inside will be moved to Unfiled.",
+                actionLabel: "Delete",
+                onCancel: {
+                    showDeleteFolderConfirm = false
+                    deleteFolderTarget = nil
+                },
+                onAction: {
+                    if let folder = deleteFolderTarget {
+                        if selectedFolderFilter == folder.id {
+                            selectedFolderFilter = nil
+                        }
+                        viewModel.deleteFolder(folder)
+                    }
+                    showDeleteFolderConfirm = false
+                    deleteFolderTarget = nil
+                }
+            )
         }
         .alert("Leave Story?", isPresented: $showLeaveConfirm) {
             Button("Leave", role: .destructive) {
@@ -170,11 +215,33 @@ struct StorybankView: View {
 
     // MARK: - My Stories Content
 
+    /// Stories filtered by the selected folder pill.
+    /// "All" (nil) shows everything; a specific folder shows only its stories.
+    private var filteredMyStories: [Story] {
+        let owned = viewModel.stories.filter { !viewModel.isSharedStory($0.id) }
+        if let folderId = selectedFolderFilter {
+            return owned.filter { viewModel.storyFolderMap[$0.id] == folderId }
+        }
+        return owned
+    }
+
     @ViewBuilder
     private var myStoriesContent: some View {
+        // Folder dropdown — only when folders exist
+        if !viewModel.folders.isEmpty {
+            folderPicker
+        }
+
+        // "UNFILED" section header — only when "All" is selected and folders exist
         let unfiled = viewModel.unfiledStories
-        if !unfiled.isEmpty {
-            if !viewModel.folders.isEmpty {
+        if selectedFolderFilter == nil && !viewModel.folders.isEmpty && !unfiled.isEmpty {
+            let filedStories = filteredMyStories.filter { viewModel.storyFolderMap[$0.id] != nil }
+            if !filedStories.isEmpty {
+                // Show filed stories first
+                ForEach(filedStories) { story in
+                    storyCardLink(story)
+                }
+
                 Text("Unfiled")
                     .font(RF.tag)
                     .textCase(.uppercase)
@@ -182,21 +249,142 @@ struct StorybankView: View {
                     .foregroundStyle(Color.riffitTextTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, RS.sm)
-            }
 
-            ForEach(unfiled) { story in
-                NavigationLink(value: story) {
-                    StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id), avatarUrl: appState.currentUser?.avatarUrl, avatarInitial: userAvatarInitial)
+                ForEach(unfiled) { story in
+                    storyCardLink(story)
                 }
-                .buttonStyle(.plain)
-                .draggable(story.id.uuidString)
+            } else {
+                // Only unfiled stories exist
+                ForEach(unfiled) { story in
+                    storyCardLink(story)
+                }
+            }
+        } else {
+            ForEach(filteredMyStories) { story in
+                storyCardLink(story)
             }
         }
+    }
 
-        if !viewModel.folders.isEmpty {
-            ForEach(viewModel.folders) { folder in
-                StoryFolderDropTarget(folder: folder, viewModel: viewModel)
+    /// A single story card with navigation link and context menu.
+    private func storyCardLink(_ story: Story) -> some View {
+        NavigationLink(value: story) {
+            StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id), avatarUrl: appState.currentUser?.avatarUrl, avatarInitial: userAvatarInitial)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            if !viewModel.folders.isEmpty {
+                // "Move to folder" submenu
+                Menu {
+                    ForEach(viewModel.folders) { folder in
+                        Button {
+                            viewModel.moveStory(story.id, to: folder.id)
+                        } label: {
+                            Label(folder.name, systemImage: viewModel.storyFolderMap[story.id] == folder.id ? "checkmark.circle.fill" : "folder")
+                        }
+                    }
+
+                    if viewModel.storyFolderMap[story.id] != nil {
+                        Divider()
+                        Button {
+                            viewModel.moveStory(story.id, to: nil)
+                        } label: {
+                            Label("Remove from folder", systemImage: "folder.badge.minus")
+                        }
+                    }
+                } label: {
+                    Label("Move to folder", systemImage: "folder")
+                }
             }
+        }
+    }
+
+    // MARK: - Folder Picker
+
+    /// The name shown in the folder picker label.
+    private var folderPickerLabel: String {
+        if let folderId = selectedFolderFilter,
+           let folder = viewModel.folders.first(where: { $0.id == folderId }) {
+            return folder.name
+        }
+        return "All stories"
+    }
+
+    private var folderPicker: some View {
+        Menu {
+            // "All stories" option
+            Button {
+                selectedFolderFilter = nil
+            } label: {
+                if selectedFolderFilter == nil {
+                    Label("All stories", systemImage: "checkmark")
+                } else {
+                    Text("All stories")
+                }
+            }
+
+            Divider()
+
+            // Folder options with inline rename/delete via context menu
+            ForEach(viewModel.folders) { folder in
+                let isActive = selectedFolderFilter == folder.id
+
+                Button {
+                    selectedFolderFilter = folder.id
+                } label: {
+                    if isActive {
+                        Label(folder.name, systemImage: "checkmark")
+                    } else {
+                        Text(folder.name)
+                    }
+                }
+            }
+
+            Divider()
+
+            // New folder action
+            Button {
+                newFolderName = ""
+                showNewFolderAlert = true
+            } label: {
+                Label("New Folder", systemImage: "plus")
+            }
+
+            // Folder management section — only when a folder is selected
+            if let folderId = selectedFolderFilter,
+               let folder = viewModel.folders.first(where: { $0.id == folderId }) {
+                Divider()
+
+                Button {
+                    renameFolderTarget = folder
+                    renameFolderText = folder.name
+                    showRenameFolderAlert = true
+                } label: {
+                    Label("Rename \(folder.name)", systemImage: "pencil")
+                }
+
+                Button(role: .destructive) {
+                    deleteFolderTarget = folder
+                    showDeleteFolderConfirm = true
+                } label: {
+                    Label("Delete \(folder.name)", systemImage: "trash")
+                }
+            }
+        } label: {
+            HStack(spacing: RS.xs) {
+                Text(folderPickerLabel)
+                    .font(RF.body(14, weight: .medium))
+                    .foregroundStyle(
+                        selectedFolderFilter == nil
+                            ? Color.riffitTextSecondary
+                            : Color.riffitTextPrimary
+                    )
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.riffitTextTertiary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -563,78 +751,6 @@ extension Story.Status {
     }
 }
 
-// MARK: - Story Folder Row
-
-/// Displays a folder in the Storybank list.
-struct StoryFolderRow: View {
-    let folder: StoryFolder
-    let count: Int
-
-    var body: some View {
-        HStack(spacing: RS.smPlus) {
-            Image(systemName: "folder.fill")
-                .font(.title3)
-                .foregroundStyle(Color.riffitPrimary)
-
-            Text(folder.name)
-                .font(RF.heading)
-                .foregroundStyle(Color.riffitTextPrimary)
-
-            Spacer()
-
-            Text("\(count)")
-                .font(RF.caption)
-                .foregroundStyle(Color.riffitTextTertiary)
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(Color.riffitTextTertiary)
-        }
-        .padding(RS.md)
-        .background(Color.riffitSurface)
-        .cornerRadius(RR.card)
-        .overlay(
-            RoundedRectangle(cornerRadius: RR.card)
-                .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
-        )
-    }
-}
-
-// MARK: - Story Folder Drop Target
-
-/// Wraps a StoryFolderRow with drop-target behavior so stories
-/// can be dragged onto a folder to organize them.
-struct StoryFolderDropTarget: View {
-    let folder: StoryFolder
-    @ObservedObject var viewModel: StorybankViewModel
-    @State private var isTargeted: Bool = false
-
-    var body: some View {
-        NavigationLink(value: folder) {
-            StoryFolderRow(
-                folder: folder,
-                count: viewModel.stories(in: folder).count
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: RR.card)
-                    .stroke(Color.riffitPrimary, lineWidth: isTargeted ? 2 : 0)
-            )
-            .scaleEffect(isTargeted ? 1.02 : 1.0)
-            .animation(.easeInOut(duration: 0.15), value: isTargeted)
-        }
-        .buttonStyle(.plain)
-        .dropDestination(for: String.self) { items, _ in
-            guard let idString = items.first,
-                  let storyId = UUID(uuidString: idString),
-                  viewModel.stories.contains(where: { $0.id == storyId })
-            else { return false }
-            viewModel.moveStory(storyId, to: folder.id)
-            return true
-        } isTargeted: { targeted in
-            isTargeted = targeted
-        }
-    }
-}
 
 // MARK: - Story Folder Detail View
 
@@ -1011,8 +1127,12 @@ struct StorybankSegmentedControl: View {
             segmentButton(.shared, label: "Shared", showDot: hasPending)
         }
         .padding(3)
-        .background(Color.riffitElevated)
+        .background(Color.riffitSurface)
         .cornerRadius(RR.button)
+        .overlay(
+            RoundedRectangle(cornerRadius: RR.button)
+                .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
+        )
     }
 
     private func segmentButton(
@@ -1020,7 +1140,9 @@ struct StorybankSegmentedControl: View {
         label: String,
         showDot: Bool = false
     ) -> some View {
-        Button {
+        let isSelected = selection == segment
+
+        return Button {
             withAnimation(.easeInOut(duration: 0.2)) {
                 selection = segment
             }
@@ -1028,8 +1150,9 @@ struct StorybankSegmentedControl: View {
             HStack(spacing: RS.xs) {
                 Text(label)
                     .font(RF.bodyMd)
+                    .fontWeight(isSelected ? .semibold : .regular)
                     .foregroundStyle(
-                        selection == segment
+                        isSelected
                             ? Color.riffitTextPrimary
                             : Color.riffitTextSecondary
                     )
@@ -1044,10 +1167,9 @@ struct StorybankSegmentedControl: View {
             .padding(.vertical, RS.sm)
             .background(
                 Group {
-                    if selection == segment {
+                    if isSelected {
                         RoundedRectangle(cornerRadius: RR.button - 3)
-                            .fill(Color.riffitSurface)
-                            .shadow(color: .black.opacity(0.08), radius: 1, y: 0.5)
+                            .fill(Color.riffitPrimaryTint)
                     }
                 }
             )

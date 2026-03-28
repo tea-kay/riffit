@@ -423,3 +423,74 @@
 - Features/Storybank/StorybankView.swift (flicker fix, segmented control, refreshable simplified)
 
 **Build status:** Zero errors confirmed
+
+### 2026-03-27 — People section owner fix, iMessage-style notes, segmented picker light mode, ghost button light mode
+
+**What changed:**
+
+*People section — owner display fix:*
+- CollaboratorRow display name/avatar now branches on `collaborator.userId == currentUser.id` instead of `collaborator.role == .owner` — fixes bug where the current user's name/avatar showed on the actual owner's row when a collaborator views a shared story
+- User info cache trigger updated to match: caches info for `userId != currentUser.id` instead of `role != .owner`
+- Renamed `ownerCollabDisplayName` → `currentUserDisplayName` (role-agnostic)
+
+*iMessage-style note/comment bubbles:*
+- Own messages: right-aligned, primary tint (gold) background, no avatar/name, less-rounded bottom-right corner, timestamp below bubble trailing-aligned
+- Others' messages: left-aligned, surface background, avatar + name + timestamp above bubble, less-rounded bottom-left corner
+- Added `RoundedCornerShape` (per-corner radius) to StoryDetailView for iMessage-style asymmetric corners
+- Own note text uses `textPrimary` color (brighter on gold tint), others use `textSecondary`
+- Same treatment applied to `CommentBubble` in InspirationDetailView for idea comments
+- Extracted `notesContent` and `noteBubbleRow(for:)` from StoryDetailView body to fix Swift type-checker complexity limit
+- Added `collaboratorAvatarUrl(forUserId:)` to StorybankViewModel for direct user ID lookup
+
+*Segmented picker light mode fix:*
+- Selected tab: `Color.riffitSurface` + shadow → `Color.riffitPrimaryTint` (gold tint), `.fontWeight(.semibold)`
+- Unselected tab: transparent, `.fontWeight(.regular)`
+- Outer pill: `Color.riffitElevated` → `Color.riffitSurface` with `Color.riffitBorderSubtle` stroke — visible shape in light mode
+
+*Ghost button light mode fix:*
+- `RiffitGhostGoldButtonStyle` had hardcoded `Color(hex: 0x111111)` for resting fill and pressed text — dark mode appearance in light mode
+- Replaced with `Color.riffitBackground` — adapts to `#111111` dark / `#F5F2EB` light
+
+**Files modified:**
+- Features/Storybank/StoryDetailView.swift (People section userId check, iMessage note bubbles, RoundedCornerShape, notesContent extraction)
+- Features/Library/InspirationDetailView.swift (iMessage comment bubbles, CommentBubble rewrite)
+- Features/Storybank/StorybankViewModel.swift (collaboratorAvatarUrl(forUserId:) helper)
+- Features/Storybank/StorybankView.swift (segmented picker light mode colors)
+- Components/RiffitButton.swift (ghost gold button light mode fix)
+
+**Build status:** Zero errors confirmed
+
+### 2026-03-27 — Storybank folders → dropdown picker, story card context menu
+
+**What changed:**
+
+*Folder UI overhaul:*
+- Removed inline folder rows (StoryFolderRow, StoryFolderDropTarget) from the Storybank story list
+- Removed drag-to-organize on story cards (`.draggable` modifier)
+- Replaced horizontal folder filter pills with a compact `Menu` dropdown picker
+- Picker sits between segmented control and story list, shows "All stories" or active folder name + chevron.down
+- Menu contents: "All stories" (checkmark when active) → divider → each folder (checkmark on active) → divider → "New Folder" (plus icon)
+- When a specific folder is selected, Rename and Delete options appear at the bottom of the menu
+- Folder rename/delete trigger existing `RiffitInputModal` and `RiffitConfirmModal` flows
+- Deleting the currently-selected folder resets filter to "All stories"
+
+*Story card context menu:*
+- Long-press on any StoryCard now shows "Move to folder" submenu with all available folders
+- Active folder shows checkmark.circle.fill icon, others show folder icon
+- "Remove from folder" option appears when story is already in a folder
+
+*Styling:*
+- Picker label: SF Pro 14pt medium weight, text secondary when "All stories", text primary when filtered
+- Chevron: system 10pt, text tertiary
+- No background, no border — subtle context indicator
+
+**Decisions made:**
+- StoryFolderDetailView kept as dead code (navigable via deep link, not from main list)
+- Folder CRUD moved from inline pills to inside the dropdown menu
+- Drag-to-organize removed entirely — folder assignment via context menu only
+
+**Files modified:**
+- Features/Storybank/StorybankView.swift (folder picker, story card context menu, removed StoryFolderRow, StoryFolderDropTarget, folder filter pills)
+- Features/Storybank/StorybankViewModel.swift (added `isSharedStory()` public method)
+
+**Build status:** Zero errors confirmed
