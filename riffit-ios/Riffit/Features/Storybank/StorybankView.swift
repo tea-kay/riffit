@@ -242,8 +242,10 @@ struct StorybankView: View {
 
     @ViewBuilder
     private var myStoriesContent: some View {
-        // Folder dropdown — only when folders exist
-        if !viewModel.folders.isEmpty {
+        // Folder dropdown — shown when folders exist, UNLESS the folder empty state
+        // is active (which renders its own overlaid folderPicker to avoid pushing content down)
+        let isFolderEmptyState = selectedFolderFilter != nil && filteredMyStories.isEmpty
+        if !viewModel.folders.isEmpty && !isFolderEmptyState {
             folderPicker
         }
 
@@ -275,24 +277,66 @@ struct StorybankView: View {
                 }
             }
         } else if selectedFolderFilter != nil && filteredMyStories.isEmpty {
-            // Filtered empty state — use containerRelativeFrame so Spacers
-            // expand to fill the visible area (Spacer has zero height inside ScrollView)
+            // Filtered empty state — folder picker is overlaid at top so it
+            // doesn't push the centered content down vs the Ideas empty state
+            ZStack(alignment: .top) {
+                VStack(spacing: 0) {
+                    Spacer()
+
+                    // Illustration — fixed 140pt height to match Ideas and Storybank empty states
+                    FolderEmptyRipple()
+                        .frame(width: 180, height: 140)
+
+                    Spacer().frame(height: RS.lg)  // 24pt
+
+                    Text("Nothing in here yet")
+                        .font(RF.heading)
+                        .foregroundStyle(Color.riffitTextPrimary)
+
+                    Spacer().frame(height: RS.sm)  // 8pt
+
+                    Text("Move a story here or start a new one.")
+                        .font(RF.caption)
+                        .foregroundStyle(Color.riffitTextSecondary)
+
+                    Spacer().frame(height: RS.lg)  // 24pt
+
+                    RiffitButton(title: "Start a new story", variant: .ghostGold) {
+                        newStoryTitle = ""
+                        newStoryFolderId = selectedFolderFilter
+                        showNewStoryAlert = true
+                    }
+                    .padding(.horizontal, RS.xl2)
+
+                    Spacer()
+                }
+
+                // Folder picker pinned to top, overlaid so it doesn't
+                // affect the vertical centering of the empty state
+                folderPicker
+            }
+            .frame(maxWidth: .infinity)
+            .containerRelativeFrame(.vertical) { length, _ in length }
+        } else if filteredMyStories.isEmpty {
+            // "All stories" selected but no owned stories exist —
+            // show the main empty state centered below the folder picker
             VStack(spacing: 0) {
                 Spacer()
 
-                // Illustration — fixed 140pt height to match Ideas and Storybank empty states
-                FolderEmptyRipple()
-                    .frame(width: 180, height: 140)
+                GemIllustration()
+                    .frame(width: 100, height: 140)
 
                 Spacer().frame(height: RS.lg)  // 24pt
 
-                Text("Nothing in here yet")
+                Text(colorScheme == .dark
+                     ? "Every story needs a spark."
+                     : "Your story starts here.")
                     .font(RF.heading)
                     .foregroundStyle(Color.riffitTextPrimary)
 
                 Spacer().frame(height: RS.sm)  // 8pt
 
-                Text("Move a story here or start a new one.")
+                Text("Start building your first story.")
                     .font(RF.caption)
                     .foregroundStyle(Color.riffitTextSecondary)
 
@@ -300,7 +344,6 @@ struct StorybankView: View {
 
                 RiffitButton(title: "Start a new story", variant: .ghostGold) {
                     newStoryTitle = ""
-                    newStoryFolderId = selectedFolderFilter
                     showNewStoryAlert = true
                 }
                 .padding(.horizontal, RS.xl2)
