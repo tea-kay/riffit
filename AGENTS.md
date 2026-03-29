@@ -501,6 +501,29 @@ Do not change anything else.
 Build. Confirm zero errors.
 ```
 
+### Prompt sizing rule
+
+If a task touches more than 8 methods or 3 files, break it into
+sequential prompts of ≤8 methods or ≤2 files each. Each prompt must
+build and be testable independently.
+
+**How to split:**
+- Group by file (StorybankViewModel first, LibraryViewModel second)
+- Group by feature area (mutations first, fetch logic second, UI third)
+- Each prompt ends with "Build. Confirm zero errors."
+- Each prompt starts with "Read AGENTS.md, CLAUDE.md and CONTEXT.md"
+- Never assume the previous prompt's changes — read the files fresh
+
+**When presenting prompts to the developer:** ALWAYS break large tasks
+into numbered sequential prompts (Prompt 1, Prompt 2, Prompt 3...).
+Never hand over a single prompt that tries to do everything. The
+developer runs one, tests, then runs the next. This catches regressions
+between steps instead of at the end of a 200-line mega-prompt.
+
+**The rule of thumb:** If you're writing a prompt and it passes 60 lines,
+stop and split it. Two 40-line prompts that each build clean will always
+outperform one 80-line prompt that might half-work.
+
 ### After every session
 
 1. **Overwrite CONTEXT.md** with current state (not history)

@@ -188,6 +188,7 @@ struct StoryDetailView: View {
 
             // MARK: References Section
             Section {
+                let _ = print("[StoryDetail] references for \(story.id): \(viewModel.references(for: story.id).count)")
                 if viewModel.references(for: story.id).isEmpty {
                     emptyReferencesState
                         .listRowBackground(Color.riffitBackground)

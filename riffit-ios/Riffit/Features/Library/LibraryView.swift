@@ -141,8 +141,8 @@ struct LibraryView: View {
                 isDestructive: true,
                 onConfirm: {
                     if let video = videoToDelete {
-                        storybankViewModel.removeReferences(for: video.id)
                         Task {
+                            await storybankViewModel.removeReferences(for: video.id)
                             await viewModel.deleteVideo(video.id)
                         }
                         videoToDelete = nil

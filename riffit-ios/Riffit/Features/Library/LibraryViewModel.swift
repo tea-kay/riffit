@@ -303,6 +303,10 @@ class LibraryViewModel: ObservableObject {
                 try await supabase.from("idea_comments").insert(firstComment).execute()
             }
         } catch {
+            videos.removeAll { $0.id == newVideo.id }
+            videoTagsMap.removeValue(forKey: newVideo.id)
+            videoFolderMap.removeValue(forKey: newVideo.id)
+            videoCommentsMap.removeValue(forKey: newVideo.id)
             print("[LibraryVM] addVideo persist FAILED: \(error)")
         }
     }
@@ -313,6 +317,7 @@ class LibraryViewModel: ObservableObject {
         beginMutation()
         defer { endMutation() }
         guard let index = videos.firstIndex(where: { $0.id == videoId }) else { return }
+        let previousTitle = videos[index].title
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         videos[index].title = trimmed.isEmpty ? nil : trimmed
 
@@ -323,6 +328,9 @@ class LibraryViewModel: ObservableObject {
                 .eq("id", value: videoId)
                 .execute()
         } catch {
+            if let idx = videos.firstIndex(where: { $0.id == videoId }) {
+                videos[idx].title = previousTitle
+            }
             print("[LibraryVM] updateTitle FAILED: \(error)")
         }
     }
@@ -347,6 +355,7 @@ class LibraryViewModel: ObservableObject {
     func setTags(for videoId: UUID, tags: [String]) async {
         beginMutation()
         defer { endMutation() }
+        let previousTags = videoTagsMap[videoId]
         if tags.isEmpty {
             videoTagsMap.removeValue(forKey: videoId)
         } else {
@@ -373,6 +382,7 @@ class LibraryViewModel: ObservableObject {
                     .execute()
             }
         } catch {
+            videoTagsMap[videoId] = previousTags
             print("[LibraryVM] setTags FAILED: \(error)")
         }
     }
@@ -381,6 +391,7 @@ class LibraryViewModel: ObservableObject {
     func toggleTag(for videoId: UUID, tag: String) async {
         beginMutation()
         defer { endMutation() }
+        let previousTags = videoTagsMap[videoId]
         var current = videoTagsMap[videoId] ?? []
         let wasPresent = current.contains(tag)
         if wasPresent {
@@ -413,6 +424,7 @@ class LibraryViewModel: ObservableObject {
                     .execute()
             }
         } catch {
+            videoTagsMap[videoId] = previousTags
             print("[LibraryVM] toggleTag FAILED: \(error)")
         }
     }
@@ -439,6 +451,7 @@ class LibraryViewModel: ObservableObject {
                 .insert(UserTagInsert(userId: userId, tag: trimmed))
                 .execute()
         } catch {
+            availableTags.removeAll { $0 == trimmed }
             print("[LibraryVM] addCustomTag FAILED: \(error)")
         }
     }
@@ -447,6 +460,8 @@ class LibraryViewModel: ObservableObject {
     func removeAvailableTag(_ tag: String, userId: UUID? = nil) async {
         beginMutation()
         defer { endMutation() }
+        let previousAvailableTags = availableTags
+        let previousVideoTagsMap = videoTagsMap
         availableTags.removeAll { $0 == tag }
         // Remove this tag from any videos that had it
         for (videoId, tags) in videoTagsMap {
@@ -469,6 +484,8 @@ class LibraryViewModel: ObservableObject {
                     .execute()
             }
         } catch {
+            availableTags = previousAvailableTags
+            videoTagsMap = previousVideoTagsMap
             print("[LibraryVM] removeAvailableTag FAILED: \(error)")
         }
     }
@@ -490,6 +507,7 @@ class LibraryViewModel: ObservableObject {
         do {
             try await supabase.from("idea_comments").insert(comment).execute()
         } catch {
+            videoCommentsMap[videoId]?.removeAll { $0.id == comment.id }
             print("[LibraryVM] addComment FAILED: \(error)")
         }
     }
@@ -501,6 +519,7 @@ class LibraryViewModel: ObservableObject {
         guard var comments = videoCommentsMap[videoId],
               let index = comments.firstIndex(where: { $0.id == commentId })
         else { return }
+        let previousText = comments[index].text
         comments[index].text = newText
         videoCommentsMap[videoId] = comments
 
@@ -511,6 +530,11 @@ class LibraryViewModel: ObservableObject {
                 .eq("id", value: commentId)
                 .execute()
         } catch {
+            if var cs = videoCommentsMap[videoId],
+               let idx = cs.firstIndex(where: { $0.id == commentId }) {
+                cs[idx].text = previousText
+                videoCommentsMap[videoId] = cs
+            }
             print("[LibraryVM] updateComment FAILED: \(error)")
         }
     }
@@ -526,6 +550,7 @@ class LibraryViewModel: ObservableObject {
         do {
             try await supabase.from("inspiration_folders").insert(folder).execute()
         } catch {
+            folders.removeAll { $0.id == folder.id }
             print("[LibraryVM] createFolder FAILED: \(error)")
         }
     }
@@ -534,6 +559,7 @@ class LibraryViewModel: ObservableObject {
         beginMutation()
         defer { endMutation() }
         guard let index = folders.firstIndex(where: { $0.id == folder.id }) else { return }
+        let previousName = folders[index].name
         folders[index].name = name
 
         do {
@@ -543,6 +569,9 @@ class LibraryViewModel: ObservableObject {
                 .eq("id", value: folder.id)
                 .execute()
         } catch {
+            if let idx = folders.firstIndex(where: { $0.id == folder.id }) {
+                folders[idx].name = previousName
+            }
             print("[LibraryVM] renameFolder FAILED: \(error)")
         }
     }
@@ -550,6 +579,8 @@ class LibraryViewModel: ObservableObject {
     func deleteFolder(_ folder: IdeaFolder) async {
         beginMutation()
         defer { endMutation() }
+        let snapshotFolders = folders
+        let snapshotFolderMap = videoFolderMap
         let unfiledVideoIds = videoFolderMap.filter { $0.value == folder.id }.map { $0.key }
         for videoId in unfiledVideoIds {
             videoFolderMap.removeValue(forKey: videoId)
@@ -563,6 +594,8 @@ class LibraryViewModel: ObservableObject {
                 .eq("id", value: folder.id)
                 .execute()
         } catch {
+            folders = snapshotFolders
+            videoFolderMap = snapshotFolderMap
             print("[LibraryVM] deleteFolder FAILED: \(error)")
         }
     }
@@ -570,6 +603,7 @@ class LibraryViewModel: ObservableObject {
     func moveVideo(_ videoId: UUID, to folderId: UUID?) async {
         beginMutation()
         defer { endMutation() }
+        let previousFolderId = videoFolderMap[videoId]
         if let folderId {
             videoFolderMap[videoId] = folderId
         } else {
@@ -596,6 +630,11 @@ class LibraryViewModel: ObservableObject {
                     .execute()
             }
         } catch {
+            if let previousFolderId {
+                videoFolderMap[videoId] = previousFolderId
+            } else {
+                videoFolderMap.removeValue(forKey: videoId)
+            }
             print("[LibraryVM] moveVideo FAILED: \(error)")
         }
     }
@@ -608,6 +647,12 @@ class LibraryViewModel: ObservableObject {
     func deleteVideo(_ videoId: UUID) async {
         beginMutation()
         defer { endMutation() }
+        // Snapshot for rollback
+        let snapshotVideos = videos
+        let snapshotFolderMap = videoFolderMap[videoId]
+        let snapshotTags = videoTagsMap[videoId]
+        let snapshotComments = videoCommentsMap[videoId]
+
         // Remove from local arrays immediately so UI never shows the deleted video
         videos.removeAll { $0.id == videoId }
         videoFolderMap.removeValue(forKey: videoId)
@@ -622,6 +667,10 @@ class LibraryViewModel: ObservableObject {
                 .eq("id", value: videoId)
                 .execute()
         } catch {
+            videos = snapshotVideos
+            if let snapshotFolderMap { videoFolderMap[videoId] = snapshotFolderMap }
+            videoTagsMap[videoId] = snapshotTags
+            videoCommentsMap[videoId] = snapshotComments
             print("[LibraryVM] deleteVideo FAILED: \(error)")
         }
     }

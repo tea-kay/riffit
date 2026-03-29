@@ -550,3 +550,36 @@
 - Riffit.xcodeproj/project.pbxproj (added RiffitConfirmationModal.swift)
 
 **Build status:** Zero errors confirmed
+
+### 2026-03-28 — Reference persistence fix + updateLastViewed persistence + rollback on all mutations
+
+**What changed:**
+
+**Fix 1: Story references not persisting to Supabase**
+- `removeReferences(for:)` was completely local-only — no Supabase DELETE. Converted from sync to `async` with `beginMutation/endMutation`, added awaited Supabase DELETE (`story_references` WHERE `inspiration_video_id`), added snapshot rollback on failure
+- `addReference` — already had INSERT, added rollback on failure
+- `deleteReference` — already had DELETE, added snapshot rollback on failure
+- `moveReference` — already had UPDATE, added snapshot rollback on failure
+- Updated two callers (`LibraryView.swift`, `InspirationDetailView.swift`) to `await` the now-async `removeReferences(for:)`
+
+**Fix 2: updateLastViewed not persisting to Supabase**
+- `updateLastViewed(for:)` was local-only — unread gold dots reset on app restart. Added background `Task` with Supabase UPDATE (`story_collaborators` SET `last_viewed_at` WHERE `story_id` + `user_id`). No rollback needed — quiet background update.
+
+**Fix 3: Rollback-on-failure for all 32 mutation methods**
+- Added rollback to 19 StorybankViewModel methods: `createStory`, `deleteStory`, `updateStoryTitle`, `updateStoryStatus`, `addTextAsset`, `addVoiceAsset`, `addVideoAsset`, `addImageAsset`, `updateAsset`, `deleteAsset`, `addSection`, `renameSection`, `deleteSection`, `addNote`, `updateNote`, `createFolder`, `renameFolder`, `deleteFolder`, `moveStory`
+- Added rollback to 13 LibraryViewModel methods: `addVideo`, `updateTitle`, `deleteVideo`, `setTags`, `toggleTag`, `addCustomTag`, `removeAvailableTag`, `addComment`, `updateComment`, `createFolder`, `renameFolder`, `deleteFolder`, `moveVideo`
+- Changed `persistAsset` helper from `Void` to `Bool` return so asset-add methods can rollback
+- Added `beginMutation/endMutation` to `deleteStory` (was missing)
+- Pattern: snapshot before optimistic update → await Supabase → restore snapshot on catch
+
+**Decisions made:**
+- All mutations now follow the rollback pattern from AGENTS.md Principle 2
+- `updateLastViewed` uses fire-and-forget `Task {}` (acceptable — quiet background update, not a data mutation the user sees)
+
+**Files modified:**
+- Features/Storybank/StorybankViewModel.swift
+- Features/Library/LibraryViewModel.swift
+- Features/Library/LibraryView.swift
+- Features/Library/InspirationDetailView.swift
+
+**Build status:** Zero errors confirmed
