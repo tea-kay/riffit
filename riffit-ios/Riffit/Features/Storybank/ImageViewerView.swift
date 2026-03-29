@@ -53,11 +53,13 @@ struct ImageViewerView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         let trimmed = titleText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        viewModel.updateAsset(
-                            asset,
-                            name: trimmed.isEmpty ? nil : trimmed,
-                            text: asset.contentText ?? ""
-                        )
+                        Task {
+                            await viewModel.updateAsset(
+                                asset,
+                                name: trimmed.isEmpty ? nil : trimmed,
+                                text: asset.contentText ?? ""
+                            )
+                        }
                         dismiss()
                     }
                     .font(RF.button)

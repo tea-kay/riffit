@@ -419,12 +419,14 @@ struct InviteSheet: View {
     /// Invite a user to this story with the selected role
     private func inviteUser(_ user: RiffitUser) {
         guard let ownerId = appState.currentUser?.id else { return }
-        viewModel.addCollaborator(
-            to: story.id,
-            userId: user.id,
-            role: hasRolePermissions ? selectedRole : .collaborator,
-            invitedBy: ownerId
-        )
+        Task {
+            await viewModel.addCollaborator(
+                to: story.id,
+                userId: user.id,
+                role: hasRolePermissions ? selectedRole : .collaborator,
+                invitedBy: ownerId
+            )
+        }
         // Clear search after invite
         searchQuery = ""
         searchResults = []

@@ -261,7 +261,10 @@ struct SettingsView: View {
 
     private var accountCard: some View {
         HStack(spacing: RS.smPlus) {
-            // Avatar — remote image or initials fallback
+            // Avatar — remote image or initials fallback.
+            // .id() forces SwiftUI to recreate AsyncImage when the URL
+            // changes (e.g. after uploading a new photo in AccountView),
+            // bypassing AsyncImage's internal cache.
             if let avatarUrlString = appState.currentUser?.avatarUrl,
                let avatarUrl = URL(string: avatarUrlString) {
                 AsyncImage(url: avatarUrl) { image in
@@ -273,6 +276,7 @@ struct SettingsView: View {
                 }
                 .frame(width: 48, height: 48)
                 .clipShape(Circle())
+                .id(avatarUrlString)
             } else {
                 initialsAvatar
             }

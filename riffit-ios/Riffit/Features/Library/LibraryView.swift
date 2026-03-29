@@ -117,13 +117,21 @@ struct LibraryView: View {
                     showNewFolderAlert = false
                 },
                 onAction: { name in
-                    viewModel.createFolder(name: name, userId: appState.currentUser?.id)
+                    Task { await viewModel.createFolder(name: name, userId: appState.currentUser?.id) }
                     showNewFolderAlert = false
                 }
             )
         }
         .task {
+            guard !viewModel.hasLoadedOnce else { return }
             await viewModel.fetchVideos(userId: appState.currentUser?.id)
+        }
+        // Safety net: if .task fired before currentUser was set (nil userId),
+        // retry when currentUser arrives.
+        .onChange(of: appState.currentUser?.id) { _, newId in
+            if let newId, !viewModel.hasLoadedOnce {
+                Task { await viewModel.fetchVideos(userId: newId) }
+            }
         }
         .riffitModal(isPresented: $showDeleteConfirm) {
             RiffitConfirmationModal(
@@ -448,7 +456,7 @@ struct FolderDropTarget: View {
                   // Only accept video IDs, not folder IDs
                   viewModel.videos.contains(where: { $0.id == videoId })
             else { return false }
-            viewModel.moveVideo(videoId, to: folder.id)
+            Task { await viewModel.moveVideo(videoId, to: folder.id) }
             return true
         } isTargeted: { targeted in
             isTargeted = targeted

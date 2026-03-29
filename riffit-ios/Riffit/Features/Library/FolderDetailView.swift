@@ -43,7 +43,7 @@ struct FolderDetailView: View {
                             .buttonStyle(.plain)
                             .contextMenu {
                                 Button {
-                                    viewModel.moveVideo(video.id, to: nil)
+                                    Task { await viewModel.moveVideo(video.id, to: nil) }
                                 } label: {
                                     Label("Remove from Folder", systemImage: "folder.badge.minus")
                                 }
@@ -100,7 +100,7 @@ struct FolderDetailView: View {
                     showRenameAlert = false
                 },
                 onAction: { name in
-                    viewModel.renameFolder(folder, to: name)
+                    Task { await viewModel.renameFolder(folder, to: name) }
                     showRenameAlert = false
                 }
             )
@@ -112,9 +112,11 @@ struct FolderDetailView: View {
                 confirmLabel: "Delete",
                 isDestructive: true,
                 onConfirm: {
-                    viewModel.deleteFolder(folder)
+                    Task {
+                        await viewModel.deleteFolder(folder)
+                        dismiss()
+                    }
                     showDeleteConfirm = false
-                    dismiss()
                 },
                 onCancel: {
                     showDeleteConfirm = false

@@ -82,11 +82,13 @@ struct VoiceNotePlayerView: View {
                     Button("Done") {
                         // Save any title changes
                         let trimmed = titleText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        viewModel.updateAsset(
-                            asset,
-                            name: trimmed.isEmpty ? nil : trimmed,
-                            text: asset.contentText ?? ""
-                        )
+                        Task {
+                            await viewModel.updateAsset(
+                                asset,
+                                name: trimmed.isEmpty ? nil : trimmed,
+                                text: asset.contentText ?? ""
+                            )
+                        }
                         player.stop()
                         dismiss()
                     }

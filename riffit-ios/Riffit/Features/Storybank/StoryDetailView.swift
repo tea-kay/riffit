@@ -121,7 +121,7 @@ struct StoryDetailView: View {
                                     renamingSection = section
                                 },
                                 onDelete: {
-                                    viewModel.deleteSection(section)
+                                    Task { await viewModel.deleteSection(section) }
                                 }
                             )
                             .listRowBackground(Color.riffitBackground)
@@ -157,7 +157,7 @@ struct StoryDetailView: View {
 
                                     if userRole.canModifyAssets {
                                         Button(role: .destructive) {
-                                            viewModel.deleteAsset(asset)
+                                            Task { await viewModel.deleteAsset(asset) }
                                         } label: {
                                             Label("Delete", systemImage: "trash")
                                         }
@@ -177,7 +177,7 @@ struct StoryDetailView: View {
                         // based on which section header each asset falls under
                         var reordered = viewModel.flatRows(for: story.id)
                         reordered.move(fromOffsets: from, toOffset: to)
-                        viewModel.applyFlatRowOrder(for: story.id, reordered: reordered)
+                        Task { await viewModel.applyFlatRowOrder(for: story.id, reordered: reordered) }
                     }
                     .moveDisabled(!userRole.canModifyAssets)
                     .deleteDisabled(true)
@@ -206,7 +206,7 @@ struct StoryDetailView: View {
                             .contextMenu {
                                 if userRole.canModifyReferences {
                                     Button(role: .destructive) {
-                                        viewModel.deleteReference(reference)
+                                        Task { await viewModel.deleteReference(reference) }
                                     } label: {
                                         Label("Remove", systemImage: "trash")
                                     }
@@ -221,7 +221,7 @@ struct StoryDetailView: View {
                     }
                     .onMove { from, to in
                         guard userRole.canModifyReferences else { return }
-                        viewModel.moveReference(in: story.id, from: from, to: to)
+                        Task { await viewModel.moveReference(in: story.id, from: from, to: to) }
                     }
                     .moveDisabled(!userRole.canModifyReferences)
                     .deleteDisabled(true)
@@ -263,10 +263,10 @@ struct StoryDetailView: View {
                             ? appState.currentUser?.avatarUrl
                             : viewModel.collaboratorAvatarUrl(for: collaborator, currentUserId: appState.currentUser?.id),
                         onChangeRole: { newRole in
-                            viewModel.updateCollaboratorRole(collaborator, to: newRole)
+                            Task { await viewModel.updateCollaboratorRole(collaborator, to: newRole) }
                         },
                         onRemove: {
-                            viewModel.removeCollaborator(collaborator)
+                            Task { await viewModel.removeCollaborator(collaborator) }
                         }
                     )
                     .onAppear {
@@ -319,7 +319,7 @@ struct StoryDetailView: View {
                     // Archive — owner + editor
                     if userRole.canModifyAssets {
                         Button {
-                            viewModel.updateStoryStatus(story, to: .archived)
+                            Task { await viewModel.updateStoryStatus(story, to: .archived) }
                             dismiss()
                         } label: {
                             Label("Archive", systemImage: "archivebox")
@@ -344,7 +344,7 @@ struct StoryDetailView: View {
                     // Duplicate — owner + editor
                     if userRole.canDuplicateStory {
                         Button {
-                            viewModel.duplicateStory(story)
+                            Task { await viewModel.duplicateStory(story) }
                             dismiss()
                         } label: {
                             Label("Duplicate", systemImage: "plus.square.on.square")
@@ -453,7 +453,7 @@ struct StoryDetailView: View {
                 isDestructive: true,
                 onConfirm: {
                     if let collab = viewModel.sharedCollaborations.first(where: { $0.storyId == story.id }) {
-                        viewModel.leaveStory(collab)
+                        Task { await viewModel.leaveStory(collab) }
                     }
                     showLeaveConfirm = false
                     dismiss()
@@ -493,7 +493,7 @@ struct StoryDetailView: View {
                     showRenameModal = false
                 },
                 onAction: { name in
-                    viewModel.updateStoryTitle(story, to: name)
+                    Task { await viewModel.updateStoryTitle(story, to: name) }
                     showRenameModal = false
                 }
             )
@@ -508,7 +508,7 @@ struct StoryDetailView: View {
                     showAddSectionModal = false
                 },
                 onAction: { name in
-                    viewModel.addSection(to: story.id, name: name)
+                    Task { await viewModel.addSection(to: story.id, name: name) }
                     showAddSectionModal = false
                 }
             )
@@ -527,7 +527,7 @@ struct StoryDetailView: View {
                 },
                 onAction: { name in
                     if let section = renamingSection {
-                        viewModel.renameSection(section, to: name)
+                        Task { await viewModel.renameSection(section, to: name) }
                     }
                     renamingSection = nil
                 }
@@ -797,7 +797,7 @@ struct StoryDetailView: View {
             onSave: {
                 let trimmed = editingNoteText.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
-                    viewModel.updateNote(id: note.id, storyId: story.id, newText: trimmed)
+                    Task { await viewModel.updateNote(id: note.id, storyId: story.id, newText: trimmed) }
                 }
                 editingNoteId = nil
             },
@@ -920,7 +920,7 @@ struct StoryDetailView: View {
             Button {
                 let trimmed = newNoteText.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else { return }
-                viewModel.addNote(to: story.id, text: trimmed, authorName: noteDisplayName, userId: appState.currentUser?.id)
+                Task { await viewModel.addNote(to: story.id, text: trimmed, authorName: noteDisplayName, userId: appState.currentUser?.id) }
                 newNoteText = ""
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
@@ -1388,11 +1388,13 @@ struct EditTextAssetView: View {
                     Button("Done") {
                         let trimmedName = assetName.trimmingCharacters(in: .whitespacesAndNewlines)
                         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                        viewModel.updateAsset(
-                            asset,
-                            name: trimmedName.isEmpty ? nil : trimmedName,
-                            text: trimmedText
-                        )
+                        Task {
+                            await viewModel.updateAsset(
+                                asset,
+                                name: trimmedName.isEmpty ? nil : trimmedName,
+                                text: trimmedText
+                            )
+                        }
                         dismiss()
                     }
                     .font(RF.button)
@@ -1592,7 +1594,7 @@ struct AddTextAssetSheet: View {
             RiffitButton(title: "Add", variant: .primary) {
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
-                    viewModel.addTextAsset(to: storyId, text: trimmed)
+                    Task { await viewModel.addTextAsset(to: storyId, text: trimmed) }
                 }
                 dismiss()
             }

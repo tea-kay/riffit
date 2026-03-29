@@ -41,6 +41,17 @@ class AppState: ObservableObject {
     /// Set after onboarding completes or when fetched from the DB.
     @Published var creatorProfileId: UUID?
 
+    /// True once at least one tab's data has loaded (or the timeout fires).
+    /// The splash screen gates on this — not on isLoading — so data is
+    /// painted before the splash fades.
+    @Published var dataReady: Bool = false
+
+    /// Call once after the first tab fetch completes. Subsequent calls are ignored.
+    func markDataReady() {
+        guard !dataReady else { return }
+        dataReady = true
+    }
+
     // MARK: - Deep Link / Invite State
 
     /// Token from a collaboration invite deep link (riffit.app/invite/{token}).

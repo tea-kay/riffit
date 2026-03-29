@@ -39,6 +39,13 @@ class StorybankViewModel: ObservableObject {
     @Published var hasLoadedOnce: Bool = false
     @Published var hasLoadedSharedOnce: Bool = false
 
+    /// True while any mutation is in flight — fetchStories skips if set
+    /// to prevent a re-fetch from clobbering optimistic local state.
+    @Published private(set) var isMutating: Bool = false
+    private var activeMutations: Int = 0
+    private func beginMutation() { activeMutations += 1; isMutating = true }
+    private func endMutation() { activeMutations -= 1; if activeMutations <= 0 { activeMutations = 0; isMutating = false } }
+
     /// The current user's ID, stored when fetchStories runs so that
     /// fetchSharedStories can use it without a parameter.
     private var currentUserId: UUID?
@@ -127,7 +134,9 @@ class StorybankViewModel: ObservableObject {
     /// After a drag reorder, walk the flat array top-to-bottom and
     /// reassign each asset's sectionID based on the last section header
     /// seen above it. This is what enables cross-section drag.
-    func applyFlatRowOrder(for storyId: UUID, reordered rows: [AssetFlatRow]) {
+    func applyFlatRowOrder(for storyId: UUID, reordered rows: [AssetFlatRow]) async {
+        beginMutation()
+        defer { endMutation() }
         var currentSectionId: UUID? = nil
         var newAssets: [StoryAsset] = []
         var sectionOrder: Int = 0
@@ -152,26 +161,24 @@ class StorybankViewModel: ObservableObject {
         }
 
         storyAssetsMap[storyId] = newAssets
-        touchStory(storyId)
+        await touchStory(storyId)
 
         // Persist reordered assets + sections to Supabase
-        Task {
-            await saveAssetOrder(for: storyId)
-            // Also persist section display orders
-            struct SectionOrderUpdate: Encodable {
-                let displayOrder: Int
-                enum CodingKeys: String, CodingKey { case displayOrder = "display_order" }
-            }
-            let sections = self.sections(for: storyId)
-            for section in sections {
-                do {
-                    try await supabase.from("asset_sections")
-                        .update(SectionOrderUpdate(displayOrder: section.displayOrder))
-                        .eq("id", value: section.id)
-                        .execute()
-                } catch {
-                    print("[StorybankVM] saveSectionOrder FAILED for \(section.id): \(error)")
-                }
+        await saveAssetOrder(for: storyId)
+        // Also persist section display orders
+        struct SectionOrderUpdate: Encodable {
+            let displayOrder: Int
+            enum CodingKeys: String, CodingKey { case displayOrder = "display_order" }
+        }
+        let sections = self.sections(for: storyId)
+        for section in sections {
+            do {
+                try await supabase.from("asset_sections")
+                    .update(SectionOrderUpdate(displayOrder: section.displayOrder))
+                    .eq("id", value: section.id)
+                    .execute()
+            } catch {
+                print("[StorybankVM] saveSectionOrder FAILED for \(section.id): \(error)")
             }
         }
     }
@@ -184,10 +191,13 @@ class StorybankViewModel: ObservableObject {
     func fetchStories(userId: UUID? = nil) async {
         guard let profileId = userId else {
             isLoading = false
-            hasLoadedOnce = true
+            // Do NOT set hasLoadedOnce — no data was fetched.
+            // .task or .onChange can retry when userId becomes available.
             return
         }
         self.currentUserId = profileId
+        // Skip fetch if a mutation is in flight — local state is authoritative
+        guard !isMutating else { return }
         // Only show loading indicator on initial fetch — refreshes are silent
         if !hasLoadedOnce {
             isLoading = true
@@ -293,9 +303,6 @@ class StorybankViewModel: ObservableObject {
                 for (storyId, notes) in Dictionary(grouping: try Self.decoder.decode([StoryNote].self, from: snData), by: \.storyId) {
                     self.storyNotesMap[storyId] = notes
                 }
-                for ownerId in Set(sharedStories.map({ $0.creatorProfileId })) {
-                    cacheUserInfo(userId: ownerId)
-                }
                 print("[DEBUG] Phase 2: owned + shared sub-data loaded")
             } catch {
                 print("[StorybankVM] Phase 2 FAILED: \(error)")
@@ -357,9 +364,6 @@ class StorybankViewModel: ObservableObject {
                 for (storyId, notes) in Dictionary(grouping: try Self.decoder.decode([StoryNote].self, from: snData), by: \.storyId) {
                     self.storyNotesMap[storyId] = notes
                 }
-                for ownerId in Set(sharedStories.map({ $0.creatorProfileId })) {
-                    cacheUserInfo(userId: ownerId)
-                }
                 print("[DEBUG] Phase 2: shared sub-data loaded")
             } catch {
                 print("[StorybankVM] Phase 2 (shared) FAILED: \(error)")
@@ -367,20 +371,14 @@ class StorybankViewModel: ObservableObject {
         }
 
         // ── Single assignment — self.stories written exactly once ──
-        // Filter out any stories that were deleted locally but may still be in Supabase
-        // due to a race between the DELETE and this re-fetch
-        let allFetched = ownedStories + sharedStories
-        if !deletedStoryIds.isEmpty {
-            let fetchedIds = Set(allFetched.map(\.id))
-            // Clear IDs that are confirmed gone from Supabase
-            deletedStoryIds = deletedStoryIds.intersection(fetchedIds)
-            self.stories = allFetched.filter { !deletedStoryIds.contains($0.id) }
-        } else {
-            self.stories = allFetched
-        }
+        self.stories = ownedStories + sharedStories
         hasLoadedSharedOnce = true
 
-        // Owned collaborators (for CREATORS section in StoryDetailView)
+        // ── Phase 3: Owned collaborators + batch user info (parallel) ──
+        // Fetch collaborator records AND all user display info in one pass
+        // so avatars are ready before hasLoadedOnce flips and the view renders.
+        var allUserIdsToCache: Set<UUID> = Set(sharedStories.map { $0.creatorProfileId })
+
         if !ownedIds.isEmpty {
             do {
                 let data = try await supabase
@@ -394,14 +392,18 @@ class StorybankViewModel: ObservableObject {
                 for (storyId, collabs) in grouped {
                     self.storyCollaboratorsMap[storyId] = collabs
                 }
-                let userIds = Set(allCollabs.map { $0.userId })
-                for uid in userIds {
-                    self.cacheUserInfo(userId: uid)
-                }
+                allUserIdsToCache.formUnion(allCollabs.map { $0.userId })
                 print("[StorybankVM] fetchOwnedCollaborators OK — \(allCollabs.count) records across \(grouped.count) stories")
             } catch {
                 print("[StorybankVM] fetchOwnedCollaborators FAILED: \(error)")
             }
+        }
+
+        // Batch-fetch display names + avatars for all users we need,
+        // skipping any already cached. Single query instead of N fire-and-forget Tasks.
+        let uncachedIds = allUserIdsToCache.filter { collaboratorUserInfo[$0] == nil }
+        if !uncachedIds.isEmpty {
+            await batchCacheUserInfo(userIds: Array(uncachedIds))
         }
 
         isLoading = false
@@ -412,7 +414,9 @@ class StorybankViewModel: ObservableObject {
 
     /// Creates a story locally and persists to Supabase.
     /// TODO: creator_profile_id is user.id for now (1:1 until onboarding).
-    func createStory(title: String, userId: UUID? = nil) {
+    func createStory(title: String, userId: UUID? = nil) async {
+        beginMutation()
+        defer { endMutation() }
         let profileId = userId ?? UUID()
         let story = Story(creatorProfileId: profileId, title: title)
         stories.insert(story, at: 0)
@@ -428,20 +432,14 @@ class StorybankViewModel: ObservableObject {
         storyCollaboratorsMap[story.id, default: []].insert(ownerCollab, at: 0)
         print("[DEBUG] createStory inserted '\(title)', stories.count = \(stories.count)")
 
-        Task {
-            do {
-                try await supabase.from("stories").insert(story).execute()
-                // Persist owner collaborator record so collaborators can see the owner
-                try await supabase.from("story_collaborators").insert(ownerCollab).execute()
-            } catch {
-                print("[StorybankVM] createStory FAILED: \(error)")
-            }
+        do {
+            try await supabase.from("stories").insert(story).execute()
+            // Persist owner collaborator record so collaborators can see the owner
+            try await supabase.from("story_collaborators").insert(ownerCollab).execute()
+        } catch {
+            print("[StorybankVM] createStory FAILED: \(error)")
         }
     }
-
-    /// Tracks story IDs that have been deleted locally but may not yet be
-    /// confirmed gone from Supabase — prevents zombie re-fetch from .task.
-    private var deletedStoryIds: Set<UUID> = []
 
     func deleteStory(_ story: Story) async {
         // 1. Remove from local arrays immediately so UI never shows the deleted story
@@ -452,7 +450,6 @@ class StorybankViewModel: ObservableObject {
         storyFolderMap.removeValue(forKey: story.id)
         storyCollaboratorsMap.removeValue(forKey: story.id)
         stories.removeAll { $0.id == story.id }
-        deletedStoryIds.insert(story.id)
         print("[DEBUG] deleteStory removed '\(story.title)', stories.count = \(stories.count)")
 
         // 2. Await the Supabase DELETE so it completes before dismiss triggers a re-fetch
@@ -465,7 +462,9 @@ class StorybankViewModel: ObservableObject {
     }
 
     /// Creates a copy of a story with all its assets, references, sections, and notes.
-    func duplicateStory(_ story: Story) {
+    func duplicateStory(_ story: Story) async {
+        beginMutation()
+        defer { endMutation() }
         let newStory = Story(
             creatorProfileId: story.creatorProfileId,
             title: story.title + " Copy"
@@ -526,72 +525,70 @@ class StorybankViewModel: ObservableObject {
         }
 
         // Persist all duplicated records to Supabase
-        Task {
-            do {
-                try await supabase.from("stories").insert(newStory).execute()
-                for section in storySectionsMap[newStory.id] ?? [] {
-                    try await supabase.from("asset_sections").insert(section).execute()
-                }
-                for asset in storyAssetsMap[newStory.id] ?? [] {
-                    try await supabase.from("story_assets").insert(asset).execute()
-                }
-                for ref in storyReferencesMap[newStory.id] ?? [] {
-                    try await supabase.from("story_references").insert(ref).execute()
-                }
-                for note in storyNotesMap[newStory.id] ?? [] {
-                    try await supabase.from("story_notes").insert(note).execute()
-                }
-            } catch {
-                print("[StorybankVM] duplicateStory persist FAILED: \(error)")
+        do {
+            try await supabase.from("stories").insert(newStory).execute()
+            for section in storySectionsMap[newStory.id] ?? [] {
+                try await supabase.from("asset_sections").insert(section).execute()
             }
+            for asset in storyAssetsMap[newStory.id] ?? [] {
+                try await supabase.from("story_assets").insert(asset).execute()
+            }
+            for ref in storyReferencesMap[newStory.id] ?? [] {
+                try await supabase.from("story_references").insert(ref).execute()
+            }
+            for note in storyNotesMap[newStory.id] ?? [] {
+                try await supabase.from("story_notes").insert(note).execute()
+            }
+        } catch {
+            print("[StorybankVM] duplicateStory persist FAILED: \(error)")
         }
     }
 
-    func updateStoryTitle(_ story: Story, to title: String) {
+    func updateStoryTitle(_ story: Story, to title: String) async {
+        beginMutation()
+        defer { endMutation() }
         guard let index = stories.firstIndex(where: { $0.id == story.id }) else { return }
         stories[index].title = title
         stories[index].updatedAt = Date()
 
-        Task {
-            do {
-                struct TitleUpdate: Encodable {
-                    let title: String
-                    let updatedAt: String
-                    enum CodingKeys: String, CodingKey { case title; case updatedAt = "updated_at" }
-                }
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                try await supabase.from("stories")
-                    .update(TitleUpdate(title: title, updatedAt: formatter.string(from: Date())))
-                    .eq("id", value: story.id)
-                    .execute()
-            } catch {
-                print("[StorybankVM] updateStoryTitle FAILED: \(error)")
+        do {
+            struct TitleUpdate: Encodable {
+                let title: String
+                let updatedAt: String
+                enum CodingKeys: String, CodingKey { case title; case updatedAt = "updated_at" }
             }
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            try await supabase.from("stories")
+                .update(TitleUpdate(title: title, updatedAt: formatter.string(from: Date())))
+                .eq("id", value: story.id)
+                .execute()
+        } catch {
+            print("[StorybankVM] updateStoryTitle FAILED: \(error)")
         }
     }
 
-    func updateStoryStatus(_ story: Story, to status: Story.Status) {
+    func updateStoryStatus(_ story: Story, to status: Story.Status) async {
+        beginMutation()
+        defer { endMutation() }
         guard let index = stories.firstIndex(where: { $0.id == story.id }) else { return }
         stories[index].status = status
         stories[index].updatedAt = Date()
 
-        Task {
-            do {
-                struct StatusUpdate: Encodable {
-                    let status: String
-                    let updatedAt: String
-                    enum CodingKeys: String, CodingKey { case status; case updatedAt = "updated_at" }
-                }
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                try await supabase.from("stories")
-                    .update(StatusUpdate(status: status.rawValue, updatedAt: formatter.string(from: Date())))
-                    .eq("id", value: story.id)
-                    .execute()
-            } catch {
-                print("[StorybankVM] updateStoryStatus FAILED: \(error)")
+        do {
+            struct StatusUpdate: Encodable {
+                let status: String
+                let updatedAt: String
+                enum CodingKeys: String, CodingKey { case status; case updatedAt = "updated_at" }
             }
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            try await supabase.from("stories")
+                .update(StatusUpdate(status: status.rawValue, updatedAt: formatter.string(from: Date())))
+                .eq("id", value: story.id)
+                .execute()
+        } catch {
+            print("[StorybankVM] updateStoryStatus FAILED: \(error)")
         }
     }
 
@@ -602,77 +599,85 @@ class StorybankViewModel: ObservableObject {
     }
 
     /// Helper: persist a new asset to Supabase after optimistic local add.
-    private func persistAsset(_ asset: StoryAsset) {
-        Task {
-            do {
-                try await supabase.from("story_assets").insert(asset).execute()
-            } catch {
-                print("[StorybankVM] persistAsset FAILED: \(error)")
-            }
+    private func persistAsset(_ asset: StoryAsset) async {
+        do {
+            try await supabase.from("story_assets").insert(asset).execute()
+        } catch {
+            print("[StorybankVM] persistAsset FAILED: \(error)")
         }
     }
 
-    func addTextAsset(to storyId: UUID, text: String) {
+    func addTextAsset(to storyId: UUID, text: String) async {
+        beginMutation()
+        defer { endMutation() }
         let existing = assets(for: storyId)
         let asset = StoryAsset(storyId: storyId, assetType: .text, contentText: text, displayOrder: existing.count)
         storyAssetsMap[storyId, default: []].append(asset)
-        touchStory(storyId)
-        persistAsset(asset)
+        await touchStory(storyId)
+        await persistAsset(asset)
     }
 
-    func addVoiceAsset(to storyId: UUID, fileUrl: String, durationSeconds: Int, name: String? = nil) {
+    func addVoiceAsset(to storyId: UUID, fileUrl: String, durationSeconds: Int, name: String? = nil) async {
+        beginMutation()
+        defer { endMutation() }
         let existing = assets(for: storyId)
         let asset = StoryAsset(storyId: storyId, assetType: .voiceNote, name: name, fileUrl: fileUrl, durationSeconds: durationSeconds, displayOrder: existing.count)
         storyAssetsMap[storyId, default: []].append(asset)
-        touchStory(storyId)
-        persistAsset(asset)
+        await touchStory(storyId)
+        await persistAsset(asset)
     }
 
-    func addVideoAsset(to storyId: UUID, fileUrl: String, durationSeconds: Int?, name: String? = nil) {
+    func addVideoAsset(to storyId: UUID, fileUrl: String, durationSeconds: Int?, name: String? = nil) async {
+        beginMutation()
+        defer { endMutation() }
         let existing = assets(for: storyId)
         let asset = StoryAsset(storyId: storyId, assetType: .video, name: name, fileUrl: fileUrl, durationSeconds: durationSeconds, displayOrder: existing.count)
         storyAssetsMap[storyId, default: []].append(asset)
-        touchStory(storyId)
-        persistAsset(asset)
+        await touchStory(storyId)
+        await persistAsset(asset)
     }
 
-    func addImageAsset(to storyId: UUID, fileUrl: String, name: String? = nil) {
+    func addImageAsset(to storyId: UUID, fileUrl: String, name: String? = nil) async {
+        beginMutation()
+        defer { endMutation() }
         let existing = assets(for: storyId)
         let asset = StoryAsset(storyId: storyId, assetType: .image, name: name, fileUrl: fileUrl, displayOrder: existing.count)
         storyAssetsMap[storyId, default: []].append(asset)
-        touchStory(storyId)
-        persistAsset(asset)
+        await touchStory(storyId)
+        await persistAsset(asset)
     }
 
-    func updateAsset(_ asset: StoryAsset, name: String?, text: String) {
+    func updateAsset(_ asset: StoryAsset, name: String?, text: String) async {
+        beginMutation()
+        defer { endMutation() }
         guard let assets = storyAssetsMap[asset.storyId],
               let index = assets.firstIndex(where: { $0.id == asset.id })
         else { return }
         storyAssetsMap[asset.storyId]?[index].name = name
         storyAssetsMap[asset.storyId]?[index].contentText = text
-        touchStory(asset.storyId)
+        await touchStory(asset.storyId)
 
-        Task {
-            do {
-                struct AssetUpdate: Encodable {
-                    let name: String?
-                    let contentText: String?
-                    enum CodingKeys: String, CodingKey {
-                        case name
-                        case contentText = "content_text"
-                    }
+        do {
+            struct AssetUpdate: Encodable {
+                let name: String?
+                let contentText: String?
+                enum CodingKeys: String, CodingKey {
+                    case name
+                    case contentText = "content_text"
                 }
-                try await supabase.from("story_assets")
-                    .update(AssetUpdate(name: name, contentText: text))
-                    .eq("id", value: asset.id)
-                    .execute()
-            } catch {
-                print("[StorybankVM] updateAsset FAILED: \(error)")
             }
+            try await supabase.from("story_assets")
+                .update(AssetUpdate(name: name, contentText: text))
+                .eq("id", value: asset.id)
+                .execute()
+        } catch {
+            print("[StorybankVM] updateAsset FAILED: \(error)")
         }
     }
 
-    func deleteAsset(_ asset: StoryAsset) {
+    func deleteAsset(_ asset: StoryAsset) async {
+        beginMutation()
+        defer { endMutation() }
         let storyId = asset.storyId
         storyAssetsMap[storyId]?.removeAll { $0.id == asset.id }
         if var remaining = storyAssetsMap[storyId] {
@@ -680,24 +685,24 @@ class StorybankViewModel: ObservableObject {
             for i in remaining.indices { remaining[i].displayOrder = i }
             storyAssetsMap[storyId] = remaining
         }
-        touchStory(storyId)
+        await touchStory(storyId)
 
-        Task {
-            do {
-                try await supabase.from("story_assets").delete().eq("id", value: asset.id).execute()
-            } catch {
-                print("[StorybankVM] deleteAsset FAILED: \(error)")
-            }
+        do {
+            try await supabase.from("story_assets").delete().eq("id", value: asset.id).execute()
+        } catch {
+            print("[StorybankVM] deleteAsset FAILED: \(error)")
         }
     }
 
-    func moveAsset(in storyId: UUID, from source: IndexSet, to destination: Int) {
+    func moveAsset(in storyId: UUID, from source: IndexSet, to destination: Int) async {
+        beginMutation()
+        defer { endMutation() }
         var assets = self.assets(for: storyId)
         assets.move(fromOffsets: source, toOffset: destination)
         for i in assets.indices { assets[i].displayOrder = i }
         storyAssetsMap[storyId] = assets
-        touchStory(storyId)
-        Task { await saveAssetOrder(for: storyId) }
+        await touchStory(storyId)
+        await saveAssetOrder(for: storyId)
     }
 
     /// Persists the current display_order + section_id for all assets in a story.
@@ -729,18 +734,18 @@ class StorybankViewModel: ObservableObject {
         (storyReferencesMap[storyId] ?? []).sorted { $0.displayOrder < $1.displayOrder }
     }
 
-    func addReference(to storyId: UUID, videoId: UUID, tag: String) {
+    func addReference(to storyId: UUID, videoId: UUID, tag: String) async {
+        beginMutation()
+        defer { endMutation() }
         let existing = references(for: storyId)
         let reference = StoryReference(storyId: storyId, inspirationVideoId: videoId, referenceTag: tag, displayOrder: existing.count)
         storyReferencesMap[storyId, default: []].append(reference)
-        touchStory(storyId)
+        await touchStory(storyId)
 
-        Task {
-            do {
-                try await supabase.from("story_references").insert(reference).execute()
-            } catch {
-                print("[StorybankVM] addReference FAILED: \(error)")
-            }
+        do {
+            try await supabase.from("story_references").insert(reference).execute()
+        } catch {
+            print("[StorybankVM] addReference FAILED: \(error)")
         }
     }
 
@@ -761,50 +766,50 @@ class StorybankViewModel: ObservableObject {
                     }
                     storyReferencesMap[storyId] = refs
                 }
-                touchStory(storyId)
+                Task { await self.touchStory(storyId) }
             }
         }
     }
 
-    func deleteReference(_ reference: StoryReference) {
+    func deleteReference(_ reference: StoryReference) async {
+        beginMutation()
+        defer { endMutation() }
         storyReferencesMap[reference.storyId]?.removeAll { $0.id == reference.id }
         if var refs = storyReferencesMap[reference.storyId] {
             refs.sort { $0.displayOrder < $1.displayOrder }
             for i in refs.indices { refs[i].displayOrder = i }
             storyReferencesMap[reference.storyId] = refs
         }
-        touchStory(reference.storyId)
+        await touchStory(reference.storyId)
 
-        Task {
-            do {
-                try await supabase.from("story_references").delete().eq("id", value: reference.id).execute()
-            } catch {
-                print("[StorybankVM] deleteReference FAILED: \(error)")
-            }
+        do {
+            try await supabase.from("story_references").delete().eq("id", value: reference.id).execute()
+        } catch {
+            print("[StorybankVM] deleteReference FAILED: \(error)")
         }
     }
 
-    func moveReference(in storyId: UUID, from source: IndexSet, to destination: Int) {
+    func moveReference(in storyId: UUID, from source: IndexSet, to destination: Int) async {
+        beginMutation()
+        defer { endMutation() }
         var refs = references(for: storyId)
         refs.move(fromOffsets: source, toOffset: destination)
         for i in refs.indices { refs[i].displayOrder = i }
         storyReferencesMap[storyId] = refs
-        touchStory(storyId)
+        await touchStory(storyId)
 
-        Task {
-            struct OrderUpdate: Encodable {
-                let displayOrder: Int
-                enum CodingKeys: String, CodingKey { case displayOrder = "display_order" }
-            }
-            for ref in refs {
-                do {
-                    try await supabase.from("story_references")
-                        .update(OrderUpdate(displayOrder: ref.displayOrder))
-                        .eq("id", value: ref.id)
-                        .execute()
-                } catch {
-                    print("[StorybankVM] moveReference persist FAILED for \(ref.id): \(error)")
-                }
+        struct OrderUpdate: Encodable {
+            let displayOrder: Int
+            enum CodingKeys: String, CodingKey { case displayOrder = "display_order" }
+        }
+        for ref in refs {
+            do {
+                try await supabase.from("story_references")
+                    .update(OrderUpdate(displayOrder: ref.displayOrder))
+                    .eq("id", value: ref.id)
+                    .execute()
+            } catch {
+                print("[StorybankVM] moveReference persist FAILED for \(ref.id): \(error)")
             }
         }
     }
@@ -815,44 +820,46 @@ class StorybankViewModel: ObservableObject {
         (storySectionsMap[storyId] ?? []).sorted { $0.displayOrder < $1.displayOrder }
     }
 
-    func addSection(to storyId: UUID, name: String) {
+    func addSection(to storyId: UUID, name: String) async {
+        beginMutation()
+        defer { endMutation() }
         let existing = sections(for: storyId)
         let section = AssetSection(storyId: storyId, name: name, displayOrder: existing.count)
         storySectionsMap[storyId, default: []].append(section)
-        touchStory(storyId)
+        await touchStory(storyId)
 
-        Task {
-            do {
-                try await supabase.from("asset_sections").insert(section).execute()
-            } catch {
-                print("[StorybankVM] addSection FAILED: \(error)")
-            }
+        do {
+            try await supabase.from("asset_sections").insert(section).execute()
+        } catch {
+            print("[StorybankVM] addSection FAILED: \(error)")
         }
     }
 
-    func renameSection(_ section: AssetSection, to name: String) {
+    func renameSection(_ section: AssetSection, to name: String) async {
+        beginMutation()
+        defer { endMutation() }
         guard var sections = storySectionsMap[section.storyId],
               let index = sections.firstIndex(where: { $0.id == section.id })
         else { return }
         sections[index].name = name
         storySectionsMap[section.storyId] = sections
-        touchStory(section.storyId)
+        await touchStory(section.storyId)
 
-        Task {
-            do {
-                struct NameUpdate: Encodable { let name: String }
-                try await supabase.from("asset_sections")
-                    .update(NameUpdate(name: name))
-                    .eq("id", value: section.id)
-                    .execute()
-            } catch {
-                print("[StorybankVM] renameSection FAILED: \(error)")
-            }
+        do {
+            struct NameUpdate: Encodable { let name: String }
+            try await supabase.from("asset_sections")
+                .update(NameUpdate(name: name))
+                .eq("id", value: section.id)
+                .execute()
+        } catch {
+            print("[StorybankVM] renameSection FAILED: \(error)")
         }
     }
 
     /// Deleting a section does NOT delete its assets — they become unsectioned.
-    func deleteSection(_ section: AssetSection) {
+    func deleteSection(_ section: AssetSection) async {
+        beginMutation()
+        defer { endMutation() }
         // Unfile all assets that belonged to this section
         if var assets = storyAssetsMap[section.storyId] {
             for i in assets.indices where assets[i].sectionId == section.id {
@@ -869,24 +876,22 @@ class StorybankViewModel: ObservableObject {
             storySectionsMap[section.storyId] = sections
         }
 
-        touchStory(section.storyId)
+        await touchStory(section.storyId)
 
-        Task {
-            do {
-                // Unfile assets: set section_id to null
-                struct NullSection: Encodable {
-                    let sectionId: UUID?
-                    enum CodingKeys: String, CodingKey { case sectionId = "section_id" }
-                }
-                try await supabase.from("story_assets")
-                    .update(NullSection(sectionId: nil))
-                    .eq("section_id", value: section.id)
-                    .execute()
-                // Delete the section
-                try await supabase.from("asset_sections").delete().eq("id", value: section.id).execute()
-            } catch {
-                print("[StorybankVM] deleteSection FAILED: \(error)")
+        do {
+            // Unfile assets: set section_id to null
+            struct NullSection: Encodable {
+                let sectionId: UUID?
+                enum CodingKeys: String, CodingKey { case sectionId = "section_id" }
             }
+            try await supabase.from("story_assets")
+                .update(NullSection(sectionId: nil))
+                .eq("section_id", value: section.id)
+                .execute()
+            // Delete the section
+            try await supabase.from("asset_sections").delete().eq("id", value: section.id).execute()
+        } catch {
+            print("[StorybankVM] deleteSection FAILED: \(error)")
         }
     }
 
@@ -897,38 +902,38 @@ class StorybankViewModel: ObservableObject {
         (storyNotesMap[storyId] ?? []).sorted { $0.createdAt < $1.createdAt }
     }
 
-    func addNote(to storyId: UUID, text: String, authorName: String = "You", userId: UUID? = nil) {
+    func addNote(to storyId: UUID, text: String, authorName: String = "You", userId: UUID? = nil) async {
+        beginMutation()
+        defer { endMutation() }
         let note = StoryNote(storyId: storyId, userId: userId, authorName: authorName, text: text)
         storyNotesMap[storyId, default: []].append(note)
-        touchStory(storyId)
+        await touchStory(storyId)
 
-        Task {
-            do {
-                try await supabase.from("story_notes").insert(note).execute()
-            } catch {
-                print("[StorybankVM] addNote FAILED: \(error)")
-            }
+        do {
+            try await supabase.from("story_notes").insert(note).execute()
+        } catch {
+            print("[StorybankVM] addNote FAILED: \(error)")
         }
     }
 
-    func updateNote(id noteId: UUID, storyId: UUID, newText: String) {
+    func updateNote(id noteId: UUID, storyId: UUID, newText: String) async {
+        beginMutation()
+        defer { endMutation() }
         guard var notes = storyNotesMap[storyId],
               let index = notes.firstIndex(where: { $0.id == noteId })
         else { return }
         notes[index].text = newText
         storyNotesMap[storyId] = notes
-        touchStory(storyId)
+        await touchStory(storyId)
 
-        Task {
-            do {
-                struct TextUpdate: Encodable { let text: String }
-                try await supabase.from("story_notes")
-                    .update(TextUpdate(text: newText))
-                    .eq("id", value: noteId)
-                    .execute()
-            } catch {
-                print("[StorybankVM] updateNote FAILED: \(error)")
-            }
+        do {
+            struct TextUpdate: Encodable { let text: String }
+            try await supabase.from("story_notes")
+                .update(TextUpdate(text: newText))
+                .eq("id", value: noteId)
+                .execute()
+        } catch {
+            print("[StorybankVM] updateNote FAILED: \(error)")
         }
     }
 
@@ -1133,7 +1138,9 @@ class StorybankViewModel: ObservableObject {
     /// Joins a story from a resolved invite link.
     /// Creates the StoryCollaborator record and increments the invite link use_count.
     /// Optimistic local update first, then persists to Supabase in background.
-    func joinStoryFromInvite(inviteLink: StoryInviteLink, userId: UUID) {
+    func joinStoryFromInvite(inviteLink: StoryInviteLink, userId: UUID) async {
+        beginMutation()
+        defer { endMutation() }
         // Create the collaborator record
         let collaborator = StoryCollaborator(
             storyId: inviteLink.storyId,
@@ -1153,32 +1160,23 @@ class StorybankViewModel: ObservableObject {
             inviteLinks[inviteLink.token] = link
         }
 
-        // Persist collaborator record to Supabase
-        Task {
-            do {
-                try await supabase.from("story_collaborators").insert(collaborator).execute()
-                print("[StorybankVM] joinStoryFromInvite INSERT OK — user \(userId) → story \(inviteLink.storyId)")
-            } catch {
-                print("[StorybankVM] joinStoryFromInvite INSERT FAILED: \(error)")
-            }
-        }
+        // Persist collaborator record and increment use_count in Supabase
+        do {
+            try await supabase.from("story_collaborators").insert(collaborator).execute()
+            print("[StorybankVM] joinStoryFromInvite INSERT OK — user \(userId) → story \(inviteLink.storyId)")
 
-        // Increment use_count on the invite link in Supabase
-        Task {
-            do {
-                struct UseCountUpdate: Encodable {
-                    let useCount: Int
-                    enum CodingKeys: String, CodingKey { case useCount = "use_count" }
-                }
-                let newCount = (inviteLinks[inviteLink.token]?.useCount ?? inviteLink.useCount)
-                try await supabase.from("story_invite_links")
-                    .update(UseCountUpdate(useCount: newCount))
-                    .eq("id", value: inviteLink.id)
-                    .execute()
-                print("[StorybankVM] joinStoryFromInvite use_count UPDATE OK")
-            } catch {
-                print("[StorybankVM] joinStoryFromInvite use_count UPDATE FAILED: \(error)")
+            struct UseCountUpdate: Encodable {
+                let useCount: Int
+                enum CodingKeys: String, CodingKey { case useCount = "use_count" }
             }
+            let newCount = (inviteLinks[inviteLink.token]?.useCount ?? inviteLink.useCount)
+            try await supabase.from("story_invite_links")
+                .update(UseCountUpdate(useCount: newCount))
+                .eq("id", value: inviteLink.id)
+                .execute()
+            print("[StorybankVM] joinStoryFromInvite use_count UPDATE OK")
+        } catch {
+            print("[StorybankVM] joinStoryFromInvite FAILED: \(error)")
         }
     }
 
@@ -1235,6 +1233,49 @@ class StorybankViewModel: ObservableObject {
             } catch {
                 print("[StorybankVM] cacheUserInfo FAILED for \(userId): \(error)")
             }
+        }
+    }
+
+    /// Fetches display info for multiple users in a single Supabase query and
+    /// populates collaboratorUserInfo. Awaitable — callers can wait for the cache
+    /// to be populated before rendering, preventing avatar pop-in.
+    private func batchCacheUserInfo(userIds: [UUID]) async {
+        struct UserRow: Decodable {
+            let id: UUID
+            let fullName: String?
+            let username: String?
+            let avatarUrl: String?
+            let email: String?
+            enum CodingKeys: String, CodingKey {
+                case id
+                case fullName = "full_name"
+                case username
+                case avatarUrl = "avatar_url"
+                case email
+            }
+        }
+
+        do {
+            let data = try await supabase
+                .from("users")
+                .select("id, full_name, username, avatar_url, email")
+                .in("id", values: userIds.map { $0.uuidString })
+                .execute()
+                .data
+            let rows = try JSONDecoder().decode([UserRow].self, from: data)
+
+            for row in rows {
+                let name: String = {
+                    if let fn = row.fullName?.trimmingCharacters(in: .whitespacesAndNewlines), !fn.isEmpty { return fn }
+                    if let un = row.username?.trimmingCharacters(in: .whitespacesAndNewlines), !un.isEmpty { return "@\(un)" }
+                    if let em = row.email, let prefix = em.components(separatedBy: "@").first, !prefix.isEmpty { return prefix }
+                    return "User"
+                }()
+                self.collaboratorUserInfo[row.id] = CollaboratorUserInfo(displayName: name, avatarUrl: row.avatarUrl)
+            }
+            print("[StorybankVM] batchCacheUserInfo OK — \(rows.count) users cached")
+        } catch {
+            print("[StorybankVM] batchCacheUserInfo FAILED: \(error)")
         }
     }
 
@@ -1362,7 +1403,9 @@ class StorybankViewModel: ObservableObject {
 
     /// Adds a collaborator to a story. Creates a pending invitation.
     /// Optimistic local update + Supabase INSERT in background.
-    func addCollaborator(to storyId: UUID, userId: UUID, role: CollaboratorRole, invitedBy: UUID) {
+    func addCollaborator(to storyId: UUID, userId: UUID, role: CollaboratorRole, invitedBy: UUID) async {
+        beginMutation()
+        defer { endMutation() }
         // Check for duplicate
         let existing = storyCollaboratorsMap[storyId] ?? []
         guard !existing.contains(where: { $0.userId == userId }) else { return }
@@ -1380,56 +1423,54 @@ class StorybankViewModel: ObservableObject {
         cacheUserInfo(userId: userId)
 
         // Persist to Supabase
-        Task {
-            do {
-                try await supabase.from("story_collaborators").insert(collaborator).execute()
-                print("[StorybankVM] addCollaborator INSERT OK — user \(userId) → story \(storyId)")
-            } catch {
-                print("[StorybankVM] addCollaborator INSERT FAILED: \(error)")
-            }
+        do {
+            try await supabase.from("story_collaborators").insert(collaborator).execute()
+            print("[StorybankVM] addCollaborator INSERT OK — user \(userId) → story \(storyId)")
+        } catch {
+            print("[StorybankVM] addCollaborator INSERT FAILED: \(error)")
         }
     }
 
     /// Removes a collaborator from a story (owner action).
     /// Optimistic local removal + Supabase DELETE in background.
-    func removeCollaborator(_ collaborator: StoryCollaborator) {
+    func removeCollaborator(_ collaborator: StoryCollaborator) async {
+        beginMutation()
+        defer { endMutation() }
         storyCollaboratorsMap[collaborator.storyId]?.removeAll { $0.id == collaborator.id }
 
-        Task {
-            do {
-                try await supabase.from("story_collaborators")
-                    .delete()
-                    .eq("id", value: collaborator.id)
-                    .execute()
-                print("[StorybankVM] removeCollaborator DELETE OK — \(collaborator.id)")
-            } catch {
-                print("[StorybankVM] removeCollaborator DELETE FAILED: \(error)")
-            }
+        do {
+            try await supabase.from("story_collaborators")
+                .delete()
+                .eq("id", value: collaborator.id)
+                .execute()
+            print("[StorybankVM] removeCollaborator DELETE OK — \(collaborator.id)")
+        } catch {
+            print("[StorybankVM] removeCollaborator DELETE FAILED: \(error)")
         }
     }
 
     /// Updates a collaborator's role (Studio+ feature).
     /// Optimistic local update + Supabase UPDATE in background.
-    func updateCollaboratorRole(_ collaborator: StoryCollaborator, to newRole: CollaboratorRole) {
+    func updateCollaboratorRole(_ collaborator: StoryCollaborator, to newRole: CollaboratorRole) async {
+        beginMutation()
+        defer { endMutation() }
         guard var collabs = storyCollaboratorsMap[collaborator.storyId],
               let index = collabs.firstIndex(where: { $0.id == collaborator.id })
         else { return }
         collabs[index].role = newRole
         storyCollaboratorsMap[collaborator.storyId] = collabs
 
-        Task {
-            do {
-                struct RoleUpdate: Encodable {
-                    let role: String
-                }
-                try await supabase.from("story_collaborators")
-                    .update(RoleUpdate(role: newRole.rawValue))
-                    .eq("id", value: collaborator.id)
-                    .execute()
-                print("[StorybankVM] updateCollaboratorRole OK — \(collaborator.id) → \(newRole.rawValue)")
-            } catch {
-                print("[StorybankVM] updateCollaboratorRole FAILED: \(error)")
+        do {
+            struct RoleUpdate: Encodable {
+                let role: String
             }
+            try await supabase.from("story_collaborators")
+                .update(RoleUpdate(role: newRole.rawValue))
+                .eq("id", value: collaborator.id)
+                .execute()
+            print("[StorybankVM] updateCollaboratorRole OK — \(collaborator.id) → \(newRole.rawValue)")
+        } catch {
+            print("[StorybankVM] updateCollaboratorRole FAILED: \(error)")
         }
     }
 
@@ -1561,7 +1602,9 @@ class StorybankViewModel: ObservableObject {
     /// Accepts a pending invite. Updates status and sets acceptedAt.
     /// Optimistic local update + Supabase UPDATE, then fetches the
     /// Story object so it appears in the Active section immediately.
-    func acceptInvite(_ collaborator: StoryCollaborator) {
+    func acceptInvite(_ collaborator: StoryCollaborator) async {
+        beginMutation()
+        defer { endMutation() }
         let now = Date()
         if let index = sharedCollaborations.firstIndex(where: { $0.id == collaborator.id }) {
             sharedCollaborations[index].status = .accepted
@@ -1570,120 +1613,118 @@ class StorybankViewModel: ObservableObject {
 
         let storyId = collaborator.storyId
 
-        Task {
-            // 1. Persist the accept to Supabase
-            do {
-                struct AcceptUpdate: Encodable {
-                    let status: String
-                    let acceptedAt: String
-                    enum CodingKeys: String, CodingKey {
-                        case status
-                        case acceptedAt = "accepted_at"
-                    }
+        // 1. Persist the accept to Supabase
+        do {
+            struct AcceptUpdate: Encodable {
+                let status: String
+                let acceptedAt: String
+                enum CodingKeys: String, CodingKey {
+                    case status
+                    case acceptedAt = "accepted_at"
                 }
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                try await supabase.from("story_collaborators")
-                    .update(AcceptUpdate(status: "accepted", acceptedAt: formatter.string(from: now)))
-                    .eq("id", value: collaborator.id)
-                    .execute()
-                print("[StorybankVM] acceptInvite UPDATE OK — \(collaborator.id)")
-            } catch {
-                print("[StorybankVM] acceptInvite UPDATE FAILED: \(error)")
+            }
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            try await supabase.from("story_collaborators")
+                .update(AcceptUpdate(status: "accepted", acceptedAt: formatter.string(from: now)))
+                .eq("id", value: collaborator.id)
+                .execute()
+            print("[StorybankVM] acceptInvite UPDATE OK — \(collaborator.id)")
+        } catch {
+            print("[StorybankVM] acceptInvite UPDATE FAILED: \(error)")
+        }
+
+        // 2. Fetch the Story object so ActiveSection can render it
+        do {
+            let storyData = try await supabase
+                .from("stories")
+                .select()
+                .eq("id", value: storyId)
+                .execute()
+                .data
+            let fetchedStories = try Self.decoder.decode([Story].self, from: storyData)
+            guard let story = fetchedStories.first else {
+                print("[StorybankVM] acceptInvite — story \(storyId) not returned (RLS or deleted)")
+                return
             }
 
-            // 2. Fetch the Story object so ActiveSection can render it
-            do {
-                let storyData = try await supabase
-                    .from("stories")
-                    .select()
-                    .eq("id", value: storyId)
-                    .execute()
-                    .data
-                let fetchedStories = try Self.decoder.decode([Story].self, from: storyData)
-                guard let story = fetchedStories.first else {
-                    print("[StorybankVM] acceptInvite — story \(storyId) not returned (RLS or deleted)")
-                    return
-                }
+            // Merge into stories array (remove stale entry if present, then append)
+            self.stories.removeAll { $0.id == storyId }
+            self.stories.append(story)
 
-                // Merge into stories array (remove stale entry if present, then append)
-                self.stories.removeAll { $0.id == storyId }
-                self.stories.append(story)
+            // 3. Fetch assets, references, notes for counts and unread detection
+            let idForQuery = [storyId.uuidString]
 
-                // 3. Fetch assets, references, notes for counts and unread detection
-                let idForQuery = [storyId.uuidString]
+            let assetsData = try await supabase
+                .from("story_assets")
+                .select()
+                .in("story_id", values: idForQuery)
+                .order("display_order")
+                .execute()
+                .data
+            self.storyAssetsMap[storyId] = try Self.decoder.decode([StoryAsset].self, from: assetsData)
 
-                let assetsData = try await supabase
-                    .from("story_assets")
-                    .select()
-                    .in("story_id", values: idForQuery)
-                    .order("display_order")
-                    .execute()
-                    .data
-                self.storyAssetsMap[storyId] = try Self.decoder.decode([StoryAsset].self, from: assetsData)
+            let refsData = try await supabase
+                .from("story_references")
+                .select()
+                .in("story_id", values: idForQuery)
+                .order("display_order")
+                .execute()
+                .data
+            self.storyReferencesMap[storyId] = try Self.decoder.decode([StoryReference].self, from: refsData)
 
-                let refsData = try await supabase
-                    .from("story_references")
-                    .select()
-                    .in("story_id", values: idForQuery)
-                    .order("display_order")
-                    .execute()
-                    .data
-                self.storyReferencesMap[storyId] = try Self.decoder.decode([StoryReference].self, from: refsData)
+            let notesData = try await supabase
+                .from("story_notes")
+                .select()
+                .in("story_id", values: idForQuery)
+                .order("created_at")
+                .execute()
+                .data
+            self.storyNotesMap[storyId] = try Self.decoder.decode([StoryNote].self, from: notesData)
 
-                let notesData = try await supabase
-                    .from("story_notes")
-                    .select()
-                    .in("story_id", values: idForQuery)
-                    .order("created_at")
-                    .execute()
-                    .data
-                self.storyNotesMap[storyId] = try Self.decoder.decode([StoryNote].self, from: notesData)
+            // 4. Cache owner display info
+            cacheUserInfo(userId: story.creatorProfileId)
 
-                // 4. Cache owner display info
-                cacheUserInfo(userId: story.creatorProfileId)
-
-                print("[StorybankVM] acceptInvite — fetched story + assets for \(storyId)")
-            } catch {
-                print("[StorybankVM] acceptInvite — fetch story FAILED: \(error)")
-            }
+            print("[StorybankVM] acceptInvite — fetched story + assets for \(storyId)")
+        } catch {
+            print("[StorybankVM] acceptInvite — fetch story FAILED: \(error)")
         }
     }
 
     /// Declines a pending invite. Removes the collaborator record.
     /// Optimistic local removal + Supabase DELETE in background.
-    func declineInvite(_ collaborator: StoryCollaborator) {
+    func declineInvite(_ collaborator: StoryCollaborator) async {
+        beginMutation()
+        defer { endMutation() }
         sharedCollaborations.removeAll { $0.id == collaborator.id }
 
-        Task {
-            do {
-                try await supabase.from("story_collaborators")
-                    .delete()
-                    .eq("id", value: collaborator.id)
-                    .execute()
-                print("[StorybankVM] declineInvite DELETE OK — \(collaborator.id)")
-            } catch {
-                print("[StorybankVM] declineInvite DELETE FAILED: \(error)")
-            }
+        do {
+            try await supabase.from("story_collaborators")
+                .delete()
+                .eq("id", value: collaborator.id)
+                .execute()
+            print("[StorybankVM] declineInvite DELETE OK — \(collaborator.id)")
+        } catch {
+            print("[StorybankVM] declineInvite DELETE FAILED: \(error)")
         }
     }
 
     /// Removes the current user's collaboration record — they leave the shared story.
     /// Optimistic local removal + Supabase DELETE in background.
-    func leaveStory(_ collaborator: StoryCollaborator) {
+    func leaveStory(_ collaborator: StoryCollaborator) async {
+        beginMutation()
+        defer { endMutation() }
         sharedCollaborations.removeAll { $0.id == collaborator.id }
         storyCollaboratorsMap[collaborator.storyId]?.removeAll { $0.id == collaborator.id }
 
-        Task {
-            do {
-                try await supabase.from("story_collaborators")
-                    .delete()
-                    .eq("id", value: collaborator.id)
-                    .execute()
-                print("[StorybankVM] leaveStory DELETE OK — \(collaborator.id)")
-            } catch {
-                print("[StorybankVM] leaveStory DELETE FAILED: \(error)")
-            }
+        do {
+            try await supabase.from("story_collaborators")
+                .delete()
+                .eq("id", value: collaborator.id)
+                .execute()
+            print("[StorybankVM] leaveStory DELETE OK — \(collaborator.id)")
+        } catch {
+            print("[StorybankVM] leaveStory DELETE FAILED: \(error)")
         }
     }
 
@@ -1692,37 +1733,39 @@ class StorybankViewModel: ObservableObject {
 
     // MARK: - Story Folders
 
-    func createFolder(name: String, userId: UUID? = nil) {
+    func createFolder(name: String, userId: UUID? = nil) async {
+        beginMutation()
+        defer { endMutation() }
         let folder = StoryFolder(userId: userId, name: name)
         folders.append(folder)
 
-        Task {
-            do {
-                try await supabase.from("story_folders").insert(folder).execute()
-            } catch {
-                print("[StorybankVM] createFolder FAILED: \(error)")
-            }
+        do {
+            try await supabase.from("story_folders").insert(folder).execute()
+        } catch {
+            print("[StorybankVM] createFolder FAILED: \(error)")
         }
     }
 
-    func renameFolder(_ folder: StoryFolder, to name: String) {
+    func renameFolder(_ folder: StoryFolder, to name: String) async {
+        beginMutation()
+        defer { endMutation() }
         guard let index = folders.firstIndex(where: { $0.id == folder.id }) else { return }
         folders[index].name = name
 
-        Task {
-            do {
-                struct NameUpdate: Encodable { let name: String }
-                try await supabase.from("story_folders")
-                    .update(NameUpdate(name: name))
-                    .eq("id", value: folder.id)
-                    .execute()
-            } catch {
-                print("[StorybankVM] renameFolder FAILED: \(error)")
-            }
+        do {
+            struct NameUpdate: Encodable { let name: String }
+            try await supabase.from("story_folders")
+                .update(NameUpdate(name: name))
+                .eq("id", value: folder.id)
+                .execute()
+        } catch {
+            print("[StorybankVM] renameFolder FAILED: \(error)")
         }
     }
 
-    func deleteFolder(_ folder: StoryFolder) {
+    func deleteFolder(_ folder: StoryFolder) async {
+        beginMutation()
+        defer { endMutation() }
         // Unfile all stories in this folder locally
         let unfiledStoryIds = storyFolderMap.filter { $0.value == folder.id }.map { $0.key }
         for storyId in unfiledStoryIds {
@@ -1730,46 +1773,44 @@ class StorybankViewModel: ObservableObject {
         }
         folders.removeAll { $0.id == folder.id }
 
-        Task {
-            do {
-                // CASCADE on story_folder_map handles unfilement
-                try await supabase.from("story_folders").delete().eq("id", value: folder.id).execute()
-            } catch {
-                print("[StorybankVM] deleteFolder FAILED: \(error)")
-            }
+        do {
+            // CASCADE on story_folder_map handles unfilement
+            try await supabase.from("story_folders").delete().eq("id", value: folder.id).execute()
+        } catch {
+            print("[StorybankVM] deleteFolder FAILED: \(error)")
         }
     }
 
-    func moveStory(_ storyId: UUID, to folderId: UUID?) {
+    func moveStory(_ storyId: UUID, to folderId: UUID?) async {
+        beginMutation()
+        defer { endMutation() }
         if let folderId {
             storyFolderMap[storyId] = folderId
         } else {
             storyFolderMap.removeValue(forKey: storyId)
         }
 
-        Task {
-            do {
-                if let folderId {
-                    struct FolderMapRow: Encodable {
-                        let storyId: UUID
-                        let folderId: UUID
-                        enum CodingKeys: String, CodingKey {
-                            case storyId = "story_id"
-                            case folderId = "folder_id"
-                        }
+        do {
+            if let folderId {
+                struct FolderMapRow: Encodable {
+                    let storyId: UUID
+                    let folderId: UUID
+                    enum CodingKeys: String, CodingKey {
+                        case storyId = "story_id"
+                        case folderId = "folder_id"
                     }
-                    try await supabase.from("story_folder_map")
-                        .upsert(FolderMapRow(storyId: storyId, folderId: folderId))
-                        .execute()
-                } else {
-                    try await supabase.from("story_folder_map")
-                        .delete()
-                        .eq("story_id", value: storyId)
-                        .execute()
                 }
-            } catch {
-                print("[StorybankVM] moveStory FAILED: \(error)")
+                try await supabase.from("story_folder_map")
+                    .upsert(FolderMapRow(storyId: storyId, folderId: folderId))
+                    .execute()
+            } else {
+                try await supabase.from("story_folder_map")
+                    .delete()
+                    .eq("story_id", value: storyId)
+                    .execute()
             }
+        } catch {
+            print("[StorybankVM] moveStory FAILED: \(error)")
         }
     }
 
@@ -1793,26 +1834,24 @@ class StorybankViewModel: ObservableObject {
 
     /// Updates the updatedAt timestamp when content changes.
     /// Also persists the timestamp to Supabase.
-    private func touchStory(_ storyId: UUID) {
+    private func touchStory(_ storyId: UUID) async {
         guard let index = stories.firstIndex(where: { $0.id == storyId }) else { return }
         let now = Date()
         stories[index].updatedAt = now
 
-        Task {
-            do {
-                struct TimestampUpdate: Encodable {
-                    let updatedAt: String
-                    enum CodingKeys: String, CodingKey { case updatedAt = "updated_at" }
-                }
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                try await supabase.from("stories")
-                    .update(TimestampUpdate(updatedAt: formatter.string(from: now)))
-                    .eq("id", value: storyId)
-                    .execute()
-            } catch {
-                print("[StorybankVM] touchStory FAILED: \(error)")
+        do {
+            struct TimestampUpdate: Encodable {
+                let updatedAt: String
+                enum CodingKeys: String, CodingKey { case updatedAt = "updated_at" }
             }
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            try await supabase.from("stories")
+                .update(TimestampUpdate(updatedAt: formatter.string(from: now)))
+                .eq("id", value: storyId)
+                .execute()
+        } catch {
+            print("[StorybankVM] touchStory FAILED: \(error)")
         }
     }
 }

@@ -94,11 +94,13 @@ struct StorybankView: View {
                     showNewStoryAlert = false
                 },
                 onAction: { title in
-                    viewModel.createStory(title: title, userId: appState.currentUser?.id)
-                    // Auto-assign to folder if triggered from a folder empty state
-                    if let folderId = newStoryFolderId,
-                       let story = viewModel.stories.first {
-                        viewModel.moveStory(story.id, to: folderId)
+                    Task {
+                        await viewModel.createStory(title: title, userId: appState.currentUser?.id)
+                        // Auto-assign to folder if triggered from a folder empty state
+                        if let folderId = newStoryFolderId,
+                           let story = viewModel.stories.first {
+                            await viewModel.moveStory(story.id, to: folderId)
+                        }
                     }
                     newStoryFolderId = nil
                     showNewStoryAlert = false
@@ -115,13 +117,22 @@ struct StorybankView: View {
                     showNewFolderAlert = false
                 },
                 onAction: { name in
-                    viewModel.createFolder(name: name, userId: appState.currentUser?.id)
+                    Task { await viewModel.createFolder(name: name, userId: appState.currentUser?.id) }
                     showNewFolderAlert = false
                 }
             )
         }
         .task {
+            guard !viewModel.hasLoadedOnce else { return }
             await viewModel.fetchStories(userId: appState.currentUser?.id)
+        }
+        // Safety net: if .task fired before currentUser was set (nil userId),
+        // retry when currentUser arrives. With the RootView three-way branch
+        // this should rarely fire, but it's cheap insurance.
+        .onChange(of: appState.currentUser?.id) { _, newId in
+            if let newId, !viewModel.hasLoadedOnce {
+                Task { await viewModel.fetchStories(userId: newId) }
+            }
         }
     }
 
@@ -175,7 +186,7 @@ struct StorybankView: View {
                 },
                 onAction: { name in
                     if let folder = renameFolderTarget {
-                        viewModel.renameFolder(folder, to: name)
+                        Task { await viewModel.renameFolder(folder, to: name) }
                     }
                     showRenameFolderAlert = false
                     renameFolderTarget = nil
@@ -185,8 +196,8 @@ struct StorybankView: View {
         // Folder delete confirmation
         .riffitModal(isPresented: $showDeleteFolderConfirm) {
             RiffitConfirmationModal(
-                title: "Delete Folder?",
-                message: "Stories inside will be moved to Unfiled.",
+                title: "Delete \(deleteFolderTarget?.name ?? "folder")?",
+                message: "Stories in this folder won't be deleted — they'll move to unfiled.",
                 confirmLabel: "Delete",
                 isDestructive: true,
                 onConfirm: {
@@ -194,7 +205,7 @@ struct StorybankView: View {
                         if selectedFolderFilter == folder.id {
                             selectedFolderFilter = nil
                         }
-                        viewModel.deleteFolder(folder)
+                        Task { await viewModel.deleteFolder(folder) }
                     }
                     showDeleteFolderConfirm = false
                     deleteFolderTarget = nil
@@ -213,9 +224,7 @@ struct StorybankView: View {
                 isDestructive: true,
                 onConfirm: {
                     if let collab = collaboratorToLeave {
-                        withAnimation(.easeInOut) {
-                            viewModel.leaveStory(collab)
-                        }
+                        Task { await viewModel.leaveStory(collab) }
                     }
                     collaboratorToLeave = nil
                     showLeaveConfirm = false
@@ -371,7 +380,7 @@ struct StorybankView: View {
                 Menu {
                     ForEach(viewModel.folders) { folder in
                         Button {
-                            viewModel.moveStory(story.id, to: folder.id)
+                            Task { await viewModel.moveStory(story.id, to: folder.id) }
                         } label: {
                             Label(folder.name, systemImage: viewModel.storyFolderMap[story.id] == folder.id ? "checkmark.circle.fill" : "folder")
                         }
@@ -380,7 +389,7 @@ struct StorybankView: View {
                     if viewModel.storyFolderMap[story.id] != nil {
                         Divider()
                         Button {
-                            viewModel.moveStory(story.id, to: nil)
+                            Task { await viewModel.moveStory(story.id, to: nil) }
                         } label: {
                             Label("Remove from folder", systemImage: "folder.badge.minus")
                         }
@@ -541,14 +550,10 @@ struct StorybankView: View {
                 storyTitle: viewModel.stories.first(where: { $0.id == invite.storyId })?.title ?? "Untitled Story",
                 countsLabel: viewModel.countsLabel(for: invite.storyId),
                 onAccept: {
-                    withAnimation(.easeInOut) {
-                        viewModel.acceptInvite(invite)
-                    }
+                    Task { await viewModel.acceptInvite(invite) }
                 },
                 onDecline: {
-                    withAnimation(.easeInOut) {
-                        viewModel.declineInvite(invite)
-                    }
+                    Task { await viewModel.declineInvite(invite) }
                 }
             )
             .transition(.opacity.combined(with: .move(edge: .top)))
@@ -899,7 +904,7 @@ struct StoryFolderDetailView: View {
                             .buttonStyle(.plain)
                             .contextMenu {
                                 Button {
-                                    viewModel.moveStory(story.id, to: nil)
+                                    Task { await viewModel.moveStory(story.id, to: nil) }
                                 } label: {
                                     Label("Remove from Folder", systemImage: "folder.badge.minus")
                                 }
@@ -948,19 +953,19 @@ struct StoryFolderDetailView: View {
                     showRenameAlert = false
                 },
                 onAction: { name in
-                    viewModel.renameFolder(folder, to: name)
+                    Task { await viewModel.renameFolder(folder, to: name) }
                     showRenameAlert = false
                 }
             )
         }
         .riffitModal(isPresented: $showDeleteConfirm) {
             RiffitConfirmationModal(
-                title: "Delete Folder?",
-                message: "Stories inside will be moved to Unfiled.",
+                title: "Delete \(folder.name)?",
+                message: "Stories in this folder won't be deleted — they'll move to unfiled.",
                 confirmLabel: "Delete",
                 isDestructive: true,
                 onConfirm: {
-                    viewModel.deleteFolder(folder)
+                    Task { await viewModel.deleteFolder(folder) }
                     showDeleteConfirm = false
                     dismiss()
                 },

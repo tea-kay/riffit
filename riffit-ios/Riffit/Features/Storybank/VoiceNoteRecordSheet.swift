@@ -193,12 +193,14 @@ struct VoiceNoteRecordSheet: View {
             RiffitButton(title: "Save", variant: .primary) {
                 if let result = recordingResult {
                     let trimmedName = noteName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    viewModel.addVoiceAsset(
-                        to: storyId,
-                        fileUrl: result.url.path,
-                        durationSeconds: result.durationSeconds,
-                        name: trimmedName.isEmpty ? nil : trimmedName
-                    )
+                    Task {
+                        await viewModel.addVoiceAsset(
+                            to: storyId,
+                            fileUrl: result.url.path,
+                            durationSeconds: result.durationSeconds,
+                            name: trimmedName.isEmpty ? nil : trimmedName
+                        )
+                    }
                     player.stop()
                     dismiss()
                 }

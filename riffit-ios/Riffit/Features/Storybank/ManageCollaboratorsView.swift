@@ -99,7 +99,7 @@ struct ManageCollaboratorsView: View {
                                 ? appState.currentUser?.avatarUrl
                                 : viewModel.collaboratorAvatarUrl(for: collaborator, currentUserId: appState.currentUser?.id),
                             onChangeRole: { newRole in
-                                viewModel.updateCollaboratorRole(collaborator, to: newRole)
+                                Task { await viewModel.updateCollaboratorRole(collaborator, to: newRole) }
                             },
                             onRemove: {
                                 collaboratorToRemove = collaborator
@@ -158,7 +158,7 @@ struct ManageCollaboratorsView: View {
                     isDestructive: true,
                     onConfirm: {
                         if let collaborator = collaboratorToRemove {
-                            viewModel.removeCollaborator(collaborator)
+                            Task { await viewModel.removeCollaborator(collaborator) }
                         }
                         collaboratorToRemove = nil
                         showRemoveConfirmation = false

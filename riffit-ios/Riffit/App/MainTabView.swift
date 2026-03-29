@@ -8,6 +8,7 @@ import SwiftUI
 /// so that both the Library tab and the Storybank's reference picker
 /// can share the same video data.
 struct MainTabView: View {
+    @EnvironmentObject var appState: AppState
     @State private var selectedTab: Tab = .library
     @StateObject private var libraryViewModel = LibraryViewModel()
     @StateObject private var storybankViewModel = StorybankViewModel()
@@ -55,5 +56,14 @@ struct MainTabView: View {
         .tint(Color.riffitPrimary)
         .environmentObject(libraryViewModel)
         .environmentObject(storybankViewModel)
+        // Prefetch both tabs' data, then tell the splash it's safe to fade.
+        // Each ViewModel's .task guard on hasLoadedOnce prevents double-fetch.
+        .task {
+            let userId = appState.currentUser?.id
+            async let lib: Void = libraryViewModel.fetchVideos(userId: userId)
+            async let sb: Void = storybankViewModel.fetchStories(userId: userId)
+            _ = await (lib, sb)
+            appState.markDataReady()
+        }
     }
 }

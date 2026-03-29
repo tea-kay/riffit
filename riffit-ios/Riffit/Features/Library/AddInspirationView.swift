@@ -161,7 +161,7 @@ struct AddInspirationView: View {
                     .contextMenu {
                         Button(role: .destructive) {
                             selectedTags.remove(tag)
-                            viewModel.removeAvailableTag(tag, userId: appState.currentUser?.id)
+                            Task { await viewModel.removeAvailableTag(tag, userId: appState.currentUser?.id) }
                         } label: {
                             Label("Delete Tag", systemImage: "trash")
                         }
@@ -217,7 +217,7 @@ struct AddInspirationView: View {
     private func submitCaptureTag() {
         let trimmed = newTagText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
-            viewModel.addCustomTag(trimmed, userId: appState.currentUser?.id)
+            Task { await viewModel.addCustomTag(trimmed, userId: appState.currentUser?.id) }
             selectedTags.insert(trimmed)
         }
         newTagText = ""

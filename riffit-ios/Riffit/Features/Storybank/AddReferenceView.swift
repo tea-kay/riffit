@@ -263,7 +263,7 @@ struct AddReferenceView: View {
                                     selectedVideo = video
                                     if storySections.isEmpty {
                                         // No sections in this story — add reference directly
-                                        viewModel.addReference(to: story.id, videoId: video.id, tag: "")
+                                        Task { await viewModel.addReference(to: story.id, videoId: video.id, tag: "") }
                                         dismiss()
                                     } else {
                                         withAnimation { step = .pickSection }
@@ -379,7 +379,7 @@ struct AddReferenceView: View {
     /// Adds the selected video as a reference and dismisses.
     private func addSelectedReference(sectionName: String) {
         guard let video = selectedVideo else { return }
-        viewModel.addReference(to: story.id, videoId: video.id, tag: sectionName)
+        Task { await viewModel.addReference(to: story.id, videoId: video.id, tag: sectionName) }
         dismiss()
     }
 }

@@ -255,7 +255,8 @@ struct AccountView: View {
         )
     }
 
-    /// Resolves the avatar image: remote URL, or initials fallback
+    /// Resolves the avatar image: remote URL, or initials fallback.
+    /// .id() forces AsyncImage recreation when the URL changes after a new upload.
     @ViewBuilder
     private var avatarImage: some View {
         if let avatarUrlString = appState.currentUser?.avatarUrl,
@@ -270,6 +271,7 @@ struct AccountView: View {
                     initialsAvatar
                 }
             }
+            .id(avatarUrlString)
         } else {
             initialsAvatar
         }

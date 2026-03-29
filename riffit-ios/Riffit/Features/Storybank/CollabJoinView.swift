@@ -168,10 +168,12 @@ struct CollabJoinView: View {
     private func joinStory(_ resolved: AppState.ResolvedInvite) {
         guard let userId = appState.currentUser?.id else { return }
 
-        viewModel.joinStoryFromInvite(
-            inviteLink: resolved.inviteLink,
-            userId: userId
-        )
+        Task {
+            await viewModel.joinStoryFromInvite(
+                inviteLink: resolved.inviteLink,
+                userId: userId
+            )
+        }
 
         // Clear the invite state and dismiss
         appState.clearPendingInvite()

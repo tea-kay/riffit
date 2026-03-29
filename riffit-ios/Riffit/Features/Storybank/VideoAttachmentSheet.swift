@@ -256,12 +256,14 @@ struct VideoAttachmentSheet: View {
         let duration = VideoStorageService.duration(of: URL(fileURLWithPath: filePath))
         let trimmedName = videoName.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        viewModel.addVideoAsset(
-            to: storyId,
-            fileUrl: filePath,
-            durationSeconds: duration,
-            name: trimmedName.isEmpty ? nil : trimmedName
-        )
+        Task {
+            await viewModel.addVideoAsset(
+                to: storyId,
+                fileUrl: filePath,
+                durationSeconds: duration,
+                name: trimmedName.isEmpty ? nil : trimmedName
+            )
+        }
         dismiss()
     }
 

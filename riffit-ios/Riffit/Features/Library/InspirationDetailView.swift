@@ -69,7 +69,7 @@ struct InspirationDetailView: View {
                             .font(RF.heading)
                             .foregroundStyle(Color.riffitTextPrimary)
                             .onChange(of: titleText) { newValue in
-                                viewModel.updateTitle(for: video.id, title: newValue)
+                                Task { await viewModel.updateTitle(for: video.id, title: newValue) }
                             }
 
                         // Embedded video webview
@@ -333,7 +333,7 @@ struct InspirationDetailView: View {
                 ForEach(viewModel.allTags, id: \.self) { tag in
                     let isSelected = activeTags.contains(tag)
                     Button {
-                        viewModel.toggleTag(for: video.id, tag: tag)
+                        Task { await viewModel.toggleTag(for: video.id, tag: tag) }
                     } label: {
                         Text(tag)
                             .font(RF.tag)
@@ -401,9 +401,11 @@ struct InspirationDetailView: View {
     private func submitNewTag() {
         let trimmed = newTagText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
-            viewModel.addCustomTag(trimmed, userId: appState.currentUser?.id)
-            // Auto-select the new tag on this video
-            viewModel.toggleTag(for: video.id, tag: trimmed)
+            Task {
+                await viewModel.addCustomTag(trimmed, userId: appState.currentUser?.id)
+                // Auto-select the new tag on this video
+                await viewModel.toggleTag(for: video.id, tag: trimmed)
+            }
         }
         newTagText = ""
         showNewTagField = false
@@ -471,7 +473,7 @@ struct InspirationDetailView: View {
                         onSave: {
                             let trimmed = editingCommentText.trimmingCharacters(in: .whitespacesAndNewlines)
                             if !trimmed.isEmpty {
-                                viewModel.updateComment(id: comment.id, videoId: video.id, newText: trimmed)
+                                Task { await viewModel.updateComment(id: comment.id, videoId: video.id, newText: trimmed) }
                             }
                             editingCommentId = nil
                         },
@@ -538,7 +540,7 @@ struct InspirationDetailView: View {
         let trimmed = newCommentText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        viewModel.addComment(to: video.id, text: trimmed, authorName: displayName, userId: appState.currentUser?.id)
+        Task { await viewModel.addComment(to: video.id, text: trimmed, authorName: displayName, userId: appState.currentUser?.id) }
         newCommentText = ""
     }
 }

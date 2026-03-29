@@ -236,11 +236,13 @@ struct ImageAttachmentSheet: View {
         guard let filePath = ImageStorageService.save(image) else { return }
 
         let trimmedName = imageName.trimmingCharacters(in: .whitespacesAndNewlines)
-        viewModel.addImageAsset(
-            to: storyId,
-            fileUrl: filePath,
-            name: trimmedName.isEmpty ? nil : trimmedName
-        )
+        Task {
+            await viewModel.addImageAsset(
+                to: storyId,
+                fileUrl: filePath,
+                name: trimmedName.isEmpty ? nil : trimmedName
+            )
+        }
         dismiss()
     }
 }

@@ -3,7 +3,7 @@ import Supabase
 
 /// Manages the ideas list, folders, and tags.
 /// All mutations use optimistic UI updates — local state changes first,
-/// then a background Supabase call with error logging.
+/// then the Supabase call is awaited before returning.
 @MainActor
 class LibraryViewModel: ObservableObject {
     @Published var videos: [InspirationVideo] = []
@@ -12,6 +12,13 @@ class LibraryViewModel: ObservableObject {
     @Published var isSubmitting: Bool = false
     @Published var error: Error?
     @Published var hasLoadedOnce: Bool = false
+
+    /// True while any mutation is in flight — fetchVideos skips if set
+    /// to prevent a re-fetch from clobbering optimistic local state.
+    @Published private(set) var isMutating: Bool = false
+    private var activeMutations: Int = 0
+    private func beginMutation() { activeMutations += 1; isMutating = true }
+    private func endMutation() { activeMutations -= 1; if activeMutations <= 0 { activeMutations = 0; isMutating = false } }
 
     /// Maps video ID → folder ID. Videos not in this dictionary are unfiled.
     @Published var videoFolderMap: [UUID: UUID] = [:]
@@ -81,9 +88,12 @@ class LibraryViewModel: ObservableObject {
     func fetchVideos(userId: UUID? = nil) async {
         guard let profileId = userId else {
             isLoading = false
-            hasLoadedOnce = true
+            // Do NOT set hasLoadedOnce — no data was fetched.
+            // .task or .onChange can retry when userId becomes available.
             return
         }
+        // Skip fetch if a mutation is in flight — local state is authoritative
+        guard !isMutating else { return }
         // Only show loading indicator on initial fetch — refreshes are silent
         if !hasLoadedOnce {
             isLoading = true
@@ -99,18 +109,7 @@ class LibraryViewModel: ObservableObject {
                 .order("created_at", ascending: false)
                 .execute()
                 .data
-            var fetchedVideos = try Self.decoder.decode([InspirationVideo].self, from: videosData)
-
-            // Filter out any videos deleted locally but possibly still in Supabase
-            // due to a race between the DELETE and this re-fetch
-            if !deletedVideoIds.isEmpty {
-                let fetchedIds = Set(fetchedVideos.map(\.id))
-                // Clear IDs confirmed gone from Supabase
-                deletedVideoIds = deletedVideoIds.intersection(fetchedIds)
-                fetchedVideos = fetchedVideos.filter { !deletedVideoIds.contains($0.id) }
-            }
-
-            self.videos = fetchedVideos
+            self.videos = try Self.decoder.decode([InspirationVideo].self, from: videosData)
 
             let videoIds = videos.map { $0.id }
 
@@ -223,6 +222,8 @@ class LibraryViewModel: ObservableObject {
         folderId: UUID? = nil,
         userId: UUID? = nil
     ) async {
+        beginMutation()
+        defer { endMutation() }
         isSubmitting = true
 
         // TODO: creator_profile_id is user.id for now (1:1 until onboarding)
@@ -308,21 +309,21 @@ class LibraryViewModel: ObservableObject {
 
     // MARK: - Update Title
 
-    func updateTitle(for videoId: UUID, title: String) {
+    func updateTitle(for videoId: UUID, title: String) async {
+        beginMutation()
+        defer { endMutation() }
         guard let index = videos.firstIndex(where: { $0.id == videoId }) else { return }
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         videos[index].title = trimmed.isEmpty ? nil : trimmed
 
-        Task {
-            do {
-                struct TitleUpdate: Encodable { let title: String? }
-                try await supabase.from("inspiration_videos")
-                    .update(TitleUpdate(title: trimmed.isEmpty ? nil : trimmed))
-                    .eq("id", value: videoId)
-                    .execute()
-            } catch {
-                print("[LibraryVM] updateTitle FAILED: \(error)")
-            }
+        do {
+            struct TitleUpdate: Encodable { let title: String? }
+            try await supabase.from("inspiration_videos")
+                .update(TitleUpdate(title: trimmed.isEmpty ? nil : trimmed))
+                .eq("id", value: videoId)
+                .execute()
+        } catch {
+            print("[LibraryVM] updateTitle FAILED: \(error)")
         }
     }
 
@@ -343,41 +344,43 @@ class LibraryViewModel: ObservableObject {
     // MARK: - Tags
 
     /// Replaces all tags for a video. Pass an empty array to clear.
-    func setTags(for videoId: UUID, tags: [String]) {
+    func setTags(for videoId: UUID, tags: [String]) async {
+        beginMutation()
+        defer { endMutation() }
         if tags.isEmpty {
             videoTagsMap.removeValue(forKey: videoId)
         } else {
             videoTagsMap[videoId] = tags
         }
 
-        Task {
-            do {
-                // Delete existing tags, then insert new ones
-                try await supabase.from("idea_tags")
-                    .delete()
-                    .eq("inspiration_video_id", value: videoId)
-                    .execute()
-                for tag in tags {
-                    struct TagInsert: Encodable {
-                        let inspirationVideoId: UUID
-                        let tag: String
-                        enum CodingKeys: String, CodingKey {
-                            case inspirationVideoId = "inspiration_video_id"
-                            case tag
-                        }
+        do {
+            // Delete existing tags, then insert new ones
+            try await supabase.from("idea_tags")
+                .delete()
+                .eq("inspiration_video_id", value: videoId)
+                .execute()
+            for tag in tags {
+                struct TagInsert: Encodable {
+                    let inspirationVideoId: UUID
+                    let tag: String
+                    enum CodingKeys: String, CodingKey {
+                        case inspirationVideoId = "inspiration_video_id"
+                        case tag
                     }
-                    try await supabase.from("idea_tags")
-                        .insert(TagInsert(inspirationVideoId: videoId, tag: tag))
-                        .execute()
                 }
-            } catch {
-                print("[LibraryVM] setTags FAILED: \(error)")
+                try await supabase.from("idea_tags")
+                    .insert(TagInsert(inspirationVideoId: videoId, tag: tag))
+                    .execute()
             }
+        } catch {
+            print("[LibraryVM] setTags FAILED: \(error)")
         }
     }
 
     /// Toggles a tag on/off for a video.
-    func toggleTag(for videoId: UUID, tag: String) {
+    func toggleTag(for videoId: UUID, tag: String) async {
+        beginMutation()
+        defer { endMutation() }
         var current = videoTagsMap[videoId] ?? []
         let wasPresent = current.contains(tag)
         if wasPresent {
@@ -387,63 +390,63 @@ class LibraryViewModel: ObservableObject {
         }
         videoTagsMap[videoId] = current.isEmpty ? nil : current
 
-        Task {
-            do {
-                if wasPresent {
-                    // Remove the tag
-                    try await supabase.from("idea_tags")
-                        .delete()
-                        .eq("inspiration_video_id", value: videoId)
-                        .eq("tag", value: tag)
-                        .execute()
-                } else {
-                    // Add the tag
-                    struct TagInsert: Encodable {
-                        let inspirationVideoId: UUID
-                        let tag: String
-                        enum CodingKeys: String, CodingKey {
-                            case inspirationVideoId = "inspiration_video_id"
-                            case tag
-                        }
+        do {
+            if wasPresent {
+                // Remove the tag
+                try await supabase.from("idea_tags")
+                    .delete()
+                    .eq("inspiration_video_id", value: videoId)
+                    .eq("tag", value: tag)
+                    .execute()
+            } else {
+                // Add the tag
+                struct TagInsert: Encodable {
+                    let inspirationVideoId: UUID
+                    let tag: String
+                    enum CodingKeys: String, CodingKey {
+                        case inspirationVideoId = "inspiration_video_id"
+                        case tag
                     }
-                    try await supabase.from("idea_tags")
-                        .insert(TagInsert(inspirationVideoId: videoId, tag: tag))
-                        .execute()
                 }
-            } catch {
-                print("[LibraryVM] toggleTag FAILED: \(error)")
+                try await supabase.from("idea_tags")
+                    .insert(TagInsert(inspirationVideoId: videoId, tag: tag))
+                    .execute()
             }
+        } catch {
+            print("[LibraryVM] toggleTag FAILED: \(error)")
         }
     }
 
     /// Adds a new tag to the available tags list.
-    func addCustomTag(_ tag: String, userId: UUID? = nil) {
+    func addCustomTag(_ tag: String, userId: UUID? = nil) async {
+        beginMutation()
+        defer { endMutation() }
         let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !availableTags.contains(trimmed) else { return }
         availableTags.append(trimmed)
 
         guard let userId else { return }
-        Task {
-            do {
-                struct UserTagInsert: Encodable {
-                    let userId: UUID
-                    let tag: String
-                    enum CodingKeys: String, CodingKey {
-                        case userId = "user_id"
-                        case tag
-                    }
+        do {
+            struct UserTagInsert: Encodable {
+                let userId: UUID
+                let tag: String
+                enum CodingKeys: String, CodingKey {
+                    case userId = "user_id"
+                    case tag
                 }
-                try await supabase.from("user_tags")
-                    .insert(UserTagInsert(userId: userId, tag: trimmed))
-                    .execute()
-            } catch {
-                print("[LibraryVM] addCustomTag FAILED: \(error)")
             }
+            try await supabase.from("user_tags")
+                .insert(UserTagInsert(userId: userId, tag: trimmed))
+                .execute()
+        } catch {
+            print("[LibraryVM] addCustomTag FAILED: \(error)")
         }
     }
 
     /// Removes a tag from the available list and from all videos that have it.
-    func removeAvailableTag(_ tag: String, userId: UUID? = nil) {
+    func removeAvailableTag(_ tag: String, userId: UUID? = nil) async {
+        beginMutation()
+        defer { endMutation() }
         availableTags.removeAll { $0 == tag }
         // Remove this tag from any videos that had it
         for (videoId, tags) in videoTagsMap {
@@ -451,24 +454,22 @@ class LibraryViewModel: ObservableObject {
             videoTagsMap[videoId] = filtered.isEmpty ? nil : filtered
         }
 
-        Task {
-            do {
-                // Remove from all videos
-                try await supabase.from("idea_tags")
+        do {
+            // Remove from all videos
+            try await supabase.from("idea_tags")
+                .delete()
+                .eq("tag", value: tag)
+                .execute()
+            // Remove from user's custom tags
+            if let userId {
+                try await supabase.from("user_tags")
                     .delete()
+                    .eq("user_id", value: userId)
                     .eq("tag", value: tag)
                     .execute()
-                // Remove from user's custom tags
-                if let userId {
-                    try await supabase.from("user_tags")
-                        .delete()
-                        .eq("user_id", value: userId)
-                        .eq("tag", value: tag)
-                        .execute()
-                }
-            } catch {
-                print("[LibraryVM] removeAvailableTag FAILED: \(error)")
             }
+        } catch {
+            print("[LibraryVM] removeAvailableTag FAILED: \(error)")
         }
     }
 
@@ -480,141 +481,138 @@ class LibraryViewModel: ObservableObject {
     }
 
     /// Adds a new comment to a video's thread.
-    func addComment(to videoId: UUID, text: String, authorName: String = "You", userId: UUID? = nil) {
+    func addComment(to videoId: UUID, text: String, authorName: String = "You", userId: UUID? = nil) async {
+        beginMutation()
+        defer { endMutation() }
         let comment = IdeaComment(inspirationVideoId: videoId, userId: userId, authorName: authorName, text: text)
         videoCommentsMap[videoId, default: []].append(comment)
 
-        Task {
-            do {
-                try await supabase.from("idea_comments").insert(comment).execute()
-            } catch {
-                print("[LibraryVM] addComment FAILED: \(error)")
-            }
+        do {
+            try await supabase.from("idea_comments").insert(comment).execute()
+        } catch {
+            print("[LibraryVM] addComment FAILED: \(error)")
         }
     }
 
     /// Updates the text of an existing comment.
-    func updateComment(id commentId: UUID, videoId: UUID, newText: String) {
+    func updateComment(id commentId: UUID, videoId: UUID, newText: String) async {
+        beginMutation()
+        defer { endMutation() }
         guard var comments = videoCommentsMap[videoId],
               let index = comments.firstIndex(where: { $0.id == commentId })
         else { return }
         comments[index].text = newText
         videoCommentsMap[videoId] = comments
 
-        Task {
-            do {
-                struct TextUpdate: Encodable { let text: String }
-                try await supabase.from("idea_comments")
-                    .update(TextUpdate(text: newText))
-                    .eq("id", value: commentId)
-                    .execute()
-            } catch {
-                print("[LibraryVM] updateComment FAILED: \(error)")
-            }
+        do {
+            struct TextUpdate: Encodable { let text: String }
+            try await supabase.from("idea_comments")
+                .update(TextUpdate(text: newText))
+                .eq("id", value: commentId)
+                .execute()
+        } catch {
+            print("[LibraryVM] updateComment FAILED: \(error)")
         }
     }
 
     // MARK: - Folders
 
-    func createFolder(name: String, userId: UUID? = nil) {
+    func createFolder(name: String, userId: UUID? = nil) async {
+        beginMutation()
+        defer { endMutation() }
         let folder = IdeaFolder(userId: userId, name: name)
         folders.append(folder)
 
-        Task {
-            do {
-                try await supabase.from("inspiration_folders").insert(folder).execute()
-            } catch {
-                print("[LibraryVM] createFolder FAILED: \(error)")
-            }
+        do {
+            try await supabase.from("inspiration_folders").insert(folder).execute()
+        } catch {
+            print("[LibraryVM] createFolder FAILED: \(error)")
         }
     }
 
-    func renameFolder(_ folder: IdeaFolder, to name: String) {
+    func renameFolder(_ folder: IdeaFolder, to name: String) async {
+        beginMutation()
+        defer { endMutation() }
         guard let index = folders.firstIndex(where: { $0.id == folder.id }) else { return }
         folders[index].name = name
 
-        Task {
-            do {
-                struct NameUpdate: Encodable { let name: String }
-                try await supabase.from("inspiration_folders")
-                    .update(NameUpdate(name: name))
-                    .eq("id", value: folder.id)
-                    .execute()
-            } catch {
-                print("[LibraryVM] renameFolder FAILED: \(error)")
-            }
+        do {
+            struct NameUpdate: Encodable { let name: String }
+            try await supabase.from("inspiration_folders")
+                .update(NameUpdate(name: name))
+                .eq("id", value: folder.id)
+                .execute()
+        } catch {
+            print("[LibraryVM] renameFolder FAILED: \(error)")
         }
     }
 
-    func deleteFolder(_ folder: IdeaFolder) {
+    func deleteFolder(_ folder: IdeaFolder) async {
+        beginMutation()
+        defer { endMutation() }
         let unfiledVideoIds = videoFolderMap.filter { $0.value == folder.id }.map { $0.key }
         for videoId in unfiledVideoIds {
             videoFolderMap.removeValue(forKey: videoId)
         }
         folders.removeAll { $0.id == folder.id }
 
-        Task {
-            do {
-                // CASCADE on idea_folder_map handles unmapping
-                try await supabase.from("inspiration_folders")
-                    .delete()
-                    .eq("id", value: folder.id)
-                    .execute()
-            } catch {
-                print("[LibraryVM] deleteFolder FAILED: \(error)")
-            }
+        do {
+            // CASCADE on idea_folder_map handles unmapping
+            try await supabase.from("inspiration_folders")
+                .delete()
+                .eq("id", value: folder.id)
+                .execute()
+        } catch {
+            print("[LibraryVM] deleteFolder FAILED: \(error)")
         }
     }
 
-    func moveVideo(_ videoId: UUID, to folderId: UUID?) {
+    func moveVideo(_ videoId: UUID, to folderId: UUID?) async {
+        beginMutation()
+        defer { endMutation() }
         if let folderId {
             videoFolderMap[videoId] = folderId
         } else {
             videoFolderMap.removeValue(forKey: videoId)
         }
 
-        Task {
-            do {
-                if let folderId {
-                    struct FolderMapRow: Encodable {
-                        let inspirationVideoId: UUID
-                        let folderId: UUID
-                        enum CodingKeys: String, CodingKey {
-                            case inspirationVideoId = "inspiration_video_id"
-                            case folderId = "folder_id"
-                        }
+        do {
+            if let folderId {
+                struct FolderMapRow: Encodable {
+                    let inspirationVideoId: UUID
+                    let folderId: UUID
+                    enum CodingKeys: String, CodingKey {
+                        case inspirationVideoId = "inspiration_video_id"
+                        case folderId = "folder_id"
                     }
-                    try await supabase.from("idea_folder_map")
-                        .upsert(FolderMapRow(inspirationVideoId: videoId, folderId: folderId))
-                        .execute()
-                } else {
-                    try await supabase.from("idea_folder_map")
-                        .delete()
-                        .eq("inspiration_video_id", value: videoId)
-                        .execute()
                 }
-            } catch {
-                print("[LibraryVM] moveVideo FAILED: \(error)")
+                try await supabase.from("idea_folder_map")
+                    .upsert(FolderMapRow(inspirationVideoId: videoId, folderId: folderId))
+                    .execute()
+            } else {
+                try await supabase.from("idea_folder_map")
+                    .delete()
+                    .eq("inspiration_video_id", value: videoId)
+                    .execute()
             }
+        } catch {
+            print("[LibraryVM] moveVideo FAILED: \(error)")
         }
     }
 
     // MARK: - Delete Video
 
-    /// Tracks video IDs deleted locally but possibly not yet confirmed gone from
-    /// Supabase — prevents zombie re-fetch from .task.
-    private var deletedVideoIds: Set<UUID> = []
-
     /// Removes an idea and all its associated data (folder mapping, tags, comments).
     /// Call StorybankViewModel.removeReferences(for:) separately to clean up
     /// any story references pointing to this video.
     func deleteVideo(_ videoId: UUID) async {
-        // 1. Remove from local arrays immediately so UI never shows the deleted video
+        beginMutation()
+        defer { endMutation() }
+        // Remove from local arrays immediately so UI never shows the deleted video
         videos.removeAll { $0.id == videoId }
         videoFolderMap.removeValue(forKey: videoId)
         videoTagsMap.removeValue(forKey: videoId)
         videoCommentsMap.removeValue(forKey: videoId)
-        deletedVideoIds.insert(videoId)
 
         // 2. Await the Supabase DELETE so it completes before any re-fetch
         do {
