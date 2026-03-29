@@ -261,25 +261,7 @@ struct SettingsView: View {
 
     private var accountCard: some View {
         HStack(spacing: RS.smPlus) {
-            // Avatar — remote image or initials fallback.
-            // .id() forces SwiftUI to recreate AsyncImage when the URL
-            // changes (e.g. after uploading a new photo in AccountView),
-            // bypassing AsyncImage's internal cache.
-            if let avatarUrlString = appState.currentUser?.avatarUrl,
-               let avatarUrl = URL(string: avatarUrlString) {
-                AsyncImage(url: avatarUrl) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    initialsAvatar
-                }
-                .frame(width: 48, height: 48)
-                .clipShape(Circle())
-                .id(avatarUrlString)
-            } else {
-                initialsAvatar
-            }
+            AvatarView(image: appState.avatarImage, fallbackInitial: avatarInitials, size: 48)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(displayName)
@@ -301,16 +283,6 @@ struct SettingsView: View {
             RoundedRectangle(cornerRadius: RR.card)
                 .stroke(Color.riffitBorderSubtle, lineWidth: 0.5)
         )
-    }
-
-    /// Initials circle used when no avatar image is available
-    private var initialsAvatar: some View {
-        Text(avatarInitials)
-            .font(RF.heading)
-            .foregroundStyle(Color.riffitTextPrimary)
-            .frame(width: 48, height: 48)
-            .background(Color.riffitTeal600)
-            .clipShape(Circle())
     }
 
     // MARK: - Earn Section

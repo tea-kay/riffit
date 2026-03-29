@@ -255,36 +255,9 @@ struct AccountView: View {
         )
     }
 
-    /// Resolves the avatar image: remote URL, or initials fallback.
-    /// .id() forces AsyncImage recreation when the URL changes after a new upload.
-    @ViewBuilder
+    /// Resolves the avatar image from the locally cached UIImage in AppState.
     private var avatarImage: some View {
-        if let avatarUrlString = appState.currentUser?.avatarUrl,
-           let avatarUrl = URL(string: avatarUrlString) {
-            AsyncImage(url: avatarUrl) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                default:
-                    initialsAvatar
-                }
-            }
-            .id(avatarUrlString)
-        } else {
-            initialsAvatar
-        }
-    }
-
-    /// Initials circle used when no avatar image is available
-    private var initialsAvatar: some View {
-        Text(avatarInitials)
-            .font(RF.heading)
-            .foregroundStyle(Color.riffitTextPrimary)
-            .frame(width: 56, height: 56)
-            .background(Color.riffitTeal600)
-            .clipShape(Circle())
+        AvatarView(image: appState.avatarImage, fallbackInitial: avatarInitials, size: 56)
     }
 
     // MARK: - Name Field

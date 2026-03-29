@@ -371,7 +371,7 @@ struct StorybankView: View {
     /// A single story card with navigation link and context menu.
     private func storyCardLink(_ story: Story) -> some View {
         NavigationLink(value: story) {
-            StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id), avatarUrl: appState.currentUser?.avatarUrl, avatarInitial: userAvatarInitial)
+            StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id), avatarImage: appState.avatarImage, avatarInitial: userAvatarInitial)
         }
         .buttonStyle(.plain)
         .contextMenu {
@@ -732,7 +732,7 @@ struct GemIllustration: View {
 struct StoryCard: View {
     let story: Story
     let countsLabel: String
-    let avatarUrl: String?
+    let avatarImage: UIImage?
     let avatarInitial: String
 
     var body: some View {
@@ -775,28 +775,8 @@ struct StoryCard: View {
         )
     }
 
-    @ViewBuilder
     private var cardAvatar: some View {
-        if let urlString = avatarUrl, let url = URL(string: urlString) {
-            AsyncImage(url: url) { image in
-                image.resizable().aspectRatio(contentMode: .fill)
-            } placeholder: {
-                avatarFallback
-            }
-            .frame(width: 28, height: 28)
-            .clipShape(Circle())
-        } else {
-            avatarFallback
-        }
-    }
-
-    private var avatarFallback: some View {
-        Text(avatarInitial)
-            .font(RF.caption)
-            .foregroundStyle(Color.riffitTextPrimary)
-            .frame(width: 28, height: 28)
-            .background(Color.riffitTeal600)
-            .clipShape(Circle())
+        AvatarView(image: avatarImage, fallbackInitial: avatarInitial, size: 28)
     }
 }
 
@@ -899,7 +879,7 @@ struct StoryFolderDetailView: View {
                     LazyVStack(spacing: RS.smPlus) {
                         ForEach(folderStories) { story in
                             NavigationLink(value: story) {
-                                StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id), avatarUrl: appState.currentUser?.avatarUrl, avatarInitial: folderAvatarInitial)
+                                StoryCard(story: story, countsLabel: viewModel.countsLabel(for: story.id), avatarImage: appState.avatarImage, avatarInitial: folderAvatarInitial)
                             }
                             .buttonStyle(.plain)
                             .contextMenu {
@@ -1059,6 +1039,7 @@ struct SharedStoryCard: View {
             }
             .frame(width: 20, height: 20)
             .clipShape(Circle())
+            .id(urlString)
         } else {
             ownerAvatarFallback
         }
@@ -1190,6 +1171,7 @@ struct PendingInviteCard: View {
             }
             .frame(width: 32, height: 32)
             .clipShape(Circle())
+            .id(urlString)
         } else {
             inviterAvatarFallback
         }

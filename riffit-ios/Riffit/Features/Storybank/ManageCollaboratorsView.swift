@@ -98,6 +98,9 @@ struct ManageCollaboratorsView: View {
                             userAvatarUrl: collaborator.role == .owner
                                 ? appState.currentUser?.avatarUrl
                                 : viewModel.collaboratorAvatarUrl(for: collaborator, currentUserId: appState.currentUser?.id),
+                            userAvatarImage: collaborator.role == .owner
+                                ? appState.avatarImage
+                                : nil,
                             onChangeRole: { newRole in
                                 Task { await viewModel.updateCollaboratorRole(collaborator, to: newRole) }
                             },
@@ -185,8 +188,11 @@ struct CollaboratorRow: View {
     let isOwnerView: Bool
     /// The display name to show — e.g. "@sarah (You)" for owner, "Collaborator" for others.
     var userDisplayName: String?
-    /// Avatar URL from the user record — shows AsyncImage when available.
+    /// Avatar URL from the user record — shows AsyncImage when available (other users).
     var userAvatarUrl: String?
+    /// Locally cached avatar image for the current user. When non-nil, used
+    /// instead of AsyncImage for instant rendering with no network request.
+    var userAvatarImage: UIImage?
     var onChangeRole: ((CollaboratorRole) -> Void)?
     var onRemove: (() -> Void)?
 
@@ -209,8 +215,12 @@ struct CollaboratorRow: View {
 
     var body: some View {
         HStack(spacing: RS.smPlus) {
-            // Avatar — 32×32 circle, AsyncImage from URL or initials fallback
-            if let urlString = userAvatarUrl, let url = URL(string: urlString) {
+            // Avatar — 32×32 circle
+            if let cachedImage = userAvatarImage {
+                // Current user — render from locally cached UIImage (instant)
+                AvatarView(image: cachedImage, fallbackInitial: avatarInitial, size: 32)
+            } else if let urlString = userAvatarUrl, let url = URL(string: urlString) {
+                // Other users — fetch via AsyncImage
                 AsyncImage(url: url) { image in
                     image
                         .resizable()
@@ -220,6 +230,7 @@ struct CollaboratorRow: View {
                 }
                 .frame(width: 32, height: 32)
                 .clipShape(Circle())
+                .id(urlString)
             } else {
                 initialsCircle
             }

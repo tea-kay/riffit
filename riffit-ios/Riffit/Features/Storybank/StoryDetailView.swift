@@ -262,6 +262,9 @@ struct StoryDetailView: View {
                         userAvatarUrl: collaborator.userId == appState.currentUser?.id
                             ? appState.currentUser?.avatarUrl
                             : viewModel.collaboratorAvatarUrl(for: collaborator, currentUserId: appState.currentUser?.id),
+                        userAvatarImage: collaborator.userId == appState.currentUser?.id
+                            ? appState.avatarImage
+                            : nil,
                         onChangeRole: { newRole in
                             Task { await viewModel.updateCollaboratorRole(collaborator, to: newRole) }
                         },

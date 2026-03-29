@@ -37,6 +37,13 @@ class AppState: ObservableObject {
         currentUser?.id
     }
 
+    /// The current user's avatar as a locally cached UIImage.
+    /// Set during fetchUser (downloaded from avatarUrl) and during
+    /// uploadAvatar (from the JPEG data already in memory).
+    /// Views use AvatarView(image: appState.avatarImage, ...) to
+    /// render instantly with zero network requests.
+    @Published var avatarImage: UIImage?
+
     /// The creator profile associated with the current user.
     /// Set after onboarding completes or when fetched from the DB.
     @Published var creatorProfileId: UUID?
@@ -136,11 +143,13 @@ class AppState: ObservableObject {
                     } else {
                         // initialSession with no session means no one is logged in
                         self.currentUser = nil
+                        self.avatarImage = nil
                     }
 
                 case .signedOut:
                     self.currentUser = nil
                     self.creatorProfileId = nil
+                    self.avatarImage = nil
 
                 default:
                     break
@@ -201,6 +210,10 @@ class AppState: ObservableObject {
             print("[AppState] ✅ fetchUser succeeded — email: \(user.email), onboardingComplete: \(user.onboardingComplete)")
             self.currentUser = user
 
+            // Download the avatar image into memory so views render instantly.
+            // Non-blocking: if it fails, avatarImage stays nil and views show initials.
+            await downloadAvatarImage(from: user.avatarUrl)
+
             // If full_name is empty, default it to the email prefix so new
             // users have a visible display name immediately.
             await ensureDisplayName(user: user)
@@ -213,6 +226,24 @@ class AppState: ObservableObject {
             // A future session event will retry when the row is ready.
             print("[AppState] ❌ fetchUser FAILED — \(error)")
             self.currentUser = nil
+        }
+    }
+
+    // MARK: - Avatar Image Cache
+
+    /// Downloads the avatar image from a URL string and caches it in memory.
+    /// If the URL is nil or the download fails, avatarImage is set to nil.
+    private func downloadAvatarImage(from urlString: String?) async {
+        guard let urlString, let url = URL(string: urlString) else {
+            self.avatarImage = nil
+            return
+        }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            self.avatarImage = UIImage(data: data)
+        } catch {
+            print("[AppState] Avatar image download failed: \(error)")
+            self.avatarImage = nil
         }
     }
 
@@ -395,6 +426,11 @@ class AppState: ObservableObject {
 
         // Re-fetch so currentUser.avatarUrl updates everywhere
         await fetchUser(id: userId)
+
+        // Set avatarImage directly from the JPEG data we already have in memory.
+        // This is faster than re-downloading and guarantees the new image
+        // is available immediately after uploadAvatar returns.
+        self.avatarImage = UIImage(data: imageData)
         print("[AppState] uploadAvatar — currentUser refreshed, avatarUrl: \(currentUser?.avatarUrl ?? "nil")")
     }
 
